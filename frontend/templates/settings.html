@@ -1,1 +1,106 @@
-<!DOCTYPE html><html><body>Settings</body></html>
+{% extends "base.html" %}
+{% block title %}Settings — GEO Screener{% endblock %}
+{% block content %}
+<div x-data="settingsPage()" x-init="load()">
+  <h1 class="text-2xl font-bold mb-6">LLM Settings</h1>
+
+  <div class="bg-white rounded-xl border border-gray-200 p-6 max-w-lg space-y-5">
+    <div x-show="saveMsg" class="text-green-600 text-sm" x-text="saveMsg"></div>
+    <div x-show="error" class="text-red-600 text-sm" x-text="error"></div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Provider</label>
+      <select x-model="form.provider" @change="onProviderChange()"
+              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+        <option value="deepseek">DeepSeek</option>
+        <option value="glm">GLM (Zhipu)</option>
+        <option value="minimax">MiniMax</option>
+        <option value="custom">Custom (OpenAI-compatible)</option>
+      </select>
+    </div>
+
+    <div x-show="form.provider === 'custom'">
+      <label class="block text-sm font-medium mb-1">Base URL</label>
+      <input x-model="form.base_url" type="url" placeholder="https://api.example.com/v1"
+             class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">API Key</label>
+      <input x-model="form.api_key" type="password" placeholder="sk-…"
+             class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Model</label>
+      <input x-model="form.model" type="text" placeholder="e.g. deepseek-chat"
+             class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">Temperature
+        <span class="text-gray-400 font-normal" x-text="'(' + form.temperature + ')'"></span>
+      </label>
+      <input x-model.number="form.temperature" type="range" min="0" max="1" step="0.05" class="w-full" />
+    </div>
+
+    <div class="flex gap-3">
+      <button @click="save()" :disabled="saving"
+              class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+        <span x-text="saving ? 'Saving…' : 'Save'"></span>
+      </button>
+      <button @click="testConn()" :disabled="testing"
+              class="bg-gray-100 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50">
+        <span x-text="testing ? 'Testing…' : 'Test Connection'"></span>
+      </button>
+    </div>
+
+    <div x-show="testResult !== null">
+      <span x-show="testResult === true" class="text-green-600 text-sm font-medium">✓ Connection successful</span>
+      <span x-show="testResult === false" class="text-red-600 text-sm font-medium" x-text="testError"></span>
+    </div>
+  </div>
+</div>
+
+<script>
+  const PROVIDER_MODELS = {
+    deepseek: 'deepseek-chat', glm: 'glm-4', minimax: 'abab6.5s-chat', custom: ''
+  };
+
+  function settingsPage() {
+    return {
+      form: {provider: 'deepseek', base_url: '', api_key: '', model: 'deepseek-chat', temperature: 0.1},
+      saving: false, testing: false, saveMsg: '', error: '', testResult: null, testError: '',
+
+      async load() {
+        const r = await fetch('/llm/config');
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) {
+          const d = await r.json();
+          this.form = {...this.form, ...d, api_key: ''};
+        }
+      },
+      onProviderChange() {
+        this.form.model = PROVIDER_MODELS[this.form.provider] || '';
+      },
+      async save() {
+        this.saving = true; this.error = ''; this.saveMsg = '';
+        const body = {...this.form};
+        if (!body.api_key) delete body.api_key;
+        const r = await fetch('/llm/config', {
+          method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+        this.saving = false;
+        if (r.ok) { this.saveMsg = 'Saved!'; setTimeout(() => this.saveMsg = '', 2000); }
+        else { const d = await r.json(); this.error = d.detail || 'Save failed'; }
+      },
+      async testConn() {
+        this.testing = true; this.testResult = null; this.testError = '';
+        const r = await fetch('/llm/test', {method: 'POST'});
+        this.testing = false;
+        if (r.ok) { this.testResult = true; }
+        else { this.testResult = false; const d = await r.json(); this.testError = d.detail || 'Connection failed'; }
+      }
+    }
+  }
+</script>
+{% endblock %}
