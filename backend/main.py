@@ -4,6 +4,7 @@ from backend.database import init_db
 from backend.routers import auth as auth_router
 from backend.routers import criteria as criteria_router
 from backend.routers import llm as llm_router
+from backend.routers import tasks as tasks_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -14,3 +15,4 @@ app = FastAPI(lifespan=lifespan)
 app.include_router(auth_router.router)
 app.include_router(criteria_router.router)
 app.include_router(llm_router.router)
+app.include_router(tasks_router.router)
