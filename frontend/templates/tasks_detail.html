@@ -3,7 +3,7 @@
 {% block content %}
 <div x-data="taskDetailPage({{ task_id }})" x-init="init()">
   <div class="flex items-center gap-3 mb-6">
-    <a href="/tasks" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
+    <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
     <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
     <span :class="statusClass(task.status)"
           class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>

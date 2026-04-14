@@ -133,7 +133,7 @@
           }
           if (r.ok) {
             const d = await r.json();
-            window.location.href = '/tasks/' + d.id;
+            window.location.href = '/tasks/' + d.id + '/detail';
           } else {
             const d = await r.json();
             this.error = d.detail || 'Failed to create task';

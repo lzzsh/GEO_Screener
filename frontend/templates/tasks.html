@@ -14,7 +14,7 @@
 
   <div class="space-y-3">
     <template x-for="t in tasks" :key="t.id">
-      <a :href="'/tasks/' + t.id"
+      <a :href="'/tasks/' + t.id + '/detail'"
          class="block bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-blue-300 transition">
         <div class="flex items-center justify-between">
           <div>

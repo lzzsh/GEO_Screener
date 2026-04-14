@@ -34,7 +34,7 @@
             body: JSON.stringify({username: this.username, password: this.password})
           });
           this.loading = false;
-          if (r.ok) { window.location.href = '/tasks'; }
+          if (r.ok) { window.location.href = '/tasks-list'; }
           else { const d = await r.json(); this.error = d.detail || 'Login failed'; }
         }
       }

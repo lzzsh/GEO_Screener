@@ -23,15 +23,9 @@ app = FastAPI(title="GEO Search & Screening", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory=os.path.join(FRONTEND_DIR, "static")), name="static")
 
-app.include_router(auth_router.router)
-app.include_router(criteria_router.router)
-app.include_router(llm_router.router)
-app.include_router(tasks_router.router)
-app.include_router(geo_router.router)
-
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/tasks")
+    return RedirectResponse(url="/tasks-list")
 
 @app.get("/login")
 async def login_page(request: Request):
@@ -56,3 +50,9 @@ async def criteria_page(request: Request):
 @app.get("/settings")
 async def settings_page(request: Request):
     return templates.TemplateResponse("settings.html", {"request": request})
+
+app.include_router(auth_router.router)
+app.include_router(criteria_router.router)
+app.include_router(llm_router.router)
+app.include_router(tasks_router.router)
+app.include_router(geo_router.router)
