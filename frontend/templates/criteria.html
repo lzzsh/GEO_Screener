@@ -1,1 +1,109 @@
-<!DOCTYPE html><html><body>Criteria</body></html>
+{% extends "base.html" %}
+{% block title %}Criteria — GEO Screener{% endblock %}
+{% block content %}
+<div x-data="criteriaPage()" x-init="load()">
+  <h1 class="text-2xl font-bold mb-6">Screening Criteria</h1>
+
+  <div class="flex gap-6">
+    <!-- Left panel: list -->
+    <div class="w-64 flex-shrink-0">
+      <button @click="newCriteria()"
+              class="w-full mb-3 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
+        + New Criteria
+      </button>
+      <div class="space-y-1">
+        <template x-for="c in list" :key="c.id">
+          <button @click="select(c)"
+                  :class="selected && selected.id === c.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'"
+                  class="w-full text-left px-3 py-2.5 rounded-lg border text-sm hover:border-blue-300 transition">
+            <p class="font-medium truncate" x-text="c.name"></p>
+            <p class="text-xs text-gray-400 mt-0.5" x-text="new Date(c.updated_at).toLocaleDateString()"></p>
+          </button>
+        </template>
+      </div>
+    </div>
+
+    <!-- Right panel: editor -->
+    <div class="flex-1 bg-white rounded-xl border border-gray-200 p-6">
+      <div x-show="!selected" class="text-gray-400 text-sm text-center py-16">
+        Select a criteria template or create a new one.
+      </div>
+      <div x-show="selected">
+        <div x-show="saveMsg" class="mb-3 text-green-600 text-sm" x-text="saveMsg"></div>
+        <div x-show="error" class="mb-3 text-red-600 text-sm" x-text="error"></div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Name</label>
+          <input x-model="editName" type="text"
+                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium mb-1">Criteria Text</label>
+          <textarea x-model="editText" rows="12"
+                    placeholder="Describe your inclusion/exclusion criteria in natural language…"
+                    class="w-full border rounded-lg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+        </div>
+        <div class="flex gap-3">
+          <button @click="save()" :disabled="saving"
+                  class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+            <span x-text="saving ? 'Saving…' : 'Save'"></span>
+          </button>
+          <button @click="deleteCriteria()" x-show="selected && selected.id"
+                  class="text-red-500 hover:text-red-700 px-4 py-2 text-sm">Delete</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function criteriaPage() {
+    return {
+      list: [], selected: null, editName: '', editText: '',
+      saving: false, saveMsg: '', error: '',
+
+      async load() {
+        const r = await fetch('/criteria');
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        this.list = await r.json();
+      },
+      select(c) {
+        this.selected = c; this.editName = c.name; this.editText = c.criteria_text;
+        this.saveMsg = ''; this.error = '';
+      },
+      newCriteria() {
+        this.selected = {id: null, name: '', criteria_text: ''};
+        this.editName = ''; this.editText = ''; this.saveMsg = ''; this.error = '';
+      },
+      async save() {
+        this.saving = true; this.error = ''; this.saveMsg = '';
+        try {
+          const body = {name: this.editName, criteria_text: this.editText};
+          let r;
+          if (this.selected.id) {
+            r = await fetch('/criteria/' + this.selected.id, {
+              method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+          } else {
+            r = await fetch('/criteria', {
+              method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+          }
+          if (r.ok) {
+            const updated = await r.json();
+            this.selected = updated;
+            await this.load();
+            this.saveMsg = 'Saved!';
+            setTimeout(() => this.saveMsg = '', 2000);
+          } else {
+            const d = await r.json(); this.error = d.detail || 'Save failed';
+          }
+        } finally { this.saving = false; }
+      },
+      async deleteCriteria() {
+        if (!confirm('Delete this criteria template?')) return;
+        await fetch('/criteria/' + this.selected.id, {method: 'DELETE'});
+        this.selected = null;
+        await this.load();
+      }
+    }
+  }
+</script>
+{% endblock %}
