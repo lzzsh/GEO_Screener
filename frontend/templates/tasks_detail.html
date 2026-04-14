@@ -1,0 +1,140 @@
+{% extends "base.html" %}
+{% block title %}Task Detail — GEO Screener{% endblock %}
+{% block content %}
+<div x-data="taskDetailPage({{ task_id }})" x-init="init()">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/tasks" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
+    <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
+    <span :class="statusClass(task.status)"
+          class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>
+  </div>
+
+  <!-- Progress bar -->
+  <div x-show="task.status === 'running' || task.status === 'done'" class="mb-6">
+    <div class="flex justify-between text-xs text-gray-400 mb-1">
+      <span x-text="task.processed + ' / ' + task.total + ' processed'"></span>
+      <span x-text="task.total ? Math.round(task.processed/task.total*100) + '%' : '0%'"></span>
+    </div>
+    <div class="w-full bg-gray-100 rounded-full h-2">
+      <div class="bg-blue-500 h-2 rounded-full transition-all"
+           :style="'width:' + (task.total ? Math.round(task.processed/task.total*100) : 0) + '%'"></div>
+    </div>
+  </div>
+
+  <!-- Export button -->
+  <div class="flex justify-end mb-4">
+    <a :href="'/tasks/' + taskId + '/export'"
+       class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">
+      Export CSV
+    </a>
+  </div>
+
+  <!-- Results table -->
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Dataset</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Decision</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Confidence</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Summary</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Status</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        <template x-for="r in results" :key="r.id">
+          <tr @click="toggleExpand(r.id)" class="cursor-pointer hover:bg-gray-50">
+            <td class="px-4 py-3 font-mono text-xs" x-text="r.dataset_id"></td>
+            <td class="px-4 py-3">
+              <span :class="decisionClass(r.decision)"
+                    class="text-xs font-semibold px-2 py-0.5 rounded-full" x-text="r.decision || '—'"></span>
+            </td>
+            <td class="px-4 py-3 text-xs" x-text="r.confidence != null ? (r.confidence*100).toFixed(0)+'%' : '—'"></td>
+            <td class="px-4 py-3 text-xs text-gray-600 max-w-xs truncate" x-text="r.summary || r.error_msg || '—'"></td>
+            <td class="px-4 py-3">
+              <span :class="statusClass(r.status)"
+                    class="text-xs font-semibold px-2 py-0.5 rounded-full" x-text="r.status"></span>
+            </td>
+          </tr>
+          <!-- Expanded row -->
+          <tr x-show="expanded.has(r.id)" class="bg-blue-50">
+            <td colspan="5" class="px-4 py-3">
+              <p class="text-xs font-medium text-gray-500 mb-1">Title</p>
+              <p class="text-sm mb-3" x-text="r.title || '—'"></p>
+              <p class="text-xs font-medium text-gray-500 mb-1">Rule Checks</p>
+              <pre class="text-xs bg-white rounded p-2 overflow-x-auto" x-text="formatRuleChecks(r.rule_checks)"></pre>
+            </td>
+          </tr>
+        </template>
+      </tbody>
+    </table>
+    <div x-show="results.length === 0 && !loading" class="text-center text-gray-400 py-8 text-sm">No results yet.</div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <button @click="prevPage()" :disabled="page <= 1"
+            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">← Prev</button>
+    <span class="text-gray-400" x-text="'Page ' + page + ' of ' + totalPages"></span>
+    <button @click="nextPage()" :disabled="page >= totalPages"
+            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">Next →</button>
+  </div>
+</div>
+
+<script>
+  function taskDetailPage(taskId) {
+    return {
+      taskId, task: {}, results: [], loading: true,
+      page: 1, pageSize: 20, total: 0, expanded: new Set(),
+      pollTimer: null,
+
+      async init() {
+        await this.loadTask();
+        await this.loadResults();
+        if (this.task.status === 'running' || this.task.status === 'pending') {
+          this.pollTimer = setInterval(() => this.poll(), 3000);
+        }
+      },
+      async loadTask() {
+        const r = await fetch('/tasks/' + this.taskId);
+        if (r.ok) this.task = await r.json();
+      },
+      async loadResults() {
+        this.loading = true;
+        const r = await fetch(`/tasks/${this.taskId}/results?page=${this.page}&page_size=${this.pageSize}`);
+        if (r.ok) {
+          const d = await r.json();
+          this.results = d.items; this.total = d.total;
+        }
+        this.loading = false;
+      },
+      async poll() {
+        await this.loadTask();
+        await this.loadResults();
+        if (this.task.status !== 'running' && this.task.status !== 'pending') {
+          clearInterval(this.pollTimer);
+        }
+      },
+      get totalPages() { return Math.max(1, Math.ceil(this.total / this.pageSize)); },
+      async prevPage() { if (this.page > 1) { this.page--; await this.loadResults(); } },
+      async nextPage() { if (this.page < this.totalPages) { this.page++; await this.loadResults(); } },
+      toggleExpand(id) {
+        if (this.expanded.has(id)) this.expanded.delete(id);
+        else this.expanded.add(id);
+        this.expanded = new Set(this.expanded);
+      },
+      formatRuleChecks(raw) {
+        try { return JSON.stringify(JSON.parse(raw), null, 2); } catch { return raw || '—'; }
+      },
+      statusClass(s) {
+        return {pending:'bg-gray-100 text-gray-600',running:'bg-blue-100 text-blue-700',
+                done:'bg-green-100 text-green-700',error:'bg-red-100 text-red-700'}[s] || 'bg-gray-100 text-gray-600';
+      },
+      decisionClass(d) {
+        return {include:'bg-green-100 text-green-700',exclude:'bg-red-100 text-red-700',
+                uncertain:'bg-yellow-100 text-yellow-700'}[d] || 'bg-gray-100 text-gray-500';
+      }
+    }
+  }
+</script>
+{% endblock %}
