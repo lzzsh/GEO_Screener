@@ -17,7 +17,7 @@ def _find_col(headers: list[str], aliases: list[str]) -> Optional[str]:
 
 def parse_csv(content: bytes) -> list[dict]:
     """Parse CSV bytes into list of {id, title, description} dicts."""
-    text = content.decode("utf-8-sig")  # handle BOM
+    text = content.decode("utf-8-sig").lstrip("\ufeff")  # handle BOM (including double-BOM)
     reader = csv.DictReader(io.StringIO(text))
     headers = reader.fieldnames or []
 
