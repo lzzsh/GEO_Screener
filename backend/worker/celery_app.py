@@ -7,7 +7,7 @@ celery_app = Celery(
     "geo_search",
     broker=REDIS_URL,
     backend=REDIS_URL,
-    include=["worker.tasks"],
+    include=["backend.worker.tasks"],
 )
 celery_app.conf.update(
     task_serializer="json",
