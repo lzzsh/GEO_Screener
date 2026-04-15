@@ -12,6 +12,7 @@ from backend.routers import llm as llm_router
 from backend.routers import tasks as tasks_router
 from backend.routers import geo as geo_router
 from backend.routers import annotate as annotate_router
+from backend.routers import library as library_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 frontend_dir_value = os.getenv("FRONTEND_DIR", "frontend")
@@ -68,3 +69,12 @@ app.include_router(llm_router.router)
 app.include_router(tasks_router.router)
 app.include_router(geo_router.router)
 app.include_router(annotate_router.router)
+app.include_router(library_router.router)
+
+@app.get("/library")
+async def library_list_page(request: Request):
+    return templates.TemplateResponse(request, "library_list.html")
+
+@app.get("/library/{library_id}")
+async def library_detail_page(request: Request, library_id: int):
+    return templates.TemplateResponse(request, "library_detail.html", {"library_id": library_id})
