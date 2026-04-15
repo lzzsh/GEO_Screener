@@ -1,6 +1,36 @@
+# Git worktrees
 .worktrees/
+
+# Python
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+.venv/
+venv/
+*.egg-info/
+
+# Database
 *.db
+*.sqlite3
+
+# Environment
 .env
+.env.*
+
+# Logs
+*.log
+logs/
+.playwright-mcp/
+
+# Debug / merge artifacts
+.merge-backup/
+*.debug
+
+# Test cache
+.pytest_cache/
+.coverage
+htmlcov/
+
+# OS
+.DS_Store
