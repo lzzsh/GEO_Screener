@@ -63,3 +63,37 @@ async def test_geo_label_model(db):
     await db.commit()
     await db.refresh(label)
     assert label.source == "llm"
+
+@pytest.mark.asyncio
+async def test_library_model(db):
+    user = models.User(username="libuser", email="lib@test.com", hashed_password="h")
+    db.add(user)
+    await db.flush()
+    lib = models.Library(name="iPSC 2026", owner_id=user.id, search_query="iPSC AND human")
+    db.add(lib)
+    await db.commit()
+    await db.refresh(lib)
+    assert lib.id is not None
+    assert lib.name == "iPSC 2026"
+
+@pytest.mark.asyncio
+async def test_library_entry_model(db):
+    user = models.User(username="libuser2", email="lib2@test.com", hashed_password="h")
+    db.add(user)
+    await db.flush()
+    lib = models.Library(name="Test Lib", owner_id=user.id)
+    db.add(lib)
+    await db.flush()
+    entry = models.LibraryEntry(
+        library_id=lib.id, gse_id="GSE001", title="Study 1",
+        organism="Homo sapiens", n_samples=3, has_raw_data=True,
+        source="search", status="new"
+    )
+    db.add(entry)
+    await db.flush()
+    label = models.LibraryEntryLabel(entry_id=entry.id, key="起始细胞类型", value="iPSC", source="human")
+    db.add(label)
+    await db.commit()
+    await db.refresh(entry)
+    assert entry.id is not None
+    assert label.entry_id == entry.id

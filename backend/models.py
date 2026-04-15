@@ -93,3 +93,57 @@ class GeoLabel(Base):
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(String(16), default="llm")
     result: Mapped["ScreeningResult"] = relationship(back_populates="labels")
+
+class Library(Base):
+    __tablename__ = "libraries"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(256), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    search_query: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    entries: Mapped[list["LibraryEntry"]] = relationship(back_populates="library", cascade="all, delete-orphan")
+
+
+class LibraryEntry(Base):
+    __tablename__ = "library_entries"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    library_id: Mapped[int] = mapped_column(ForeignKey("libraries.id"), nullable=False)
+    gse_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    organism: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    n_samples: Mapped[int] = mapped_column(Integer, default=0)
+    gse_type: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    has_raw_data: Mapped[bool] = mapped_column(default=False)
+    summary: Mapped[str | None] = mapped_column(Text, nullable=True)
+    pubdate: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    update_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    status: Mapped[str] = mapped_column(String(32), default="new")
+    source: Mapped[str] = mapped_column(String(16), default="search")
+    task_id: Mapped[int | None] = mapped_column(ForeignKey("screening_tasks.id"), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    library: Mapped["Library"] = relationship(back_populates="entries")
+    labels: Mapped[list["LibraryEntryLabel"]] = relationship(back_populates="entry", cascade="all, delete-orphan")
+    samples: Mapped[list["LibraryEntrySample"]] = relationship(back_populates="entry", cascade="all, delete-orphan")
+
+
+class LibraryEntryLabel(Base):
+    __tablename__ = "library_entry_labels"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entry_id: Mapped[int] = mapped_column(ForeignKey("library_entries.id"), nullable=False)
+    key: Mapped[str] = mapped_column(String(128), nullable=False)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), default="human")
+    entry: Mapped["LibraryEntry"] = relationship(back_populates="labels")
+
+
+class LibraryEntrySample(Base):
+    __tablename__ = "library_entry_samples"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    entry_id: Mapped[int] = mapped_column(ForeignKey("library_entries.id"), nullable=False)
+    gsm_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    organism: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    biosample_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    cell_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    entry: Mapped["LibraryEntry"] = relationship(back_populates="samples")
