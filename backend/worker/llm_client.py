@@ -9,6 +9,22 @@ PROVIDER_DEFAULTS: dict[str, dict] = {
     "minimax":  {"base_url": "https://api.minimax.chat/v1", "model": "abab6.5s-chat"},
 }
 
+LABEL_PROMPT_TEMPLATE = """\
+You are a biomedical data annotator. Extract the following information from the GEO dataset description.
+
+## Dimensions to extract
+{dimensions}
+
+## Dataset Information
+ID: {dataset_id}
+Title: {title}
+Description: {description}
+
+## Instructions
+Return ONLY valid JSON where each key is a dimension name and the value is the extracted string (or null if not determinable).
+Example: {{"起始细胞类型": "iPSC", "分化体系": "2D", "数据平台": null}}
+"""
+
 SCREENING_PROMPT_TEMPLATE = """\
 You are a systematic review screener. Evaluate the following dataset against the criteria.
 
@@ -50,6 +66,19 @@ class LLMClient:
         response = await self._client.chat.completions.create(
             model=self.model,
             temperature=self.temperature,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.choices[0].message.content.strip()
+        return self._parse_json(raw)
+
+    async def extract_labels(self, dataset_id: str, title: str, description: str,
+                              dimensions: list[str]) -> dict:
+        prompt = LABEL_PROMPT_TEMPLATE.format(
+            dimensions="\n".join(f"- {d}" for d in dimensions),
+            dataset_id=dataset_id, title=title, description=description,
+        )
+        response = await self._client.chat.completions.create(
+            model=self.model, temperature=0,
             messages=[{"role": "user", "content": prompt}],
         )
         raw = response.choices[0].message.content.strip()

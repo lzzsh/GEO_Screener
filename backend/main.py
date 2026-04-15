@@ -11,6 +11,7 @@ from backend.routers import criteria as criteria_router
 from backend.routers import llm as llm_router
 from backend.routers import tasks as tasks_router
 from backend.routers import geo as geo_router
+from backend.routers import annotate as annotate_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 frontend_dir_value = os.getenv("FRONTEND_DIR", "frontend")
@@ -66,3 +67,4 @@ app.include_router(criteria_router.router)
 app.include_router(llm_router.router)
 app.include_router(tasks_router.router)
 app.include_router(geo_router.router)
+app.include_router(annotate_router.router)

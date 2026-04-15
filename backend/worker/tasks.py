@@ -4,7 +4,7 @@ import logging
 from sqlalchemy import select
 from backend.worker.celery_app import celery_app
 from backend.database import AsyncSessionLocal
-from backend.models import ScreeningTask, ScreeningResult, LLMConfig
+from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel
 from backend.worker.llm_client import LLMClient
 
 logger = logging.getLogger(__name__)
@@ -85,4 +85,46 @@ async def _screen_one(db, task: ScreeningTask, sr: ScreeningResult, llm: LLMClie
             task.excluded_count += 1
         elif sr.decision == "uncertain":
             task.uncertain_count += 1
+        await db.commit()
+
+
+@celery_app.task(bind=True, name="worker.tasks.run_annotation")
+def run_annotation(self, task_id: int):
+    _run(_run_annotation_async(task_id))
+
+
+async def _run_annotation_async(task_id: int):
+    import json as _json
+    async with AsyncSessionLocal() as db:
+        task = (await db.execute(select(ScreeningTask).where(ScreeningTask.id == task_id))).scalar_one_or_none()
+        if not task or not task.label_schema:
+            return
+        dimensions = _json.loads(task.label_schema)
+        cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))).scalar_one_or_none()
+        if not cfg or not cfg.api_key:
+            return
+        llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
+                        base_url=cfg.base_url, model=cfg.model, temperature=0)
+        results = (await db.execute(
+            select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalars().all()
+        for sr in results:
+            try:
+                extracted = await llm.extract_labels(
+                    dataset_id=sr.dataset_id, title=sr.title or "",
+                    description=sr.description or "", dimensions=dimensions,
+                )
+                for key, value in extracted.items():
+                    existing = (await db.execute(
+                        select(GeoLabel).where(GeoLabel.result_id == sr.id, GeoLabel.key == key)
+                    )).scalar_one_or_none()
+                    if existing and existing.source == "human":
+                        continue
+                    if existing:
+                        existing.value = str(value) if value is not None else None
+                    else:
+                        db.add(GeoLabel(result_id=sr.id, key=key,
+                                        value=str(value) if value is not None else None, source="llm"))
+            except Exception:
+                pass
         await db.commit()
