@@ -2309,3 +2309,1066 @@
   ```bash
   git tag v0.1.0 && echo "GEO Search & Screening Platform v0.1.0 complete"
   ```
+
+---
+
+## 2026-04-15 Plan Update: GSE/GSM Rich Data + Annotation System
+
+**Goal:** Enrich GEO data with full GSE metadata fields and GSM sub-samples, add a per-task LLM annotation system with human review, and redesign the task detail UI to match the reference layout.
+
+**Architecture:** Extend existing FastAPI + SQLAlchemy stack with two new tables (`GeoSample`, `GeoLabel`), a new Celery annotation task, and a new `/annotate` router. Frontend task detail page rebuilt as a rich table with expandable GSM panels and inline label editing.
+
+**Tech Stack:** Python 3.11, FastAPI, SQLAlchemy, Celery, httpx, Alpine.js, Jinja2, Tailwind CSS
+
+---
+
+### Task 18: Extend Data Models (GeoSample + GeoLabel + ScreeningResult fields)
+
+**Files:**
+- Modify: `backend/models.py`
+- Modify: `backend/tests/test_models.py`
+
+- [ ] Step 1: Write failing tests for new models:
+
+```python
+# backend/tests/test_models.py — add to existing file
+@pytest.mark.asyncio
+async def test_geo_sample_model(db):
+    user = models.User(username="u1", email="u1@test.com", hashed_password="h")
+    db.add(user)
+    await db.flush()
+    task = models.ScreeningTask(name="t", source="geo", criteria_text="", owner_id=user.id)
+    db.add(task)
+    await db.flush()
+    sr = models.ScreeningResult(task_id=task.id, dataset_id="GSE001")
+    db.add(sr)
+    await db.flush()
+    sample = models.GeoSample(
+        result_id=sr.id, gsm_id="GSM001", title="Sample 1",
+        organism="Homo sapiens", biosample_id="SAMN001", cell_count=None
+    )
+    db.add(sample)
+    await db.commit()
+    await db.refresh(sample)
+    assert sample.id is not None
+    assert sample.gsm_id == "GSM001"
+
+@pytest.mark.asyncio
+async def test_geo_label_model(db):
+    user = models.User(username="u2", email="u2@test.com", hashed_password="h")
+    db.add(user)
+    await db.flush()
+    task = models.ScreeningTask(name="t2", source="geo", criteria_text="", owner_id=user.id)
+    db.add(task)
+    await db.flush()
+    sr = models.ScreeningResult(task_id=task.id, dataset_id="GSE002")
+    db.add(sr)
+    await db.flush()
+    label = models.GeoLabel(result_id=sr.id, key="起始细胞类型", value="iPSC", source="llm")
+    db.add(label)
+    await db.commit()
+    await db.refresh(label)
+    assert label.source == "llm"
+```
+
+- [ ] Step 2: Run test to verify it fails:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_models.py -v -k "geo_sample or geo_label"
+```
+Expected: FAIL with `AttributeError: GeoSample` or similar.
+
+- [ ] Step 3: Add new models and fields to `backend/models.py`:
+
+```python
+# Add to ScreeningResult class (after existing fields):
+    gse_type: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    pubdate: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    update_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    has_raw_data: Mapped[bool] = mapped_column(default=False)
+    n_samples: Mapped[int] = mapped_column(Integer, default=0)
+    samples: Mapped[list["GeoSample"]] = relationship(back_populates="result", cascade="all, delete-orphan")
+    labels: Mapped[list["GeoLabel"]] = relationship(back_populates="result", cascade="all, delete-orphan")
+
+# Add to ScreeningTask class (after existing fields):
+    label_schema: Mapped[str | None] = mapped_column(Text, nullable=True)  # JSON array of dimension names
+
+# Add new classes at end of file:
+class GeoSample(Base):
+    __tablename__ = "geo_samples"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    result_id: Mapped[int] = mapped_column(ForeignKey("screening_results.id"), nullable=False)
+    gsm_id: Mapped[str] = mapped_column(String(64), nullable=False)
+    title: Mapped[str | None] = mapped_column(Text, nullable=True)
+    organism: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    biosample_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
+    cell_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    result: Mapped["ScreeningResult"] = relationship(back_populates="samples")
+
+class GeoLabel(Base):
+    __tablename__ = "geo_labels"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    result_id: Mapped[int] = mapped_column(ForeignKey("screening_results.id"), nullable=False)
+    key: Mapped[str] = mapped_column(String(128), nullable=False)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), default="llm")  # llm | human
+    result: Mapped["ScreeningResult"] = relationship(back_populates="labels")
+```
+
+- [ ] Step 4: Run tests:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_models.py -v
+```
+Expected: all PASS.
+
+- [ ] Step 5: Commit:
+```bash
+git add backend/models.py backend/tests/test_models.py
+git commit -m "feat: add GeoSample, GeoLabel models and enrich ScreeningResult fields"
+```
+
+---
+
+### Task 19: Enrich GEO Fetcher (full GSE fields + GSM sub-samples)
+
+**Files:**
+- Modify: `backend/worker/geo_fetcher.py`
+- Modify: `backend/tests/test_geo_fetcher.py`
+
+- [ ] Step 1: Write failing tests:
+
+```python
+# backend/tests/test_geo_fetcher.py — replace existing content
+import pytest
+from unittest.mock import AsyncMock, patch, MagicMock
+
+MOCK_ESEARCH = {"esearchresult": {"idlist": ["200305128"]}}
+
+MOCK_ESUMMARY = {
+    "result": {
+        "200305128": {
+            "accession": "GSE305128",
+            "title": "PreciCE study",
+            "summary": "iPSC differentiation study",
+            "taxon": "Homo sapiens",
+            "n_samples": 3,
+            "gse": "GSE305128",
+            "entrytype": "GSE",
+            "gdstype": "Expression profiling by high throughput sequencing",
+            "pdat": "2026/04/01",
+            "update_date": "2026/04/14",
+            "ftplink": "ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE305nnn/GSE305128/",
+        }
+    }
+}
+
+MOCK_GSM_ESEARCH = {"esearchresult": {"idlist": ["9162575", "9162576"]}}
+
+MOCK_GSM_ESUMMARY = {
+    "result": {
+        "9162575": {
+            "accession": "GSM9162575",
+            "title": "Experiment 23-001",
+            "organism": "Homo sapiens",
+            "biosample": "SAMN50564034",
+        },
+        "9162576": {
+            "accession": "GSM9162576",
+            "title": "Experiment 23-006",
+            "organism": "Homo sapiens",
+            "biosample": "SAMN50564033",
+        },
+    }
+}
+
+
+@pytest.mark.asyncio
+async def test_search_geo_returns_enriched_fields():
+    from backend.worker.geo_fetcher import search_geo
+
+    async def mock_get(url, params=None, **kwargs):
+        m = MagicMock()
+        m.raise_for_status = MagicMock()
+        if "esearch" in url:
+            m.json.return_value = MOCK_ESEARCH
+        else:
+            m.json.return_value = MOCK_ESUMMARY
+        return m
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=mock_get)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+        results = await search_geo("iPSC", retmax=10)
+
+    assert len(results) == 1
+    r = results[0]
+    assert r["id"] == "GSE305128"
+    assert r["gse_type"] == "Expression profiling by high throughput sequencing"
+    assert r["pubdate"] == "2026/04/01"
+    assert r["update_date"] == "2026/04/14"
+    assert r["has_raw_data"] is True
+    assert r["n_samples"] == 3
+
+
+@pytest.mark.asyncio
+async def test_fetch_gsm_samples():
+    from backend.worker.geo_fetcher import fetch_gsm_samples
+
+    async def mock_get(url, params=None, **kwargs):
+        m = MagicMock()
+        m.raise_for_status = MagicMock()
+        if "esearch" in url:
+            m.json.return_value = MOCK_GSM_ESEARCH
+        else:
+            m.json.return_value = MOCK_GSM_ESUMMARY
+        return m
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=mock_get)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+        samples = await fetch_gsm_samples("GSE305128")
+
+    assert len(samples) == 2
+    assert samples[0]["gsm_id"] == "GSM9162575"
+    assert samples[0]["organism"] == "Homo sapiens"
+    assert samples[0]["biosample_id"] == "SAMN50564034"
+```
+
+- [ ] Step 2: Run to verify failure:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_geo_fetcher.py -v
+```
+Expected: FAIL — `fetch_gsm_samples` not defined, missing fields in `search_geo`.
+
+- [ ] Step 3: Update `backend/worker/geo_fetcher.py`:
+
+```python
+import asyncio
+import httpx
+from typing import Optional
+
+NCBI_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
+MAX_RETRIES = 3
+ESUMMARY_BATCH_SIZE = 100
+
+
+async def search_geo(query: str, retmax: int = 20) -> list[dict]:
+    """Search GEO datasets. Returns enriched list with GSE metadata."""
+    ids = await _esearch("gds", query, retmax)
+    if not ids:
+        return []
+    return await _efetch_gse_summaries(ids)
+
+
+async def fetch_gsm_samples(gse_accession: str, retmax: int = 1000) -> list[dict]:
+    """Fetch all GSM samples for a given GSE accession."""
+    query = f"{gse_accession}[Accession] AND gsm[EntryType]"
+    ids = await _esearch("gds", query, retmax)
+    if not ids:
+        return []
+    return await _efetch_gsm_summaries(ids)
+
+
+async def _esearch(db: str, query: str, retmax: int) -> list[str]:
+    url = f"{NCBI_BASE}/esearch.fcgi"
+    params = {"db": db, "term": query, "retmax": retmax, "retmode": "json"}
+    async with httpx.AsyncClient(timeout=30) as client:
+        for attempt in range(MAX_RETRIES):
+            try:
+                r = await client.get(url, params=params)
+                r.raise_for_status()
+                return r.json()["esearchresult"]["idlist"]
+            except (httpx.HTTPStatusError, httpx.TimeoutException):
+                if attempt == MAX_RETRIES - 1:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+    return []
+
+
+async def _efetch_gse_summaries(ids: list[str]) -> list[dict]:
+    url = f"{NCBI_BASE}/esummary.fcgi"
+    async with httpx.AsyncClient(timeout=30) as client:
+        results = []
+        for start in range(0, len(ids), ESUMMARY_BATCH_SIZE):
+            batch_ids = ids[start:start + ESUMMARY_BATCH_SIZE]
+            params = {"db": "gds", "id": ",".join(batch_ids), "retmode": "json"}
+            for attempt in range(MAX_RETRIES):
+                try:
+                    r = await client.get(url, params=params)
+                    r.raise_for_status()
+                    data = r.json()
+                    for uid in batch_ids:
+                        doc = data.get("result", {}).get(uid, {})
+                        results.append({
+                            "id": doc.get("accession", uid),
+                            "title": doc.get("title", ""),
+                            "summary": doc.get("summary", ""),
+                            "organism": doc.get("taxon", ""),
+                            "n_samples": doc.get("n_samples", 0),
+                            "gse_type": doc.get("gdstype", ""),
+                            "pubdate": doc.get("pdat", ""),
+                            "update_date": doc.get("update_date", ""),
+                            "has_raw_data": bool(doc.get("ftplink", "")),
+                        })
+                    break
+                except (httpx.HTTPStatusError, httpx.TimeoutException):
+                    if attempt == MAX_RETRIES - 1:
+                        raise
+                    await asyncio.sleep(2 ** attempt)
+        return results
+
+
+async def _efetch_gsm_summaries(ids: list[str]) -> list[dict]:
+    url = f"{NCBI_BASE}/esummary.fcgi"
+    async with httpx.AsyncClient(timeout=30) as client:
+        results = []
+        for start in range(0, len(ids), ESUMMARY_BATCH_SIZE):
+            batch_ids = ids[start:start + ESUMMARY_BATCH_SIZE]
+            params = {"db": "gds", "id": ",".join(batch_ids), "retmode": "json"}
+            for attempt in range(MAX_RETRIES):
+                try:
+                    r = await client.get(url, params=params)
+                    r.raise_for_status()
+                    data = r.json()
+                    for uid in batch_ids:
+                        doc = data.get("result", {}).get(uid, {})
+                        results.append({
+                            "gsm_id": doc.get("accession", uid),
+                            "title": doc.get("title", ""),
+                            "organism": doc.get("organism", ""),
+                            "biosample_id": doc.get("biosample", ""),
+                        })
+                    break
+                except (httpx.HTTPStatusError, httpx.TimeoutException):
+                    if attempt == MAX_RETRIES - 1:
+                        raise
+                    await asyncio.sleep(2 ** attempt)
+        return results
+```
+
+- [ ] Step 4: Run tests:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_geo_fetcher.py -v
+```
+Expected: all PASS.
+
+- [ ] Step 5: Commit:
+```bash
+git add backend/worker/geo_fetcher.py backend/tests/test_geo_fetcher.py
+git commit -m "feat: enrich GEO fetcher with full GSE fields and GSM sub-sample fetching"
+```
+
+---
+
+### Task 20: Update Task Creation to Persist GSM Samples + New Fields
+
+**Files:**
+- Modify: `backend/routers/tasks.py`
+- Modify: `backend/tests/test_tasks_router.py`
+
+- [ ] Step 1: Write failing test:
+
+```python
+# Add to backend/tests/test_tasks_router.py
+@pytest.mark.asyncio
+async def test_create_geo_task_persists_gsm_samples(auth_client):
+    geo_candidates = [
+        {"id": "GSE001", "title": "Study one", "summary": "iPSC study",
+         "gse_type": "Expression profiling by high throughput sequencing",
+         "pubdate": "2026/01/01", "update_date": "2026/04/14",
+         "has_raw_data": True, "n_samples": 2, "organism": "Homo sapiens"},
+    ]
+    gsm_samples = [
+        {"gsm_id": "GSM001", "title": "Sample 1", "organism": "Homo sapiens", "biosample_id": "SAMN001"},
+        {"gsm_id": "GSM002", "title": "Sample 2", "organism": "Homo sapiens", "biosample_id": "SAMN002"},
+    ]
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=gsm_samples)), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        r = await auth_client.post("/tasks", params={
+            "name": "GSM Test",
+            "criteria_text": "human iPSC",
+            "source": "geo",
+            "search_query": "iPSC liver",
+            "label_schema": '["起始细胞类型","分化体系"]',
+        })
+    assert r.status_code == 201
+    task_id = r.json()["id"]
+
+    results_r = await auth_client.get(f"/tasks/{task_id}/results")
+    items = results_r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["gse_type"] == "Expression profiling by high throughput sequencing"
+    assert items[0]["has_raw_data"] is True
+    assert len(items[0]["samples"]) == 2
+    assert items[0]["samples"][0]["gsm_id"] == "GSM001"
+```
+
+- [ ] Step 2: Run to verify failure:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_tasks_router.py::test_create_geo_task_persists_gsm_samples -v
+```
+Expected: FAIL.
+
+- [ ] Step 3: Update `backend/routers/tasks.py` — add import and update `create_task`:
+
+At top, add:
+```python
+from backend.worker.geo_fetcher import search_geo, fetch_gsm_samples
+from backend.models import GeoSample
+```
+
+In `create_task`, replace the GEO candidate persistence block:
+```python
+    task.total = len(datasets)
+    task.candidate_count = len(datasets)
+    for d in datasets:
+        sr = ScreeningResult(
+            task_id=task.id,
+            dataset_id=d["id"],
+            title=d.get("title", ""),
+            description=d.get("description") or d.get("summary", ""),
+            keyword_matched=True,
+            gse_type=d.get("gse_type", ""),
+            pubdate=d.get("pubdate", ""),
+            update_date=d.get("update_date", ""),
+            has_raw_data=d.get("has_raw_data", False),
+            n_samples=d.get("n_samples", 0),
+        )
+        db.add(sr)
+        await db.flush()
+        # Fetch and persist GSM samples for GEO tasks
+        if source == "geo":
+            gsm_list = await fetch_gsm_samples(d["id"])
+            for gsm in gsm_list:
+                db.add(GeoSample(
+                    result_id=sr.id,
+                    gsm_id=gsm["gsm_id"],
+                    title=gsm.get("title", ""),
+                    organism=gsm.get("organism", ""),
+                    biosample_id=gsm.get("biosample_id", ""),
+                ))
+```
+
+Also add `label_schema` param to `create_task` signature:
+```python
+    label_schema: Optional[str] = Query(default=None),
+```
+And set it on the task:
+```python
+    task = ScreeningTask(
+        name=name, source=source, search_query=search_query,
+        criteria_text=criteria_text, owner_id=user.id,
+        label_schema=label_schema,
+    )
+```
+
+Update `get_results` to include samples in each item:
+```python
+from sqlalchemy.orm import selectinload
+# In get_results, change the query:
+rows_result = await db.execute(
+    base_query.options(selectinload(ScreeningResult.samples)).offset(offset).limit(page_size)
+)
+# In the items list comprehension, add:
+"samples": [{"gsm_id": s.gsm_id, "title": s.title, "organism": s.organism,
+              "biosample_id": s.biosample_id, "cell_count": s.cell_count} for s in r.samples],
+"gse_type": r.gse_type, "pubdate": r.pubdate, "update_date": r.update_date,
+"has_raw_data": r.has_raw_data, "n_samples": r.n_samples,
+```
+
+- [ ] Step 4: Run all task router tests:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_tasks_router.py -v
+```
+Expected: all PASS.
+
+- [ ] Step 5: Commit:
+```bash
+git add backend/routers/tasks.py backend/tests/test_tasks_router.py
+git commit -m "feat: persist GSM samples and enriched GSE fields on task creation"
+```
+
+---
+
+### Task 21: Annotation Router + LLM Label Extraction Worker
+
+**Files:**
+- Create: `backend/routers/annotate.py`
+- Modify: `backend/worker/tasks.py`
+- Modify: `backend/worker/llm_client.py`
+- Modify: `backend/main.py`
+- Create: `backend/tests/test_annotate_router.py`
+
+- [ ] Step 1: Write failing tests:
+
+```python
+# backend/tests/test_annotate_router.py
+import json
+import pytest
+from httpx import AsyncClient, ASGITransport
+from unittest.mock import AsyncMock, patch, MagicMock
+
+
+@pytest.fixture
+async def auth_client():
+    from backend.main import app
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        await client.post("/auth/register", json={"username": "annuser", "email": "ann@test.com", "password": "pw"})
+        r = await client.post("/auth/login", json={"username": "annuser", "password": "pw"})
+        client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
+        yield client
+
+
+@pytest.mark.asyncio
+async def test_get_labels_empty(auth_client):
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask, ScreeningResult
+    async with AsyncSessionLocal() as db:
+        task = ScreeningTask(name="ann_task", source="geo", criteria_text="", owner_id=1,
+                             label_schema='["起始细胞类型"]')
+        db.add(task)
+        await db.flush()
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE999")
+        db.add(sr)
+        await db.commit()
+        result_id = sr.id
+
+    r = await auth_client.get(f"/annotate/results/{result_id}/labels")
+    assert r.status_code == 200
+    assert r.json() == []
+
+
+@pytest.mark.asyncio
+async def test_upsert_label_human(auth_client):
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask, ScreeningResult
+    async with AsyncSessionLocal() as db:
+        task = ScreeningTask(name="ann_task2", source="geo", criteria_text="", owner_id=1,
+                             label_schema='["起始细胞类型"]')
+        db.add(task)
+        await db.flush()
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE998")
+        db.add(sr)
+        await db.commit()
+        result_id = sr.id
+
+    r = await auth_client.put(f"/annotate/results/{result_id}/labels", json={
+        "key": "起始细胞类型", "value": "iPSC"
+    })
+    assert r.status_code == 200
+    assert r.json()["source"] == "human"
+    assert r.json()["value"] == "iPSC"
+
+    # Second upsert updates value
+    r2 = await auth_client.put(f"/annotate/results/{result_id}/labels", json={
+        "key": "起始细胞类型", "value": "ESC"
+    })
+    assert r2.json()["value"] == "ESC"
+    assert r2.json()["source"] == "human"
+```
+
+- [ ] Step 2: Run to verify failure:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_annotate_router.py -v
+```
+Expected: FAIL — router not found.
+
+- [ ] Step 3: Create `backend/routers/annotate.py`:
+
+```python
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select
+from backend.database import get_db
+from backend.models import ScreeningResult, GeoLabel, ScreeningTask, User
+from backend.auth import get_current_user
+
+router = APIRouter(prefix="/annotate", tags=["annotate"])
+
+
+class LabelUpsert(BaseModel):
+    key: str
+    value: str | None = None
+
+
+@router.get("/results/{result_id}/labels")
+async def get_labels(result_id: int, db: AsyncSession = Depends(get_db),
+                     user: User = Depends(get_current_user)):
+    rows = (await db.execute(
+        select(GeoLabel).where(GeoLabel.result_id == result_id)
+    )).scalars().all()
+    return [{"id": r.id, "key": r.key, "value": r.value, "source": r.source} for r in rows]
+
+
+@router.put("/results/{result_id}/labels")
+async def upsert_label(result_id: int, body: LabelUpsert,
+                       db: AsyncSession = Depends(get_db),
+                       user: User = Depends(get_current_user)):
+    existing = (await db.execute(
+        select(GeoLabel).where(GeoLabel.result_id == result_id, GeoLabel.key == body.key)
+    )).scalar_one_or_none()
+    if existing:
+        existing.value = body.value
+        existing.source = "human"
+        await db.commit()
+        await db.refresh(existing)
+        return {"id": existing.id, "key": existing.key, "value": existing.value, "source": existing.source}
+    label = GeoLabel(result_id=result_id, key=body.key, value=body.value, source="human")
+    db.add(label)
+    await db.commit()
+    await db.refresh(label)
+    return {"id": label.id, "key": label.key, "value": label.value, "source": label.source}
+
+
+@router.post("/tasks/{task_id}/run")
+async def trigger_annotation(task_id: int, db: AsyncSession = Depends(get_db),
+                              user: User = Depends(get_current_user)):
+    task = (await db.execute(
+        select(ScreeningTask).where(ScreeningTask.id == task_id, ScreeningTask.owner_id == user.id)
+    )).scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Not found")
+    if not task.label_schema:
+        raise HTTPException(status_code=400, detail="No label_schema defined for this task")
+    from backend.worker.tasks import run_annotation
+    run_annotation.delay(task_id)
+    return {"status": "queued"}
+```
+
+- [ ] Step 4: Add `extract_labels` method to `backend/worker/llm_client.py`:
+
+```python
+LABEL_PROMPT_TEMPLATE = """\
+You are a biomedical data annotator. Extract the following information from the GEO dataset description.
+
+## Dimensions to extract
+{dimensions}
+
+## Dataset Information
+ID: {dataset_id}
+Title: {title}
+Description: {description}
+
+## Instructions
+Return ONLY valid JSON where each key is a dimension name and the value is the extracted string (or null if not determinable).
+Example: {{"起始细胞类型": "iPSC", "分化体系": "2D", "数据平台": null}}
+"""
+
+    async def extract_labels(self, dataset_id: str, title: str, description: str,
+                              dimensions: list[str]) -> dict:
+        prompt = LABEL_PROMPT_TEMPLATE.format(
+            dimensions="\n".join(f"- {d}" for d in dimensions),
+            dataset_id=dataset_id, title=title, description=description,
+        )
+        response = await self._client.chat.completions.create(
+            model=self.model, temperature=0,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.choices[0].message.content.strip()
+        return self._parse_json(raw)
+```
+
+- [ ] Step 5: Add `run_annotation` Celery task to `backend/worker/tasks.py`:
+
+```python
+@celery_app.task(bind=True, name="worker.tasks.run_annotation")
+def run_annotation(self, task_id: int):
+    _run(_run_annotation_async(task_id))
+
+async def _run_annotation_async(task_id: int):
+    import json
+    async with AsyncSessionLocal() as db:
+        task = (await db.execute(select(ScreeningTask).where(ScreeningTask.id == task_id))).scalar_one_or_none()
+        if not task or not task.label_schema:
+            return
+        dimensions = json.loads(task.label_schema)
+        cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))).scalar_one_or_none()
+        if not cfg or not cfg.api_key:
+            return
+        llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
+                        base_url=cfg.base_url, model=cfg.model, temperature=0)
+        results = (await db.execute(
+            select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalars().all()
+        for sr in results:
+            try:
+                extracted = await llm.extract_labels(
+                    dataset_id=sr.dataset_id, title=sr.title or "",
+                    description=sr.description or "", dimensions=dimensions,
+                )
+                for key, value in extracted.items():
+                    existing = (await db.execute(
+                        select(GeoLabel).where(GeoLabel.result_id == sr.id, GeoLabel.key == key)
+                    )).scalar_one_or_none()
+                    if existing and existing.source == "human":
+                        continue  # don't overwrite human labels
+                    if existing:
+                        existing.value = str(value) if value is not None else None
+                    else:
+                        db.add(GeoLabel(result_id=sr.id, key=key,
+                                        value=str(value) if value is not None else None, source="llm"))
+            except Exception:
+                pass
+        await db.commit()
+```
+
+Add missing import at top of `backend/worker/tasks.py`:
+```python
+from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel
+```
+
+- [ ] Step 6: Register router in `backend/main.py`:
+```python
+from backend.routers import annotate as annotate_router
+# after existing include_router calls:
+app.include_router(annotate_router.router)
+```
+
+- [ ] Step 7: Run tests:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_annotate_router.py -v
+```
+Expected: all PASS.
+
+- [ ] Step 8: Run full suite:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/ -q
+```
+Expected: all PASS.
+
+- [ ] Step 9: Commit:
+```bash
+git add backend/routers/annotate.py backend/worker/tasks.py backend/worker/llm_client.py backend/main.py backend/tests/test_annotate_router.py
+git commit -m "feat: annotation router with LLM label extraction and human upsert"
+```
+
+---
+
+### Task 22: Redesign Task Detail Frontend (GSE table + GSM panel + label editing)
+
+**Files:**
+- Modify: `frontend/templates/tasks_detail.html`
+- Modify: `frontend/templates/tasks_new.html`
+- Modify: `backend/tests/test_pages.py`
+
+- [ ] Step 1: Update `frontend/templates/tasks_new.html` — add `label_schema` input to the GEO tab:
+
+In the GEO search tab section, after the existing `<p class="text-xs text-gray-500">` paragraph, add:
+```html
+        <div x-show="source==='geo'" class="mt-3">
+          <label class="block text-sm font-medium mb-1">标注维度
+            <span class="text-gray-400 font-normal">（每行一个，LLM 将自动提取）</span>
+          </label>
+          <textarea x-model="labelSchema" rows="5"
+                    placeholder="起始细胞类型&#10;分化体系&#10;数据平台&#10;是否提供原始测序数据&#10;单细胞测序数据类型"
+                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"></textarea>
+        </div>
+```
+
+In the Alpine.js data object, add `labelSchema: ''` to the return object.
+
+In `submit()`, for the GEO branch, add `label_schema` to params:
+```javascript
+        const schemaArr = this.labelSchema.split('\n').map(s => s.trim()).filter(Boolean);
+        const params = new URLSearchParams({
+          name: this.name,
+          criteria_text: this.criteriaText,
+          source: 'geo',
+          search_query: this.geoQuery,
+          label_schema: JSON.stringify(schemaArr),
+        });
+```
+
+- [ ] Step 2: Replace `frontend/templates/tasks_detail.html` with the new layout:
+
+```html
+{% extends "base.html" %}
+{% block title %}Task Detail — GEO Screener{% endblock %}
+{% block content %}
+<div x-data="taskDetailPage({{ task_id }})" x-init="init()">
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
+    <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
+    <span :class="statusClass(task.status)"
+          class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>
+  </div>
+
+  <!-- Stats row -->
+  <div class="grid gap-3 md:grid-cols-5 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">GEO Candidates</p>
+      <p class="text-2xl font-semibold" x-text="task.candidate_count || 0"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Included</p>
+      <p class="text-2xl font-semibold text-green-700" x-text="task.included_count || 0"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Excluded</p>
+      <p class="text-2xl font-semibold text-red-700" x-text="task.excluded_count || 0"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Uncertain</p>
+      <p class="text-2xl font-semibold text-yellow-700" x-text="task.uncertain_count || 0"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center">
+      <button @click="triggerAnnotation()" :disabled="annotating"
+              class="w-full text-sm bg-blue-600 text-white rounded-lg py-1.5 hover:bg-blue-700 disabled:opacity-50">
+        <span x-text="annotating ? 'Running…' : 'Run LLM Annotation'"></span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Progress bar -->
+  <div x-show="task.status === 'running'" class="mb-6">
+    <div class="flex justify-between text-xs text-gray-400 mb-1">
+      <span x-text="task.processed + ' / ' + task.total + ' processed'"></span>
+      <span x-text="task.total ? Math.round(task.processed/task.total*100) + '%' : '0%'"></span>
+    </div>
+    <div class="w-full bg-gray-100 rounded-full h-2">
+      <div class="bg-blue-500 h-2 rounded-full transition-all"
+           :style="'width:' + (task.total ? Math.round(task.processed/task.total*100) : 0) + '%'"></div>
+    </div>
+  </div>
+
+  <!-- Toolbar -->
+  <div class="flex justify-between items-center mb-4 gap-3">
+    <div class="flex items-center gap-2">
+      <label class="text-sm text-gray-500">筛选</label>
+      <select x-model="decisionFilter" @change="reloadResults()"
+              class="border rounded-lg px-3 py-2 text-sm bg-white">
+        <option value="">全部候选</option>
+        <option value="include">Included</option>
+        <option value="exclude">Excluded</option>
+        <option value="uncertain">Uncertain</option>
+      </select>
+    </div>
+    <a :href="'/tasks/' + taskId + '/export'"
+       class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
+  </div>
+
+  <!-- GSE Table -->
+  <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+    <table class="w-full text-sm">
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-36">Accession</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">标题</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-20">Samples</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-48">实验类型</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">论文更新日期</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">最后更新</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">原始数据</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">决策</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">操作</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        <template x-for="r in results" :key="r.id">
+          <>
+          <tr @click="toggleExpand(r.id)" class="cursor-pointer hover:bg-gray-50">
+            <td class="px-4 py-3">
+              <p class="font-mono text-xs font-semibold text-blue-700" x-text="r.dataset_id"></p>
+              <p class="text-xs text-gray-400" x-text="r.n_samples ? r.n_samples + ' samples' : ''"></p>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-800 max-w-xs">
+              <p class="line-clamp-2" x-text="r.title || '—'"></p>
+            </td>
+            <td class="px-4 py-3 text-xs text-center" x-text="r.n_samples || '—'"></td>
+            <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-xs" x-text="r.gse_type || '—'"></td>
+            <td class="px-4 py-3 text-xs text-gray-500" x-text="r.pubdate || '—'"></td>
+            <td class="px-4 py-3 text-xs text-gray-500" x-text="r.update_date || '—'"></td>
+            <td class="px-4 py-3 text-center">
+              <span x-show="r.has_raw_data" class="text-green-500 text-base">✓</span>
+              <span x-show="!r.has_raw_data" class="text-gray-300 text-base">—</span>
+            </td>
+            <td class="px-4 py-3">
+              <span :class="decisionClass(r.decision)"
+                    class="text-xs font-semibold px-2 py-0.5 rounded-full" x-text="r.decision || '—'"></span>
+            </td>
+            <td class="px-4 py-3 text-xs text-blue-600 cursor-pointer"
+                x-text="expanded.has(r.id) ? '收起' : '展开'"></td>
+          </tr>
+          <!-- Expanded panel -->
+          <tr x-show="expanded.has(r.id)" class="bg-slate-50">
+            <td colspan="9" class="px-4 py-4">
+              <!-- Labels section -->
+              <div class="mb-4" x-data="labelEditor(r.id, r.dataset_id)" x-init="loadLabels()">
+                <p class="text-xs font-semibold text-gray-500 mb-2">标注</p>
+                <div class="flex flex-wrap gap-2 mb-2">
+                  <template x-for="lbl in labels" :key="lbl.key">
+                    <div class="flex items-center gap-1 bg-white border rounded-lg px-2 py-1 text-xs">
+                      <span class="text-gray-500" x-text="lbl.key + ':'"></span>
+                      <span x-show="!lbl.editing" :class="lbl.source==='human' ? 'text-blue-700 font-medium' : 'text-gray-700'"
+                            x-text="lbl.value || '—'"></span>
+                      <input x-show="lbl.editing" x-model="lbl.editVal" @keydown.enter="saveLabel(lbl)"
+                             @keydown.escape="lbl.editing=false"
+                             class="border-b border-blue-400 outline-none text-xs w-24 px-1" />
+                      <button @click="lbl.editing ? saveLabel(lbl) : (lbl.editing=true, lbl.editVal=lbl.value)"
+                              class="text-gray-400 hover:text-blue-600 ml-1"
+                              x-text="lbl.editing ? '✓' : '✎'"></button>
+                    </div>
+                  </template>
+                </div>
+              </div>
+              <!-- GSM samples table -->
+              <div x-show="r.samples && r.samples.length > 0">
+                <p class="text-xs font-semibold text-gray-500 mb-2">样本列表 (GSM)</p>
+                <table class="w-full text-xs border rounded-lg overflow-hidden">
+                  <thead class="bg-gray-100">
+                    <tr>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">样本名称</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">标题</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">生物体</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">生物样本关系ID</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y bg-white">
+                    <template x-for="s in r.samples" :key="s.gsm_id">
+                      <tr>
+                        <td class="px-3 py-2 font-mono text-blue-700" x-text="s.gsm_id"></td>
+                        <td class="px-3 py-2 text-gray-700" x-text="s.title || '—'"></td>
+                        <td class="px-3 py-2 text-gray-500" x-text="s.organism || '—'"></td>
+                        <td class="px-3 py-2 text-blue-600" x-text="s.biosample_id || '—'"></td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+              <!-- LLM summary -->
+              <div x-show="r.summary" class="mt-3">
+                <p class="text-xs font-semibold text-gray-500 mb-1">筛选摘要</p>
+                <p class="text-xs text-gray-600" x-text="r.summary"></p>
+              </div>
+            </td>
+          </tr>
+          </>
+        </template>
+      </tbody>
+    </table>
+    <div x-show="results.length === 0 && !loading" class="text-center text-gray-400 py-8 text-sm">暂无结果</div>
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-between items-center mt-4 text-sm">
+    <button @click="prevPage()" :disabled="page <= 1"
+            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">← Prev</button>
+    <span class="text-gray-400" x-text="'第 ' + page + ' 页，共 ' + totalPages + ' 页'"></span>
+    <button @click="nextPage()" :disabled="page >= totalPages"
+            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">Next →</button>
+  </div>
+</div>
+
+<script>
+  function taskDetailPage(taskId) {
+    return {
+      taskId, task: {}, results: [], loading: true,
+      page: 1, pageSize: 20, total: 0, expanded: new Set(),
+      decisionFilter: '', annotating: false, pollTimer: null,
+
+      async init() {
+        await this.loadTask();
+        await this.loadResults();
+        if (this.task.status === 'running' || this.task.status === 'pending') {
+          this.pollTimer = setInterval(() => this.poll(), 3000);
+        }
+      },
+      async loadTask() {
+        const r = await fetch('/tasks/' + this.taskId);
+        if (r.ok) this.task = await r.json();
+      },
+      async loadResults() {
+        this.loading = true;
+        const params = new URLSearchParams({page: this.page, page_size: this.pageSize});
+        if (this.decisionFilter) params.set('decision', this.decisionFilter);
+        const r = await fetch(`/tasks/${this.taskId}/results?` + params.toString());
+        if (r.ok) { const d = await r.json(); this.results = d.items; this.total = d.total; }
+        this.loading = false;
+      },
+      async reloadResults() { this.page = 1; await this.loadResults(); },
+      async poll() {
+        await this.loadTask();
+        await this.loadResults();
+        if (this.task.status !== 'running' && this.task.status !== 'pending') clearInterval(this.pollTimer);
+      },
+      async triggerAnnotation() {
+        this.annotating = true;
+        await fetch(`/annotate/tasks/${this.taskId}/run`, {method: 'POST'});
+        this.annotating = false;
+      },
+      get totalPages() { return Math.max(1, Math.ceil(this.total / this.pageSize)); },
+      async prevPage() { if (this.page > 1) { this.page--; await this.loadResults(); } },
+      async nextPage() { if (this.page < this.totalPages) { this.page++; await this.loadResults(); } },
+      toggleExpand(id) {
+        if (this.expanded.has(id)) this.expanded.delete(id); else this.expanded.add(id);
+        this.expanded = new Set(this.expanded);
+      },
+      statusClass(s) {
+        return {pending:'bg-gray-100 text-gray-600',running:'bg-blue-100 text-blue-700',
+                done:'bg-green-100 text-green-700',error:'bg-red-100 text-red-700'}[s]||'bg-gray-100 text-gray-600';
+      },
+      decisionClass(d) {
+        return {include:'bg-green-100 text-green-700',exclude:'bg-red-100 text-red-700',
+                uncertain:'bg-yellow-100 text-yellow-700'}[d]||'bg-gray-100 text-gray-500';
+      }
+    }
+  }
+
+  function labelEditor(resultId, datasetId) {
+    return {
+      resultId, datasetId, labels: [],
+      async loadLabels() {
+        const r = await fetch(`/annotate/results/${this.resultId}/labels`);
+        if (r.ok) {
+          const data = await r.json();
+          this.labels = data.map(l => ({...l, editing: false, editVal: l.value}));
+        }
+      },
+      async saveLabel(lbl) {
+        const r = await fetch(`/annotate/results/${this.resultId}/labels`, {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({key: lbl.key, value: lbl.editVal}),
+        });
+        if (r.ok) {
+          const updated = await r.json();
+          lbl.value = updated.value;
+          lbl.source = updated.source;
+          lbl.editing = false;
+        }
+      }
+    }
+  }
+</script>
+{% endblock %}
+```
+
+- [ ] Step 3: Run page tests:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/test_pages.py -v
+```
+Expected: all PASS.
+
+- [ ] Step 4: Run full suite:
+```bash
+PYTHONPATH=. conda run -n autofigure pytest backend/tests/ -q
+```
+Expected: all PASS, 0 warnings about TemplateResponse.
+
+- [ ] Step 5: Commit:
+```bash
+git add frontend/templates/tasks_detail.html frontend/templates/tasks_new.html
+git commit -m "feat: redesign task detail with GSE table, GSM panel, and inline label editing"
+```
+
+- [ ] Step 6: Final commit and push:
+```bash
+git push
+```
