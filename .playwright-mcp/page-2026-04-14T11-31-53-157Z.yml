@@ -1,8 +1,0 @@
-- generic [ref=e2]:
-  - heading "GEO Screener" [level=1] [ref=e3]
-  - generic [ref=e4]:
-    - generic [ref=e5]: Username
-    - textbox [ref=e6]
-    - generic [ref=e7]: Password
-    - textbox [ref=e8]
-    - button "Sign in" [ref=e9] [cursor=pointer]
