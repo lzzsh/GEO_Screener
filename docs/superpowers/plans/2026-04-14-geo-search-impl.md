@@ -258,6 +258,45 @@
   from jose import JWTError, jwt
   from passlib.context import CryptContext
   from fastapi import Depends, HTTPException, status, Cookie
+```
+
+---
+
+## 2026-04-14 Plan Update: GEO Candidate Workflow Revision
+
+**Goal:** Change GEO tasks from "manually select GEO IDs then screen datasets" to "search GEO by literature keywords, persist all GEO candidates, and optionally screen candidate descriptions with natural-language criteria while preserving pre/post-screening visibility."
+
+**Architecture:** Keep the existing FastAPI + Celery task flow, but create GEO tasks from `search_query` instead of selected IDs. Persist every GEO search hit as a `ScreeningResult`, then use the worker to apply optional natural-language screening against each candidate's `title + description/summary`. Update the task detail page to show candidate counts and post-screening counts together.
+
+**Tech Stack:** Python 3.11, FastAPI, SQLAlchemy, Celery, httpx, Alpine.js, Jinja2, Tailwind CSS
+
+### Task 16: Revise GEO Task Semantics
+
+**Files:**
+- Modify: `backend/models.py`
+- Modify: `backend/routers/tasks.py`
+- Modify: `backend/worker/tasks.py`
+- Modify: `backend/worker/geo_fetcher.py`
+- Modify: `backend/tests/test_tasks_router.py`
+- Modify: `backend/tests/test_e2e_smoke.py`
+
+- [ ] Step 1: Write failing tests for `search_query`-driven task creation, candidate persistence, and optional screening skip behavior.
+- [ ] Step 2: Update task/result models to store `search_query`, candidate counts, per-result descriptions, and screening counters.
+- [ ] Step 3: Change task creation so GEO tasks search GEO immediately from the query and persist every returned candidate record.
+- [ ] Step 4: Change worker screening so it evaluates candidate `title + description` and updates include/exclude/uncertain counters.
+- [ ] Step 5: Run `PYTHONPATH=. conda run -n autofigure pytest -q backend/tests/test_tasks_router.py backend/tests/test_e2e_smoke.py` and commit.
+
+### Task 17: Update Task UI for Pre/Post Screening Visibility
+
+**Files:**
+- Modify: `frontend/templates/tasks_new.html`
+- Modify: `frontend/templates/tasks_detail.html`
+- Modify: `backend/tests/test_pages.py`
+
+- [ ] Step 1: Write failing tests or assertions for the new page routes/data expectations where practical.
+- [ ] Step 2: Replace manual GEO checkbox selection with keyword search preview plus optional natural-language criteria entry.
+- [ ] Step 3: Update task detail to show candidate count, included/excluded/uncertain counters, and decision-based filtering while keeping all candidates visible.
+- [ ] Step 4: Run `PYTHONPATH=. conda run -n autofigure pytest -q` and commit.
   from fastapi.security import OAuth2PasswordBearer
   from sqlalchemy.ext.asyncio import AsyncSession
   from sqlalchemy import select
@@ -2270,4 +2309,3 @@
   ```bash
   git tag v0.1.0 && echo "GEO Search & Screening Platform v0.1.0 complete"
   ```
-

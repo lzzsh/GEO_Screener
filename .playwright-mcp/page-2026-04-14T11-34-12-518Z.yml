@@ -1,0 +1,35 @@
+- generic [active] [ref=e1]:
+  - navigation [ref=e2]:
+    - link "GEO Screener" [ref=e3] [cursor=pointer]:
+      - /url: /tasks
+    - generic [ref=e4]:
+      - link "Tasks" [ref=e5] [cursor=pointer]:
+        - /url: /tasks
+      - link "Criteria" [ref=e6] [cursor=pointer]:
+        - /url: /criteria
+      - link "Settings" [ref=e7] [cursor=pointer]:
+        - /url: /settings
+      - button "Logout" [ref=e8] [cursor=pointer]
+  - main [ref=e9]:
+    - generic [ref=e10]:
+      - heading "LLM Settings" [level=1] [ref=e11]
+      - generic [ref=e12]:
+        - generic [ref=e13]:
+          - generic [ref=e14]: Provider
+          - combobox [ref=e15]:
+            - option "DeepSeek" [selected]
+            - option "GLM (Zhipu)"
+            - option "MiniMax"
+            - option "Custom (OpenAI-compatible)"
+        - generic [ref=e16]:
+          - generic [ref=e17]: API Key
+          - textbox "sk-…" [ref=e18]: admin123
+        - generic [ref=e19]:
+          - generic [ref=e20]: Model
+          - textbox "e.g. deepseek-chat" [ref=e21]: deepseek-chat
+        - generic [ref=e22]:
+          - generic [ref=e23]: Temperature (0.1)
+          - slider [ref=e24]: "0.1"
+        - generic [ref=e25]:
+          - button "Save" [ref=e26] [cursor=pointer]
+          - button "Test Connection" [ref=e27] [cursor=pointer]

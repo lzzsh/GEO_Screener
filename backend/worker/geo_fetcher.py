@@ -4,6 +4,7 @@ from typing import Optional
 
 NCBI_BASE = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
 MAX_RETRIES = 3
+ESUMMARY_BATCH_SIZE = 100
 
 async def search_geo(query: str, retmax: int = 20) -> list[dict]:
     """Search GEO datasets via NCBI eutils. Returns list of {id, title, summary}."""
@@ -29,26 +30,28 @@ async def _esearch(query: str, retmax: int) -> list[str]:
 
 async def _efetch_summaries(ids: list[str]) -> list[dict]:
     url = f"{NCBI_BASE}/esummary.fcgi"
-    params = {"db": "gds", "id": ",".join(ids), "retmode": "json"}
     async with httpx.AsyncClient(timeout=30) as client:
-        for attempt in range(MAX_RETRIES):
-            try:
-                r = await client.get(url, params=params)
-                r.raise_for_status()
-                data = r.json()
-                results = []
-                for uid in ids:
-                    doc = data.get("result", {}).get(uid, {})
-                    results.append({
-                        "id": doc.get("accession", uid),
-                        "title": doc.get("title", ""),
-                        "summary": doc.get("summary", ""),
-                        "organism": doc.get("taxon", ""),
-                        "n_samples": doc.get("n_samples", 0),
-                    })
-                return results
-            except (httpx.HTTPStatusError, httpx.TimeoutException):
-                if attempt == MAX_RETRIES - 1:
-                    raise
-                await asyncio.sleep(2 ** attempt)
-    return []
+        results = []
+        for start in range(0, len(ids), ESUMMARY_BATCH_SIZE):
+            batch_ids = ids[start:start + ESUMMARY_BATCH_SIZE]
+            params = {"db": "gds", "id": ",".join(batch_ids), "retmode": "json"}
+            for attempt in range(MAX_RETRIES):
+                try:
+                    r = await client.get(url, params=params)
+                    r.raise_for_status()
+                    data = r.json()
+                    for uid in batch_ids:
+                        doc = data.get("result", {}).get(uid, {})
+                        results.append({
+                            "id": doc.get("accession", uid),
+                            "title": doc.get("title", ""),
+                            "summary": doc.get("summary", ""),
+                            "organism": doc.get("taxon", ""),
+                            "n_samples": doc.get("n_samples", 0),
+                        })
+                    break
+                except (httpx.HTTPStatusError, httpx.TimeoutException):
+                    if attempt == MAX_RETRIES - 1:
+                        raise
+                    await asyncio.sleep(2 ** attempt)
+        return results

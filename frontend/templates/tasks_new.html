@@ -14,15 +14,17 @@
     </div>
 
     <div>
-      <label class="block text-sm font-medium mb-1">Screening Criteria</label>
+      <label class="block text-sm font-medium mb-1">Natural-Language Screening Criteria
+        <span class="text-gray-400 font-normal">(Optional)</span>
+      </label>
       <select x-model="criteriaId" @change="onCriteriaSelect()"
               class="w-full border rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
-        <option value="">— Select template or write custom —</option>
+        <option value="">— Optional: select template or write custom —</option>
         <template x-for="c in criteriaList" :key="c.id">
           <option :value="c.id" x-text="c.name"></option>
         </template>
       </select>
-      <textarea x-model="criteriaText" rows="5" placeholder="Enter criteria in natural language…"
+      <textarea x-model="criteriaText" rows="5" placeholder="Optional: describe how to screen GEO candidate descriptions…"
                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"></textarea>
     </div>
 
@@ -46,27 +48,27 @@
       <!-- GEO search tab -->
       <div x-show="source==='geo'" class="space-y-3">
         <div class="flex gap-2">
-          <input x-model="geoQuery" type="text" placeholder="Search GEO (e.g. cancer RNA-seq human)"
+          <input x-model="geoQuery" type="text" placeholder="Enter literature keywords to search GEO candidates"
                  @keydown.enter="searchGEO()"
                  class="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <button @click="searchGEO()" :disabled="geoLoading"
                   class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-            Search
+            Preview Candidates
           </button>
         </div>
+        <p class="text-xs text-gray-500">
+          The task will save all GEO keyword matches first, then optionally screen each candidate description with your natural-language criteria.
+        </p>
         <div x-show="geoResults.length > 0" class="border rounded-lg divide-y max-h-64 overflow-y-auto">
           <template x-for="r in geoResults" :key="r.id">
-            <label class="flex items-start gap-3 px-4 py-3 hover:bg-gray-50 cursor-pointer">
-              <input type="checkbox" :value="r.id" x-model="selectedGeoIds" class="mt-1" />
-              <div>
-                <p class="text-sm font-medium" x-text="r.id + ' — ' + r.title"></p>
-                <p class="text-xs text-gray-400 line-clamp-2" x-text="r.summary"></p>
-              </div>
-            </label>
+            <div class="px-4 py-3 hover:bg-gray-50">
+              <p class="text-sm font-medium" x-text="r.id + ' — ' + r.title"></p>
+              <p class="text-xs text-gray-400 line-clamp-2" x-text="r.summary"></p>
+            </div>
           </template>
         </div>
-        <p x-show="selectedGeoIds.length > 0" class="text-xs text-gray-400"
-           x-text="selectedGeoIds.length + ' datasets selected'"></p>
+        <p x-show="geoResults.length > 0" class="text-xs text-gray-400"
+           x-text="geoResults.length + ' GEO candidates will be saved before criteria screening'"></p>
       </div>
     </div>
 
@@ -82,7 +84,7 @@
     return {
       name: '', criteriaId: '', criteriaText: '', criteriaList: [],
       source: 'csv', csvFile: null, csvRows: 0,
-      geoQuery: '', geoResults: [], geoLoading: false, selectedGeoIds: [],
+      geoQuery: '', geoResults: [], geoLoading: false,
       submitting: false, error: '',
 
       async loadCriteria() {
@@ -111,8 +113,8 @@
         if (r.ok) this.geoResults = await r.json();
       },
       async submit() {
-        if (!this.name.trim() || !this.criteriaText.trim()) {
-          this.error = 'Task name and criteria are required.'; return;
+        if (!this.name.trim()) {
+          this.error = 'Task name is required.'; return;
         }
         this.submitting = true; this.error = '';
         try {
@@ -126,8 +128,10 @@
             r = await fetch('/tasks', {method: 'POST', body: fd});
           } else {
             const params = new URLSearchParams({
-              name: this.name, criteria_text: this.criteriaText,
-              source: 'geo', geo_ids: this.selectedGeoIds.join(',')
+              name: this.name,
+              criteria_text: this.criteriaText,
+              source: 'geo',
+              search_query: this.geoQuery
             });
             r = await fetch('/tasks?' + params, {method: 'POST'});
           }

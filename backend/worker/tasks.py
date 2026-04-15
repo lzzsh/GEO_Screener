@@ -51,7 +51,7 @@ async def _screen_one(db, task: ScreeningTask, sr: ScreeningResult, llm: LLMClie
         result = await llm.screen_dataset(
             dataset_id=sr.dataset_id,
             title=sr.title or "",
-            description="",
+            description=sr.description or "",
             criteria_text=task.criteria_text,
         )
         sr.decision = result.get("decision")
@@ -62,7 +62,7 @@ async def _screen_one(db, task: ScreeningTask, sr: ScreeningResult, llm: LLMClie
     except json.JSONDecodeError:
         try:
             result = await llm.screen_dataset(
-                dataset_id=sr.dataset_id, title=sr.title or "", description="",
+                dataset_id=sr.dataset_id, title=sr.title or "", description=sr.description or "",
                 criteria_text=task.criteria_text + "\n\nIMPORTANT: Return ONLY raw JSON, no markdown.",
             )
             sr.decision = result.get("decision")
@@ -79,4 +79,10 @@ async def _screen_one(db, task: ScreeningTask, sr: ScreeningResult, llm: LLMClie
         logger.warning("LLM error for %s: %s", sr.dataset_id, e)
     finally:
         task.processed += 1
+        if sr.decision == "include":
+            task.included_count += 1
+        elif sr.decision == "exclude":
+            task.excluded_count += 1
+        elif sr.decision == "uncertain":
+            task.uncertain_count += 1
         await db.commit()

@@ -3,9 +3,12 @@
 {% block content %}
 <div x-data="tasksPage()" x-init="load()">
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold">Screening Tasks</h1>
-    <a href="/tasks/new" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
-      + New Task
+    <div>
+      <h1 class="text-2xl font-bold">Screening Tasks</h1>
+      <p class="text-sm text-gray-500 mt-1">Tasks are now created from the Search workspace after you inspect GEO candidates.</p>
+    </div>
+    <a href="/search" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+      Go to Search
     </a>
   </div>
 
@@ -19,12 +22,14 @@
         <div class="flex items-center justify-between">
           <div>
             <p class="font-medium" x-text="t.name"></p>
+            <p class="text-xs text-blue-600 mt-1" x-show="t.search_query" x-text="t.search_query"></p>
             <p class="text-xs text-gray-400 mt-1" x-text="new Date(t.created_at).toLocaleString()"></p>
           </div>
           <div class="text-right">
             <span :class="statusClass(t.status)"
                   class="text-xs font-semibold px-2 py-1 rounded-full" x-text="t.status"></span>
-            <p class="text-xs text-gray-400 mt-1" x-text="t.processed + ' / ' + t.total"></p>
+            <p class="text-xs text-gray-400 mt-1" x-text="`${t.processed} / ${t.total} screened`"></p>
+            <p class="text-xs text-gray-400 mt-1" x-text="`${t.candidate_count || t.total} candidates · ${t.included_count || 0} included`"></p>
           </div>
         </div>
         <div x-show="t.status === 'running'" class="mt-3">

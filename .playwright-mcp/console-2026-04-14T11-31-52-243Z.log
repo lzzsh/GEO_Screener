@@ -1,0 +1,3 @@
+[     582ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[     734ms] [VERBOSE] [DOM] Input elements should have autocomplete attributes (suggested: "current-password"): (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8001/login:0
+[     742ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8001/favicon.ico:0

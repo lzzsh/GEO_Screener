@@ -49,14 +49,25 @@ async def test_full_workflow(client):
     r = await client.put("/llm/config", json={"provider": "deepseek", "api_key": "sk-fake", "model": "deepseek-chat"})
     assert r.status_code == 200
 
+    geo_candidates = [
+        {"id": "GSE001", "title": "Study one", "summary": "Human RCT in liver tissue"},
+        {"id": "GSE002", "title": "Study two", "summary": "Mouse exploratory study"},
+        {"id": "GSE003", "title": "Study three", "summary": "Human validation cohort"},
+    ]
+
     # 6. Create GEO task (mock Celery dispatch)
-    with patch("backend.worker.tasks.run_screening.delay"):
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.worker.tasks.run_screening.delay"):
         r = await client.post("/tasks", params={
-            "name": "Smoke Test Task", "criteria_text": "Must be human RCT",
-            "source": "geo", "geo_ids": "GSE001,GSE002,GSE003"})
+            "name": "Smoke Test Task",
+            "criteria_text": "Must be human RCT",
+            "source": "geo",
+            "search_query": "human RCT liver",
+        })
     assert r.status_code == 201
     task_id = r.json()["id"]
     assert r.json()["total"] == 3
+    assert r.json()["candidate_count"] == 3
 
     # 7. Simulate worker running (call internal async function directly)
     mock_resp = _mock_llm_response()
@@ -68,6 +79,8 @@ async def test_full_workflow(client):
     r = await client.get(f"/tasks/{task_id}")
     assert r.json()["status"] == "done"
     assert r.json()["processed"] == 3
+    assert r.json()["candidate_count"] == 3
+    assert r.json()["included_count"] == 3
 
     # 9. Fetch results
     r = await client.get(f"/tasks/{task_id}/results")
@@ -75,6 +88,7 @@ async def test_full_workflow(client):
     items = r.json()["items"]
     assert len(items) == 3
     assert all(i["decision"] == "include" for i in items)
+    assert all(i["keyword_matched"] is True for i in items)
 
     # 10. Export CSV
     r = await client.get(f"/tasks/{task_id}/export")

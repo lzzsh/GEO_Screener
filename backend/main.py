@@ -1,5 +1,6 @@
 import os
 from contextlib import asynccontextmanager
+from pathlib import Path
 from fastapi import FastAPI, Request
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
@@ -11,8 +12,13 @@ from backend.routers import llm as llm_router
 from backend.routers import tasks as tasks_router
 from backend.routers import geo as geo_router
 
-FRONTEND_DIR = os.getenv("FRONTEND_DIR", "../frontend")
-templates = Jinja2Templates(directory=os.path.join(FRONTEND_DIR, "templates"))
+BASE_DIR = Path(__file__).resolve().parent.parent
+frontend_dir_value = os.getenv("FRONTEND_DIR", "frontend")
+FRONTEND_DIR = Path(frontend_dir_value)
+if not FRONTEND_DIR.is_absolute():
+    FRONTEND_DIR = (BASE_DIR / FRONTEND_DIR).resolve()
+
+templates = Jinja2Templates(directory=str(FRONTEND_DIR / "templates"))
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -21,11 +27,15 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title="GEO Search & Screening", lifespan=lifespan)
 
-app.mount("/static", StaticFiles(directory=os.path.join(FRONTEND_DIR, "static")), name="static")
+app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
 
 @app.get("/")
 async def root():
-    return RedirectResponse(url="/tasks-list")
+    return RedirectResponse(url="/search")
+
+@app.get("/search")
+async def search_page(request: Request):
+    return templates.TemplateResponse("search.html", {"request": request})
 
 @app.get("/login")
 async def login_page(request: Request):

@@ -9,6 +9,25 @@
           class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>
   </div>
 
+  <div class="grid gap-3 md:grid-cols-4 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">GEO Candidates</p>
+      <p class="text-2xl font-semibold" x-text="task.candidate_count || 0"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Included</p>
+      <p class="text-2xl font-semibold text-green-700" x-text="task.included_count || 0"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Excluded</p>
+      <p class="text-2xl font-semibold text-red-700" x-text="task.excluded_count || 0"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Uncertain</p>
+      <p class="text-2xl font-semibold text-yellow-700" x-text="task.uncertain_count || 0"></p>
+    </div>
+  </div>
+
   <!-- Progress bar -->
   <div x-show="task.status === 'running' || task.status === 'done'" class="mb-6">
     <div class="flex justify-between text-xs text-gray-400 mb-1">
@@ -22,7 +41,17 @@
   </div>
 
   <!-- Export button -->
-  <div class="flex justify-end mb-4">
+  <div class="flex justify-between items-center mb-4 gap-3">
+    <div class="flex items-center gap-2">
+      <label class="text-sm text-gray-500">Criteria Match</label>
+      <select x-model="decisionFilter" @change="reloadResults()"
+              class="border rounded-lg px-3 py-2 text-sm bg-white">
+        <option value="">All candidates</option>
+        <option value="include">Included only</option>
+        <option value="exclude">Excluded only</option>
+        <option value="uncertain">Uncertain only</option>
+      </select>
+    </div>
     <a :href="'/tasks/' + taskId + '/export'"
        class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">
       Export CSV
@@ -35,6 +64,7 @@
       <thead class="bg-gray-50 border-b">
         <tr>
           <th class="text-left px-4 py-3 font-medium text-gray-600">Dataset</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Keyword Match</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">Decision</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">Confidence</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">Summary</th>
@@ -45,6 +75,10 @@
         <template x-for="r in results" :key="r.id">
           <tr @click="toggleExpand(r.id)" class="cursor-pointer hover:bg-gray-50">
             <td class="px-4 py-3 font-mono text-xs" x-text="r.dataset_id"></td>
+            <td class="px-4 py-3">
+              <span class="text-xs font-semibold px-2 py-0.5 rounded-full bg-blue-50 text-blue-700"
+                    x-text="r.keyword_matched ? 'matched' : '—'"></span>
+            </td>
             <td class="px-4 py-3">
               <span :class="decisionClass(r.decision)"
                     class="text-xs font-semibold px-2 py-0.5 rounded-full" x-text="r.decision || '—'"></span>
@@ -58,9 +92,11 @@
           </tr>
           <!-- Expanded row -->
           <tr x-show="expanded.has(r.id)" class="bg-blue-50">
-            <td colspan="5" class="px-4 py-3">
+            <td colspan="6" class="px-4 py-3">
               <p class="text-xs font-medium text-gray-500 mb-1">Title</p>
               <p class="text-sm mb-3" x-text="r.title || '—'"></p>
+              <p class="text-xs font-medium text-gray-500 mb-1">Description</p>
+              <p class="text-sm mb-3 whitespace-pre-wrap" x-text="r.description || '—'"></p>
               <p class="text-xs font-medium text-gray-500 mb-1">Rule Checks</p>
               <pre class="text-xs bg-white rounded p-2 overflow-x-auto" x-text="formatRuleChecks(r.rule_checks)"></pre>
             </td>
@@ -86,6 +122,7 @@
     return {
       taskId, task: {}, results: [], loading: true,
       page: 1, pageSize: 20, total: 0, expanded: new Set(),
+      decisionFilter: '',
       pollTimer: null,
 
       async init() {
@@ -101,12 +138,18 @@
       },
       async loadResults() {
         this.loading = true;
-        const r = await fetch(`/tasks/${this.taskId}/results?page=${this.page}&page_size=${this.pageSize}`);
+        const params = new URLSearchParams({page: this.page, page_size: this.pageSize});
+        if (this.decisionFilter) params.set('decision', this.decisionFilter);
+        const r = await fetch(`/tasks/${this.taskId}/results?` + params.toString());
         if (r.ok) {
           const d = await r.json();
           this.results = d.items; this.total = d.total;
         }
         this.loading = false;
+      },
+      async reloadResults() {
+        this.page = 1;
+        await this.loadResults();
       },
       async poll() {
         await this.loadTask();

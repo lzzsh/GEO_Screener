@@ -26,9 +26,14 @@ class ScreeningTask(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     name: Mapped[str] = mapped_column(String(256), nullable=False)
     source: Mapped[str] = mapped_column(String(16), nullable=False)  # csv | geo
+    search_query: Mapped[str | None] = mapped_column(Text, nullable=True)
     status: Mapped[str] = mapped_column(String(32), default="pending")  # pending|running|done|error
     total: Mapped[int] = mapped_column(Integer, default=0)
+    candidate_count: Mapped[int] = mapped_column(Integer, default=0)
     processed: Mapped[int] = mapped_column(Integer, default=0)
+    included_count: Mapped[int] = mapped_column(Integer, default=0)
+    excluded_count: Mapped[int] = mapped_column(Integer, default=0)
+    uncertain_count: Mapped[int] = mapped_column(Integer, default=0)
     criteria_text: Mapped[str] = mapped_column(Text, nullable=False)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
@@ -41,6 +46,8 @@ class ScreeningResult(Base):
     task_id: Mapped[int] = mapped_column(ForeignKey("screening_tasks.id"), nullable=False)
     dataset_id: Mapped[str] = mapped_column(String(64), nullable=False)
     title: Mapped[str] = mapped_column(String(512), nullable=True)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    keyword_matched: Mapped[bool] = mapped_column(default=True)
     decision: Mapped[str] = mapped_column(String(16), nullable=True)  # include|exclude|uncertain
     confidence: Mapped[float] = mapped_column(Float, nullable=True)
     summary: Mapped[str] = mapped_column(Text, nullable=True)

@@ -2,6 +2,7 @@ import os
 import pytest
 
 os.environ["DATABASE_URL"] = "sqlite+aiosqlite:///:memory:"
+os.environ["FRONTEND_DIR"] = "frontend"
 
 pytest_plugins = ['anyio']
 

@@ -1,0 +1,26 @@
+[      55ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[     104ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8001/settings:0
+[     106ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[     106ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  357977ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://localhost:8001/llm/test:0
+[  396651ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[  396702ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8001/settings:0
+[  396704ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  396705ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  423209ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[  423244ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8001/settings:0
+[  423246ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  423246ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  424099ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[  424125ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8001/settings:0
+[  424126ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  424126ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  426490ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[  426518ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8001/settings:0
+[  426518ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[  426519ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[ 1903579ms] [WARNING] cdn.tailwindcss.com should not be used in production. To use Tailwind CSS in production, install it as a PostCSS plugin or use the Tailwind CLI: https://tailwindcss.com/docs/installation @ https://cdn.tailwindcss.com/:63
+[ 1903632ms] [VERBOSE] [DOM] Password field is not contained in a form: (More info: https://goo.gl/9p2vKq) %o @ http://localhost:8001/settings:0
+[ 1903636ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[ 1903636ms] [ERROR] Failed to load resource: the server responded with a status of 405 (Method Not Allowed) @ http://localhost:8001/auth/login:0
+[ 1908609ms] [ERROR] Failed to load resource: the server responded with a status of 502 (Bad Gateway) @ http://localhost:8001/llm/test:0

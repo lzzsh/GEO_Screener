@@ -1,0 +1,11 @@
+[      36ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[    5914ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[    6770ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[    7279ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[   98667ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[  200459ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[  201161ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[  202041ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[  275848ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
+[  353160ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/:0
+[  354067ms] [ERROR] Failed to load resource: the server responded with a status of 404 (Not Found) @ http://localhost:8000/login:0
