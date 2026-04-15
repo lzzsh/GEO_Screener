@@ -5,11 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.orm import selectinload
 from backend.database import get_db
-from backend.models import ScreeningTask, ScreeningResult, User
+from backend.models import ScreeningTask, ScreeningResult, User, GeoSample
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
-from backend.worker.geo_fetcher import search_geo
+from backend.worker.geo_fetcher import search_geo, fetch_gsm_samples
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -22,6 +23,7 @@ async def create_task(
     file: Optional[UploadFile] = File(default=None),
     search_query: Optional[str] = Query(default=None),
     geo_ids: Optional[str] = Query(default=None),
+    label_schema: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -34,6 +36,7 @@ async def create_task(
         search_query=search_query,
         criteria_text=criteria_text,
         owner_id=user.id,
+        label_schema=label_schema,
     )
     db.add(task)
     await db.flush()
@@ -59,8 +62,24 @@ async def create_task(
             title=d.get("title", ""),
             description=d.get("description") or d.get("summary", ""),
             keyword_matched=True,
+            gse_type=d.get("gse_type", ""),
+            pubdate=d.get("pubdate", ""),
+            update_date=d.get("update_date", ""),
+            has_raw_data=d.get("has_raw_data", False),
+            n_samples=d.get("n_samples", 0),
         )
         db.add(sr)
+        await db.flush()
+        if source == "geo":
+            gsm_list = await fetch_gsm_samples(d["id"])
+            for gsm in gsm_list:
+                db.add(GeoSample(
+                    result_id=sr.id,
+                    gsm_id=gsm["gsm_id"],
+                    title=gsm.get("title", ""),
+                    organism=gsm.get("organism", ""),
+                    biosample_id=gsm.get("biosample_id", ""),
+                ))
 
     if source == "geo" and not criteria_text.strip():
         task.status = "done"
@@ -131,7 +150,9 @@ async def get_results(
         count_query = count_query.where(ScreeningResult.decision == decision)
     count_result = await db.execute(count_query)
     total = count_result.scalar()
-    rows_result = await db.execute(base_query.offset(offset).limit(page_size))
+    rows_result = await db.execute(
+        base_query.options(selectinload(ScreeningResult.samples)).offset(offset).limit(page_size)
+    )
     rows = rows_result.scalars().all()
     return {
         "total": total, "page": page, "page_size": page_size,
@@ -139,7 +160,13 @@ async def get_results(
                    "description": r.description, "keyword_matched": r.keyword_matched,
                    "decision": r.decision, "confidence": r.confidence,
                    "summary": r.summary, "rule_checks": r.rule_checks,
-                   "status": r.status, "error_msg": r.error_msg} for r in rows],
+                   "status": r.status, "error_msg": r.error_msg,
+                   "gse_type": r.gse_type, "pubdate": r.pubdate,
+                   "update_date": r.update_date, "has_raw_data": r.has_raw_data,
+                   "n_samples": r.n_samples,
+                   "samples": [{"gsm_id": s.gsm_id, "title": s.title,
+                                "organism": s.organism, "biosample_id": s.biosample_id,
+                                "cell_count": s.cell_count} for s in r.samples]} for r in rows],
     }
 
 

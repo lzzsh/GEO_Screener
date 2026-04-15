@@ -90,3 +90,37 @@ async def test_filter_task_results_by_decision(auth_client):
     assert filtered.status_code == 200
     assert len(filtered.json()["items"]) == 1
     assert filtered.json()["items"][0]["dataset_id"] == "GSE010"
+
+
+@pytest.mark.asyncio
+async def test_create_geo_task_persists_gsm_samples(auth_client):
+    geo_candidates = [
+        {"id": "GSE001", "title": "Study one", "summary": "iPSC study",
+         "gse_type": "Expression profiling by high throughput sequencing",
+         "pubdate": "2026/01/01", "update_date": "2026/04/14",
+         "has_raw_data": True, "n_samples": 2, "organism": "Homo sapiens"},
+    ]
+    gsm_samples = [
+        {"gsm_id": "GSM001", "title": "Sample 1", "organism": "Homo sapiens", "biosample_id": "SAMN001"},
+        {"gsm_id": "GSM002", "title": "Sample 2", "organism": "Homo sapiens", "biosample_id": "SAMN002"},
+    ]
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=gsm_samples)), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        r = await auth_client.post("/tasks", params={
+            "name": "GSM Test",
+            "criteria_text": "human iPSC",
+            "source": "geo",
+            "search_query": "iPSC liver",
+            "label_schema": '["起始细胞类型","分化体系"]',
+        })
+    assert r.status_code == 201
+    task_id = r.json()["id"]
+
+    results_r = await auth_client.get(f"/tasks/{task_id}/results")
+    items = results_r.json()["items"]
+    assert len(items) == 1
+    assert items[0]["gse_type"] == "Expression profiling by high throughput sequencing"
+    assert items[0]["has_raw_data"] is True
+    assert len(items[0]["samples"]) == 2
+    assert items[0]["samples"][0]["gsm_id"] == "GSM001"
