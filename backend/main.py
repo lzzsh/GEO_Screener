@@ -35,31 +35,31 @@ async def root():
 
 @app.get("/search")
 async def search_page(request: Request):
-    return templates.TemplateResponse("search.html", {"request": request})
+    return templates.TemplateResponse(request, "search.html")
 
 @app.get("/login")
 async def login_page(request: Request):
-    return templates.TemplateResponse("login.html", {"request": request})
+    return templates.TemplateResponse(request, "login.html")
 
 @app.get("/tasks/new")
 async def tasks_new_page(request: Request):
-    return templates.TemplateResponse("tasks_new.html", {"request": request})
+    return templates.TemplateResponse(request, "tasks_new.html")
 
 @app.get("/tasks/{task_id}/detail")
 async def task_detail_page(request: Request, task_id: int):
-    return templates.TemplateResponse("tasks_detail.html", {"request": request, "task_id": task_id})
+    return templates.TemplateResponse(request, "tasks_detail.html", {"task_id": task_id})
 
 @app.get("/tasks-list")
 async def tasks_page(request: Request):
-    return templates.TemplateResponse("tasks.html", {"request": request})
+    return templates.TemplateResponse(request, "tasks.html")
 
 @app.get("/criteria-page")
 async def criteria_page(request: Request):
-    return templates.TemplateResponse("criteria.html", {"request": request})
+    return templates.TemplateResponse(request, "criteria.html")
 
 @app.get("/settings")
 async def settings_page(request: Request):
-    return templates.TemplateResponse("settings.html", {"request": request})
+    return templates.TemplateResponse(request, "settings.html")
 
 app.include_router(auth_router.router)
 app.include_router(criteria_router.router)

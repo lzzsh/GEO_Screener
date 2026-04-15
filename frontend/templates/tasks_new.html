@@ -110,7 +110,7 @@
         this.geoLoading = true;
         const r = await fetch('/geo/search?q=' + encodeURIComponent(this.geoQuery));
         this.geoLoading = false;
-        if (r.ok) this.geoResults = await r.json();
+        if (r.ok) { const d = await r.json(); this.geoResults = d.items || []; }
       },
       async submit() {
         if (!this.name.trim()) {
