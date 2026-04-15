@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, Query
 from pydantic import BaseModel, Field
 from backend.auth import get_current_user
 from backend.models import User
-from backend.worker.geo_fetcher import search_geo as fetch_geo_candidates
+from backend.worker.geo_fetcher import search_geo as fetch_geo_candidates, fetch_gsm_samples
 
 router = APIRouter(prefix="/geo", tags=["geo"])
 
@@ -44,3 +44,12 @@ async def geo_search_post(
     user: User = Depends(get_current_user),
 ):
     return await _search_payload(q=req.q, retmax=req.retmax, page=req.page, page_size=req.page_size)
+
+
+@router.get("/gse/{gse_id}/samples")
+async def get_gse_samples(
+    gse_id: str,
+    user: User = Depends(get_current_user),
+):
+    samples = await fetch_gsm_samples(gse_id)
+    return {"gse_id": gse_id, "samples": samples}
