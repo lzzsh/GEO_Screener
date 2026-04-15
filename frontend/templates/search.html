@@ -17,10 +17,10 @@
       <div class="grid gap-4 md:grid-cols-[1fr_auto]">
         <div>
           <label class="block text-sm font-medium mb-1">Literature Keywords</label>
-          <input x-model="query" @keydown.enter="search()"
-                 type="text"
-                 placeholder="e.g. liver fibrosis single-cell human"
-                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          <textarea x-model="query" @keydown.enter.ctrl="search()" rows="3"
+                 placeholder="e.g. (iPSC OR ESC) AND (differentiation OR organoid) AND (scRNA OR spatial)"
+                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm resize-y"></textarea>
+          <p class="text-xs text-gray-400 mt-1">支持 NCBI 布尔逻辑：AND / OR / NOT / 引号短语。Ctrl+Enter 搜索。</p>
         </div>
         <div>
           <label class="block text-sm font-medium mb-1">Candidate Limit</label>
@@ -109,18 +109,37 @@
       <table class="min-w-full text-sm">
         <thead class="bg-gray-50 border-b">
           <tr>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">Accession</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 w-32">Accession</th>
             <th class="text-left px-4 py-3 font-medium text-gray-600">Title</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">Organism</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">Samples</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">Raw</th>
             <th class="text-left px-4 py-3 font-medium text-gray-600">Summary</th>
           </tr>
         </thead>
         <tbody class="divide-y">
           <template x-for="item in visibleItems" :key="item.id">
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 font-mono text-xs text-blue-700" x-text="item.id"></td>
-              <td class="px-4 py-3 text-sm font-medium text-gray-900" x-text="item.title"></td>
-              <td class="px-4 py-3 text-xs text-gray-500 max-w-2xl" x-text="item.summary || '—'"></td>
+            <tbody>
+            <tr class="hover:bg-gray-50 cursor-pointer" @click="toggleExpand(item.id)">
+              <td class="px-4 py-3 font-mono text-xs text-blue-700 align-top" x-text="item.id"></td>
+              <td class="px-4 py-3 text-sm font-medium text-gray-900 align-top">
+                <p x-text="item.title"></p>
+                <p class="text-xs text-gray-400 mt-0.5" x-text="item.gse_type || ''"></p>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-500 align-top" x-text="item.organism || '—'"></td>
+              <td class="px-4 py-3 text-xs text-gray-500 align-top text-center" x-text="item.n_samples || '—'"></td>
+              <td class="px-4 py-3 text-center align-top">
+                <span x-show="item.has_raw_data" class="text-green-500 text-sm">✓</span>
+                <span x-show="!item.has_raw_data" class="text-gray-300 text-sm">—</span>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-500 align-top max-w-sm">
+                <p :class="expanded.has(item.id) ? '' : 'line-clamp-2'" x-text="item.summary || '—'"></p>
+                <button x-show="item.summary && item.summary.length > 120"
+                        class="text-blue-500 hover:text-blue-700 mt-1 text-xs"
+                        x-text="expanded.has(item.id) ? '收起' : '展开'"></button>
+              </td>
             </tr>
+            </tbody>
           </template>
         </tbody>
       </table>
@@ -147,6 +166,7 @@
       loading: false,
       creating: false,
       error: '',
+      expanded: new Set(),
       summary: {query: '', total: 0, retmax: 10000},
       visibleItems: [],
 
@@ -156,6 +176,10 @@
           this.query = params.get('q');
           this.search();
         }
+      },
+      toggleExpand(id) {
+        if (this.expanded.has(id)) this.expanded.delete(id); else this.expanded.add(id);
+        this.expanded = new Set(this.expanded);
       },
       get hasResults() {
         return this.summary.total > 0;
