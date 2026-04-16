@@ -97,3 +97,93 @@ async def test_fetch_gsm_samples():
     assert samples[0]["gsm_id"] == "GSM9162575"
     assert samples[0]["organism"] == "Homo sapiens"
     assert samples[0]["biosample_id"] == "SAMN50564034"
+
+
+@pytest.mark.asyncio
+async def test_search_geo_normalizes_accession_queries():
+    from backend.worker.geo_fetcher import search_geo
+
+    with patch("backend.worker.geo_fetcher._esearch", new=AsyncMock(return_value=["200305128"])) as mock_esearch, \
+         patch("backend.worker.geo_fetcher._efetch_gse_summaries", new=AsyncMock(return_value=[])):
+        await search_geo("GSE305128", retmax=10)
+
+    mock_esearch.assert_awaited_once_with("gds", '"GSE305128"[Accession]', 10, retstart=0)
+
+
+@pytest.mark.asyncio
+async def test_search_geo_normalizes_biosample_queries():
+    from backend.worker.geo_fetcher import search_geo
+
+    with patch("backend.worker.geo_fetcher._esearch", new=AsyncMock(return_value=["9162575"])) as mock_esearch, \
+         patch("backend.worker.geo_fetcher._efetch_gse_summaries", new=AsyncMock(return_value=[])):
+        await search_geo("SAMN50564034", retmax=10)
+
+    mock_esearch.assert_awaited_once_with("gds", '"SAMN50564034"', 10, retstart=0)
+
+
+@pytest.mark.asyncio
+async def test_parse_miniml_extracts_all_fields():
+    from backend.worker.geo_fetcher import _parse_miniml
+
+    xml = '''<?xml version="1.0"?>
+<MINiML xmlns="http://www.ncbi.nlm.nih.gov/geo/info/MINiML">
+  <Contributor iid="contrib1">
+    <Person><First>Jens</First><Last>Magnusson</Last></Person>
+    <Email>jens@test.com</Email>
+    <Department>Biosciences</Department>
+    <Organization>
+      <Address>Alfred Nobels Allé 8</Address>
+      <City>Stockholm</City>
+      <Zip-Code>14152</Zip-Code>
+      <Country>Sweden</Country>
+    </Organization>
+  </Contributor>
+  <Series iid="GSE305128">
+    <Summary>Test abstract</Summary>
+    <Overall-Design>Test design</Overall-Design>
+    <Contact-Ref ref="contrib1"/>
+    <Supplementary-Data type="TAR">ftp://test.com/file.tar</Supplementary-Data>
+    <Relation type="BioProject" target="https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1304480"/>
+  </Series>
+</MINiML>'''
+
+    result = _parse_miniml(xml, "GSE305128")
+    assert result["gse_id"] == "GSE305128"
+    assert result["bioproject_id"] == "PRJNA1304480"
+    assert result["abstract"] == "Test abstract"
+    assert result["overall_design"] == "Test design"
+    assert result["contact"]["name"] == "Jens Magnusson"
+    assert result["contact"]["email"] == "jens@test.com"
+    assert result["contact"]["city"] == "Stockholm"
+    assert len(result["supplementary_files"]) == 1
+    assert result["supplementary_files"][0]["name"] == "file.tar"
+
+
+@pytest.mark.asyncio
+async def test_fetch_gse_detail_calls_efetch():
+    from backend.worker.geo_fetcher import fetch_gse_detail
+
+    mock_xml = '''<?xml version="1.0"?>
+<MINiML xmlns="http://www.ncbi.nlm.nih.gov/geo/info/MINiML">
+  <Contributor iid="c1"><Person><First>Test</First></Person></Contributor>
+  <Series iid="GSE123"><Summary>Test</Summary><Contact-Ref ref="c1"/></Series>
+</MINiML>'''
+
+    async def mock_get(url, params=None, **kwargs):
+        m = MagicMock()
+        m.raise_for_status = MagicMock()
+        m.text = mock_xml
+        return m
+
+    with patch("backend.worker.geo_fetcher._esearch", new=AsyncMock(return_value=["123"])), \
+         patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=mock_get)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+
+        result = await fetch_gse_detail("GSE123")
+
+    assert result["gse_id"] == "GSE123"
+    assert "contact" in result
