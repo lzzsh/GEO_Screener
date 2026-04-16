@@ -1,5 +1,6 @@
 import json
 import pytest
+import httpx
 from httpx import AsyncClient, ASGITransport
 from unittest.mock import AsyncMock, patch
 
@@ -21,6 +22,7 @@ async def test_create_geo_task(auth_client):
         {"id": "GSE002", "title": "Paper two", "summary": "mouse control cohort"},
     ]
     with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
          patch("backend.worker.tasks.run_screening.delay") as delay_mock:
         r = await auth_client.post("/tasks", params={
             "name": "Test Task",
@@ -33,11 +35,18 @@ async def test_create_geo_task(auth_client):
     assert r.json()["candidate_count"] == 2
     delay_mock.assert_called_once()
 
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask
+    async with AsyncSessionLocal() as db:
+        task = await db.get(ScreeningTask, r.json()["id"])
+        assert json.loads(task.label_schema) == ["起始细胞类型", "分化体系", "数据平台", "是否提供原始测序数据", "单细胞测序数据类型"]
+
 
 @pytest.mark.asyncio
 async def test_list_and_get_task(auth_client):
     geo_candidates = [{"id": "GSE003", "title": "Candidate three", "summary": "human blood data"}]
     with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
          patch("backend.worker.tasks.run_screening.delay"):
         r = await auth_client.post("/tasks", params={
             "name": "List Test",
@@ -63,6 +72,7 @@ async def test_filter_task_results_by_decision(auth_client):
         {"id": "GSE011", "title": "Candidate two", "summary": "mouse cohort"},
     ]
     with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
          patch("backend.worker.tasks.run_screening.delay"):
         created = await auth_client.post("/tasks", params={
             "name": "Filter Test",
@@ -124,3 +134,73 @@ async def test_create_geo_task_persists_gsm_samples(auth_client):
     assert items[0]["has_raw_data"] is True
     assert len(items[0]["samples"]) == 2
     assert items[0]["samples"][0]["gsm_id"] == "GSM001"
+
+
+@pytest.mark.asyncio
+async def test_task_results_include_labels(auth_client):
+    geo_candidates = [{"id": "GSE777", "title": "Study one", "summary": "iPSC study"}]
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        r = await auth_client.post("/tasks", params={
+            "name": "Labels Test",
+            "criteria_text": "human iPSC",
+            "source": "geo",
+            "search_query": "iPSC liver",
+        })
+    task_id = r.json()["id"]
+
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningResult, GeoLabel
+    async with AsyncSessionLocal() as db:
+        result = (await db.execute(
+            __import__("sqlalchemy").select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalar_one()
+        db.add(GeoLabel(result_id=result.id, key="起始细胞类型", value="iPSC", source="llm"))
+        await db.commit()
+
+    results_r = await auth_client.get(f"/tasks/{task_id}/results")
+    items = results_r.json()["items"]
+    assert items[0]["labels"] == [{"key": "起始细胞类型", "value": "iPSC", "source": "llm"}]
+
+
+@pytest.mark.asyncio
+async def test_create_geo_task_survives_gsm_fetch_failure(auth_client):
+    geo_candidates = [
+        {"id": "GSE900", "title": "Paper one", "summary": "human liver cohort"},
+    ]
+    request = httpx.Request("GET", "https://eutils.ncbi.nlm.nih.gov/example")
+    response = httpx.Response(status_code=429, request=request)
+    fetch_error = httpx.HTTPStatusError("rate limited", request=request, response=response)
+
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(side_effect=fetch_error)), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        r = await auth_client.post("/tasks", params={
+            "name": "Graceful Task",
+            "criteria_text": "criteria",
+            "source": "geo",
+            "search_query": "liver fibrosis",
+        })
+
+    assert r.status_code == 201
+    assert r.json()["candidate_count"] == 1
+
+
+@pytest.mark.asyncio
+async def test_create_geo_task_returns_success_when_dispatch_falls_back(auth_client):
+    geo_candidates = [{"id": "GSE901", "title": "Paper one", "summary": "human liver cohort"}]
+
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
+         patch("backend.routers.tasks.dispatch_or_run_inline", return_value="running_inline") as dispatch_mock:
+        r = await auth_client.post("/tasks", params={
+            "name": "Inline Screening Task",
+            "criteria_text": "criteria",
+            "source": "geo",
+            "search_query": "liver fibrosis",
+        })
+
+    assert r.status_code == 201
+    assert r.json()["candidate_count"] == 1
+    dispatch_mock.assert_called_once()

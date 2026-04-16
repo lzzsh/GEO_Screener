@@ -7,97 +7,104 @@
   <div x-show="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4"
        @click.self="modal.open=false">
     <div class="absolute inset-0 bg-black/40"></div>
-    <div class="relative bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 z-10">
-      <div class="flex justify-between items-start mb-6">
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-6xl max-h-[92vh] overflow-y-auto z-10">
+      <!-- Header -->
+      <div class="sticky top-0 bg-white border-b px-8 py-5 flex justify-between items-start z-10">
         <div>
-          <p class="font-mono text-sm text-blue-700 font-semibold" x-text="modal.id"></p>
-          <p class="text-lg font-semibold text-gray-900 mt-2" x-text="modal.title"></p>
+          <p class="font-mono text-sm text-blue-600 font-semibold" x-text="modal.id"></p>
+          <p class="text-xl font-bold text-gray-900 mt-1 leading-snug" x-text="modal.title"></p>
         </div>
-        <button @click="modal.open=false" class="text-gray-400 hover:text-gray-600 text-xl leading-none ml-4">✕</button>
+        <button @click="modal.open=false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-6 mt-1">✕</button>
       </div>
 
-      <!-- Section 1: 数据信息 -->
-      <div class="mb-6">
-        <h3 class="text-sm font-semibold text-gray-900 mb-3">数据信息</h3>
-        <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-2 text-sm">
-          <div>
-            <p class="text-gray-500">原始数据ID</p>
-            <p class="text-gray-900 font-mono" x-text="modal.detail?.bioproject_id || '—'"></p>
-          </div>
-          <div>
-            <p class="text-gray-500">原始数据链接</p>
-            <p x-show="modal.detail?.bioproject_link">
-              <a :href="modal.detail?.bioproject_link" target="_blank" class="text-blue-600 hover:text-blue-700 break-all" x-text="modal.detail?.bioproject_link"></a>
-            </p>
-            <p x-show="!modal.detail?.bioproject_link" class="text-gray-400">—</p>
-          </div>
-        </div>
-      </div>
+      <div class="px-8 py-6 space-y-6">
+        <!-- 基本信息 -->
+        <table class="w-full text-sm border-collapse">
+          <tbody class="divide-y divide-gray-100">
+            <tr>
+              <td class="py-2 pr-6 text-gray-500 w-36 align-top">Status</td>
+              <td class="py-2 text-gray-900">Public</td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-6 text-gray-500 align-top">Organism</td>
+              <td class="py-2 text-gray-900" x-text="modal.organism || '—'"></td>
+            </tr>
+            <tr>
+              <td class="py-2 pr-6 text-gray-500 align-top">Experiment type</td>
+              <td class="py-2 text-gray-900" x-text="modal.gse_type || '—'"></td>
+            </tr>
+            <tr x-show="modal.detail?.abstract">
+              <td class="py-2 pr-6 text-gray-500 align-top">Summary</td>
+              <td class="py-2 text-gray-700 leading-relaxed" x-text="modal.detail?.abstract"></td>
+            </tr>
+            <tr x-show="modal.detail?.overall_design">
+              <td class="py-2 pr-6 text-gray-500 align-top">Overall design</td>
+              <td class="py-2 text-gray-700 leading-relaxed" x-text="modal.detail?.overall_design"></td>
+            </tr>
+          </tbody>
+        </table>
 
-      <!-- Section 2: 其他信息 -->
-      <div class="mb-6">
-        <h3 class="text-sm font-semibold text-gray-900 mb-3">其他信息</h3>
-        <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-3 text-sm">
-          <div>
-            <p class="text-gray-500 mb-1">论文摘要</p>
-            <p class="text-gray-700 leading-relaxed" x-text="modal.detail?.abstract || '—'"></p>
-          </div>
-          <div>
-            <p class="text-gray-500 mb-1">整体设计</p>
-            <p class="text-gray-700 leading-relaxed" x-text="modal.detail?.overall_design || '—'"></p>
-          </div>
+        <!-- 联系人信息 -->
+        <div x-show="modal.detail?.contact?.name" class="border-t pt-4">
+          <table class="w-full text-sm border-collapse">
+            <tbody class="divide-y divide-gray-100">
+              <tr>
+                <td class="py-2 pr-6 text-gray-500 w-36">Submission date</td>
+                <td class="py-2 text-gray-900" x-text="modal.pubdate || '—'"></td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-6 text-gray-500">Last update date</td>
+                <td class="py-2 text-gray-900" x-text="modal.update_date || '—'"></td>
+              </tr>
+              <tr>
+                <td class="py-2 pr-6 text-gray-500">Contact name</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.name || '—'"></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.email">
+                <td class="py-2 pr-6 text-gray-500">E-mail</td>
+                <td class="py-2"><a :href="'mailto:' + modal.detail?.contact?.email" class="text-blue-600 hover:underline" x-text="modal.detail?.contact?.email"></a></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.organization">
+                <td class="py-2 pr-6 text-gray-500">Organization</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.organization"></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.department">
+                <td class="py-2 pr-6 text-gray-500">Department</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.department"></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.address">
+                <td class="py-2 pr-6 text-gray-500">Street address</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.address"></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.city">
+                <td class="py-2 pr-6 text-gray-500">City</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.city"></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.state">
+                <td class="py-2 pr-6 text-gray-500">State/province</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.state"></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.zip">
+                <td class="py-2 pr-6 text-gray-500">ZIP/Postal code</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.zip"></td>
+              </tr>
+              <tr x-show="modal.detail?.contact?.country">
+                <td class="py-2 pr-6 text-gray-500">Country</td>
+                <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.country"></td>
+              </tr>
+              <tr x-show="modal.detail?.bioproject_id">
+                <td class="py-2 pr-6 text-gray-500">BioProject</td>
+                <td class="py-2"><a :href="modal.detail?.bioproject_link" target="_blank" class="text-blue-600 hover:underline" x-text="modal.detail?.bioproject_id"></a></td>
+              </tr>
+            </tbody>
+          </table>
         </div>
-      </div>
 
-      <!-- Section 3: 联系人信息 -->
-      <div class="mb-6" x-show="modal.detail?.contact && Object.keys(modal.detail.contact).length > 0">
-        <h3 class="text-sm font-semibold text-gray-900 mb-3">联系人信息</h3>
-        <div class="grid grid-cols-2 gap-4 text-sm">
-          <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-2">
-            <div>
-              <p class="text-gray-500">联系人姓名</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.name || '—'"></p>
-            </div>
-            <div>
-              <p class="text-gray-500">联系人地址</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.address || '—'"></p>
-            </div>
-            <div>
-              <p class="text-gray-500">联系人州</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.state || '—'"></p>
-            </div>
-            <div>
-              <p class="text-gray-500">联系人国家</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.country || '—'"></p>
-            </div>
-          </div>
-          <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-2">
-            <div>
-              <p class="text-gray-500">联系人邮箱</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.email || '—'"></p>
-            </div>
-            <div>
-              <p class="text-gray-500">联系人城市</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.city || '—'"></p>
-            </div>
-            <div>
-              <p class="text-gray-500">联系人邮编</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.zip || '—'"></p>
-            </div>
-            <div>
-              <p class="text-gray-500">联系人部门</p>
-              <p class="text-gray-900" x-text="modal.detail?.contact?.department || '—'"></p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Section 4: Supplementary data files -->
-      <div x-show="modal.detail?.supplementary_files && modal.detail.supplementary_files.length > 0">
-        <h3 class="text-sm font-semibold text-gray-900 mb-3">Supplementary data files</h3>
-        <div class="bg-gray-50 rounded-lg overflow-hidden">
-          <table class="w-full text-sm">
-            <thead class="bg-gray-100 border-b">
+        <!-- Supplementary files -->
+        <div x-show="modal.detail?.supplementary_files?.length > 0" class="border-t pt-4">
+          <p class="text-sm font-semibold text-gray-700 mb-3">Supplementary data files</p>
+          <table class="w-full text-sm border rounded-lg overflow-hidden">
+            <thead class="bg-gray-50 border-b">
               <tr>
                 <th class="text-left px-4 py-2 font-medium text-gray-600">文件名称</th>
                 <th class="text-left px-4 py-2 font-medium text-gray-600">下载地址</th>
@@ -107,17 +114,40 @@
               <template x-for="file in modal.detail?.supplementary_files" :key="file.name">
                 <tr>
                   <td class="px-4 py-2 text-gray-900" x-text="file.name"></td>
-                  <td class="px-4 py-2">
-                    <a :href="file.url" target="_blank" class="text-blue-600 hover:text-blue-700 break-all" x-text="file.url"></a>
-                  </td>
+                  <td class="px-4 py-2"><a :href="file.url" target="_blank" class="text-blue-600 hover:underline break-all text-xs" x-text="file.url"></a></td>
                 </tr>
               </template>
             </tbody>
           </table>
         </div>
-      </div>
 
-      <div x-show="modal.loadingDetail" class="text-sm text-gray-400 mt-4">加载详情中…</div>
+        <!-- GSM samples -->
+        <div x-show="modal.samples?.length > 0" class="border-t pt-4">
+          <p class="text-sm font-semibold text-gray-700 mb-3">样本列表 (GSM)</p>
+          <table class="w-full text-xs border rounded-lg overflow-hidden">
+            <thead class="bg-gray-50 border-b">
+              <tr>
+                <th class="text-left px-3 py-2 font-medium text-gray-600">GSM ID</th>
+                <th class="text-left px-3 py-2 font-medium text-gray-600">标题</th>
+                <th class="text-left px-3 py-2 font-medium text-gray-600">生物体</th>
+                <th class="text-left px-3 py-2 font-medium text-gray-600">BioSample</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y bg-white">
+              <template x-for="s in modal.samples" :key="s.gsm_id">
+                <tr>
+                  <td class="px-3 py-2 font-mono text-blue-700" x-text="s.gsm_id"></td>
+                  <td class="px-3 py-2 text-gray-700" x-text="s.title || '—'"></td>
+                  <td class="px-3 py-2 text-gray-500" x-text="s.organism || '—'"></td>
+                  <td class="px-3 py-2 text-blue-600" x-text="s.biosample_id || '—'"></td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+
+        <div x-show="modal.loadingDetail" class="text-sm text-gray-400 py-4 text-center">加载详情中…</div>
+      </div>
     </div>
   </div>
 
@@ -200,46 +230,50 @@
 
   <!-- Results table -->
   <div x-show="hasResults" class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-    <div class="overflow-x-auto">
-      <table class="w-full text-sm">
-        <thead class="bg-gray-50 border-b">
-          <tr>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">Accession</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 flex-1">标题</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 w-20">样本数</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">搜索标签</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">实验类型</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">论文更新日期</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">最后更新日期</th>
-            <th class="text-center px-4 py-3 font-medium text-gray-600 w-12">原始数据</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">操作</th>
+    <table class="w-full text-sm">
+      <colgroup>
+        <col style="width:100px">
+        <col>
+        <col style="width:60px">
+        <col style="width:220px">
+        <col style="width:90px">
+        <col style="width:50px">
+        <col style="width:60px">
+      </colgroup>
+      <thead class="bg-gray-50 border-b">
+        <tr>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Accession</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">标题</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">样本数</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">实验类型</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">更新日期</th>
+          <th class="text-center px-4 py-3 font-medium text-gray-600">原始数据</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">操作</th>
+        </tr>
+      </thead>
+      <tbody class="divide-y">
+        <template x-for="item in visibleItems" :key="item.id">
+          <tr class="hover:bg-gray-50 cursor-pointer" @click="openModal(item)">
+            <td class="px-4 py-3 font-mono text-xs text-blue-700 align-top" x-text="item.id"></td>
+            <td class="px-4 py-3 align-top">
+              <p class="text-sm font-medium text-gray-900 line-clamp-2" x-text="item.title"></p>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500 align-top text-center" x-text="item.n_samples || '—'"></td>
+            <td class="px-4 py-3 text-xs text-gray-500 align-top">
+              <p class="line-clamp-1" x-text="item.gse_type || '—'" :title="item.gse_type || ''"></p>
+            </td>
+            <td class="px-4 py-3 text-xs text-gray-500 align-top whitespace-nowrap" x-text="item.update_date || '—'"></td>
+            <td class="px-4 py-3 text-center align-top">
+              <span x-show="item.has_raw_data" class="text-green-500">✓</span>
+              <span x-show="!item.has_raw_data" class="text-gray-300">—</span>
+            </td>
+            <td class="px-4 py-3 text-xs align-top">
+              <button @click.stop="openModal(item)" class="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap">详情 →</button>
+            </td>
           </tr>
-        </thead>
-        <tbody class="divide-y">
-          <template x-for="item in visibleItems" :key="item.id">
-            <tr class="hover:bg-gray-50">
-              <td class="px-4 py-3 font-mono text-xs text-blue-700 align-top" x-text="item.id"></td>
-              <td class="px-4 py-3 align-top">
-                <p class="text-sm font-medium text-gray-900 truncate" x-text="item.title" :title="item.title"></p>
-              </td>
-              <td class="px-4 py-3 text-xs text-gray-500 align-top text-center" x-text="item.n_samples || '—'"></td>
-              <td class="px-4 py-3 text-xs text-gray-500 align-top truncate">—</td>
-              <td class="px-4 py-3 text-xs text-gray-500 align-top truncate" x-text="item.gse_type || '—'" :title="item.gse_type || ''"></td>
-              <td class="px-4 py-3 text-xs text-gray-500 align-top" x-text="item.pubdate || '—'"></td>
-              <td class="px-4 py-3 text-xs text-gray-500 align-top" x-text="item.update_date || '—'"></td>
-              <td class="px-4 py-3 text-center align-top">
-                <span x-show="item.has_raw_data" class="text-green-500">✓</span>
-                <span x-show="!item.has_raw_data" class="text-gray-300">—</span>
-              </td>
-              <td class="px-4 py-3 text-xs align-top">
-                <button @click.stop="openModal(item)"
-                        class="text-blue-600 hover:text-blue-700 font-medium">标注 →</button>
-              </td>
-            </tr>
-          </template>
-        </tbody>
-      </table>
-    </div>
+        </template>
+      </tbody>
+    </table>
     <div class="px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3">
       <button @click="changePage(-1)" :disabled="page <= 1"
               class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-sm">← Prev</button>
@@ -355,15 +389,26 @@
 
       async openModal(item) {
         this.modal = {
-          open: true, id: item.id, title: item.title, detail: null, loadingDetail: true,
+          open: true, id: item.id, title: item.title,
+          organism: item.organism, gse_type: item.gse_type,
+          pubdate: item.pubdate, update_date: item.update_date,
+          n_samples: item.n_samples, has_raw_data: item.has_raw_data,
+          samples: [], detail: null, loadingDetail: true,
         };
-        // fetch detail via dedicated endpoint
-        try {
-          const r = await fetch(`/geo/gse/${item.id}/detail`);
-          if (r.ok) {
-            this.modal.detail = await r.json();
-          }
-        } catch(e) {}
+        // Fetch samples and detail in parallel
+        const [samplesRes, detailRes] = await Promise.allSettled([
+          fetch(`/geo/gse/${item.id}/samples`),
+          fetch(`/geo/gse/${item.id}/detail`),
+        ]);
+        if (samplesRes.status === 'fulfilled' && samplesRes.value.ok) {
+          const d = await samplesRes.value.json();
+          this.modal.samples = d.samples || [];
+        }
+        if (detailRes.status === 'fulfilled' && detailRes.value.ok) {
+          this.modal.detail = await detailRes.value.json();
+        } else {
+          console.error('detail fetch failed');
+        }
         this.modal.loadingDetail = false;
       },
 

@@ -8,6 +8,20 @@ MAX_RETRIES = 3
 ESUMMARY_BATCH_SIZE = 100
 ACCESSION_RE = re.compile(r"^(GSE|GSM|GDS)\d+$", re.IGNORECASE)
 BIOSAMPLE_RE = re.compile(r"^SAM[A-Z0-9]+\d+$", re.IGNORECASE)
+GSE_RE = re.compile(r"GSE\d+", re.IGNORECASE)
+
+
+def _text(el: ET.Element | None) -> str:
+    return el.text.strip() if el is not None and el.text else ""
+
+
+def _find_text(parent: ET.Element, ns: str, tag: str) -> str:
+    return _text(parent.find(f"{{{ns}}}{tag}"))
+
+
+def _relation_accession(target: str) -> str:
+    match = GSE_RE.search(target or "")
+    return match.group(0).upper() if match else ""
 
 
 async def search_geo(query: str, retmax: int = 20) -> list[dict]:
@@ -37,12 +51,66 @@ async def search_geo_page(query: str, retmax: int = 10000, page: int = 1, page_s
 
 
 async def fetch_gsm_samples(gse_accession: str, retmax: int = 1000) -> list[dict]:
-    """Fetch all GSM samples for a given GSE accession."""
-    query = f"{gse_accession}[Accession] AND gsm[EntryType]"
-    ids = await _esearch("gds", query, retmax, retstart=0)
-    if not ids:
-        return []
-    return await _efetch_gsm_summaries(ids)
+    """Fetch all GSM samples for a given GSE accession via MINiML XML."""
+    url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
+    params = {"acc": gse_accession, "targ": "gsm", "form": "xml", "view": "quick"}
+    NS = "http://www.ncbi.nlm.nih.gov/geo/info/MINiML"
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        for attempt in range(MAX_RETRIES):
+            try:
+                r = await client.get(url, params=params)
+                r.raise_for_status()
+                root = ET.fromstring(r.text)
+                results = []
+                for sample in root.findall(f"{{{NS}}}Sample"):
+                    acc_el = sample.find(f"{{{NS}}}Accession")
+                    gsm_id = acc_el.text.strip() if acc_el is not None and acc_el.text else ""
+                    title_el = sample.find(f"{{{NS}}}Title")
+                    title = title_el.text.strip() if title_el is not None and title_el.text else ""
+                    org_el = sample.find(f".//{{{NS}}}Organism")
+                    organism = org_el.text.strip() if org_el is not None and org_el.text else ""
+                    source_el = sample.find(f".//{{{NS}}}Source")
+                    source_name = source_el.text.strip() if source_el is not None and source_el.text else ""
+                    molecule_el = sample.find(f".//{{{NS}}}Molecule")
+                    molecule = molecule_el.text.strip() if molecule_el is not None and molecule_el.text else ""
+                    library_strategy = _find_text(sample, NS, "Library-Strategy")
+                    growth_protocol = _find_text(sample, NS, "Growth-Protocol")
+                    treatment_protocol = _find_text(sample, NS, "Treatment-Protocol")
+                    characteristics = {}
+                    for char_el in sample.findall(f".//{{{NS}}}Characteristics"):
+                        value = char_el.text.strip() if char_el.text else ""
+                        if not value:
+                            continue
+                        key = char_el.get("tag") or "characteristic"
+                        if key in characteristics:
+                            characteristics[key] = f"{characteristics[key]}; {value}"
+                        else:
+                            characteristics[key] = value
+                    biosample_id = ""
+                    for rel in sample.findall(f"{{{NS}}}Relation"):
+                        if rel.get("type") == "BioSample":
+                            target = rel.get("target", "")
+                            if "/biosample/" in target:
+                                biosample_id = target.split("/biosample/")[-1]
+                    results.append({
+                        "gsm_id": gsm_id,
+                        "title": title,
+                        "organism": organism,
+                        "biosample_id": biosample_id,
+                        "source_name": source_name,
+                        "characteristics": characteristics,
+                        "molecule": molecule,
+                        "library_strategy": library_strategy,
+                        "growth_protocol": growth_protocol,
+                        "treatment_protocol": treatment_protocol,
+                    })
+                return results
+            except (httpx.HTTPStatusError, httpx.TimeoutException, ET.ParseError):
+                if attempt == MAX_RETRIES - 1:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+    return []
 
 
 def _normalize_geo_query(query: str) -> str:
@@ -130,7 +198,7 @@ async def _efetch_gsm_summaries(ids: list[str]) -> list[dict]:
                         results.append({
                             "gsm_id": doc.get("accession", uid),
                             "title": doc.get("title", ""),
-                            "organism": doc.get("organism", ""),
+                            "organism": doc.get("taxon", ""),
                             "biosample_id": doc.get("biosample", ""),
                         })
                     break
@@ -156,12 +224,20 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
     # BioProject ID
     bioproject_id = ""
     bioproject_link = ""
+    series_relations = []
     for rel in series.findall(f"{{{NS}}}Relation"):
-        if rel.get("type") == "BioProject":
-            target = rel.get("target", "")
+        rel_type = rel.get("type") or ""
+        target = rel.get("target", "")
+        if rel_type == "BioProject":
             if "/bioproject/" in target:
                 bioproject_id = target.split("/bioproject/")[-1]
             bioproject_link = target
+        elif "series" in rel_type.lower():
+            series_relations.append({
+                "type": rel_type,
+                "accession": _relation_accession(target),
+                "target": target,
+            })
 
     # Abstract and Overall Design
     abstract_el = series.find(f"{{{NS}}}Summary")
@@ -178,7 +254,7 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
             name = url.split("/")[-1]
             suppl_files.append({"name": name, "url": url})
 
-    # Contact info
+    # Contact info — Contact-Ref points to the contributor iid
     contact_ref = series.find(f"{{{NS}}}Contact-Ref")
     contact = {}
     if contact_ref is not None:
@@ -199,29 +275,38 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
                 dept_el = contrib.find(f"{{{NS}}}Department")
                 department = dept_el.text.strip() if dept_el is not None and dept_el.text else ""
 
-                org = contrib.find(f"{{{NS}}}Organization")
-                address = city = state = zip_code = country = ""
-                if org is not None:
-                    addr_el = org.find(f"{{{NS}}}Address")
-                    city_el = org.find(f"{{{NS}}}City")
-                    state_el = org.find(f"{{{NS}}}State")
-                    zip_el = org.find(f"{{{NS}}}Zip-Code")
-                    country_el = org.find(f"{{{NS}}}Country")
-                    address = addr_el.text.strip() if addr_el is not None and addr_el.text else ""
+                org_el = contrib.find(f"{{{NS}}}Organization")
+                organization = org_el.text.strip() if org_el is not None and org_el.text else ""
+
+                # Address is a sub-element with Line, City, Postal-Code, Country, State
+                addr_el = contrib.find(f"{{{NS}}}Address")
+                line = city = state = zip_code = country = ""
+                if addr_el is not None:
+                    line_el = addr_el.find(f"{{{NS}}}Line")
+                    city_el = addr_el.find(f"{{{NS}}}City")
+                    state_el = addr_el.find(f"{{{NS}}}State")
+                    zip_el = addr_el.find(f"{{{NS}}}Postal-Code") or addr_el.find(f"{{{NS}}}Zip-Code")
+                    country_el = addr_el.find(f"{{{NS}}}Country")
+                    line = line_el.text.strip() if line_el is not None and line_el.text else ""
                     city = city_el.text.strip() if city_el is not None and city_el.text else ""
                     state = state_el.text.strip() if state_el is not None and state_el.text else ""
                     zip_code = zip_el.text.strip() if zip_el is not None and zip_el.text else ""
                     country = country_el.text.strip() if country_el is not None and country_el.text else ""
+                elif org_el is not None:
+                    city = _find_text(org_el, NS, "City")
+                    zip_code = _find_text(org_el, NS, "Postal-Code") or _find_text(org_el, NS, "Zip-Code")
+                    country = _find_text(org_el, NS, "Country")
 
                 contact = {
                     "name": f"{first} {last}".strip(),
                     "email": email,
-                    "address": address,
+                    "organization": organization,
+                    "department": department,
+                    "address": line,
                     "city": city,
                     "state": state,
                     "zip": zip_code,
                     "country": country,
-                    "department": department,
                 }
                 break
 
@@ -231,19 +316,16 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
         "bioproject_link": bioproject_link,
         "abstract": abstract,
         "overall_design": overall_design,
+        "series_relations": series_relations,
         "contact": contact,
         "supplementary_files": suppl_files,
     }
 
 
 async def fetch_gse_detail(gse_id: str) -> dict:
-    """Fetch full GSE detail via eFetch MINiML format."""
-    ids = await _esearch("gds", f'"{gse_id}"[Accession] AND gse[EntryType]', retmax=1)
-    if not ids:
-        return {"gse_id": gse_id}
-
-    url = f"{NCBI_BASE}/efetch.fcgi"
-    params = {"db": "gds", "id": ids[0], "rettype": "miniml", "retmode": "xml"}
+    """Fetch full GSE detail via GEO MINiML XML endpoint."""
+    url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
+    params = {"acc": gse_id, "targ": "self", "form": "xml", "view": "quick"}
 
     async with httpx.AsyncClient(timeout=30) as client:
         for attempt in range(MAX_RETRIES):

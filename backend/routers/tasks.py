@@ -1,13 +1,17 @@
 import csv
 import io
 from typing import Optional
+import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.database import get_db
+from backend.label_schema import default_label_schema_json
 from backend.models import ScreeningTask, ScreeningResult, User, GeoSample
+from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
 from backend.worker.geo_fetcher import search_geo, fetch_gsm_samples
@@ -29,67 +33,81 @@ async def create_task(
 ):
     if source == "geo" and not search_query and not geo_ids:
         raise HTTPException(status_code=400, detail="search_query is required for GEO tasks")
+    if source == "geo" and not label_schema:
+        label_schema = default_label_schema_json()
 
-    task = ScreeningTask(
-        name=name,
-        source=source,
-        search_query=search_query,
-        criteria_text=criteria_text,
-        owner_id=user.id,
-        label_schema=label_schema,
-    )
-    db.add(task)
-    await db.flush()
-
-    datasets: list[dict] = []
-    if source == "csv" and file:
-        content = await file.read()
-        datasets = parse_csv(content)
-    elif source == "geo" and search_query:
-        datasets = await search_geo(search_query, retmax=20)
-    elif source == "geo" and geo_ids:
-        for gid in geo_ids.split(","):
-            gid = gid.strip()
-            if gid:
-                datasets.append({"id": gid, "title": "", "description": ""})
-
-    task.total = len(datasets)
-    task.candidate_count = len(datasets)
-    for d in datasets:
-        sr = ScreeningResult(
-            task_id=task.id,
-            dataset_id=d["id"],
-            title=d.get("title", ""),
-            description=d.get("description") or d.get("summary", ""),
-            keyword_matched=True,
-            gse_type=d.get("gse_type", ""),
-            pubdate=d.get("pubdate", ""),
-            update_date=d.get("update_date", ""),
-            has_raw_data=d.get("has_raw_data", False),
-            n_samples=d.get("n_samples", 0),
+    try:
+        task = ScreeningTask(
+            name=name,
+            source=source,
+            search_query=search_query,
+            criteria_text=criteria_text,
+            owner_id=user.id,
+            label_schema=label_schema,
         )
-        db.add(sr)
+        db.add(task)
         await db.flush()
-        if source == "geo":
-            gsm_list = await fetch_gsm_samples(d["id"])
-            for gsm in gsm_list:
-                db.add(GeoSample(
-                    result_id=sr.id,
-                    gsm_id=gsm["gsm_id"],
-                    title=gsm.get("title", ""),
-                    organism=gsm.get("organism", ""),
-                    biosample_id=gsm.get("biosample_id", ""),
-                ))
 
-    if source == "geo" and not criteria_text.strip():
-        task.status = "done"
+        datasets: list[dict] = []
+        if source == "csv" and file:
+            content = await file.read()
+            datasets = parse_csv(content)
+        elif source == "geo" and search_query:
+            datasets = await search_geo(search_query, retmax=20)
+        elif source == "geo" and geo_ids:
+            for gid in geo_ids.split(","):
+                gid = gid.strip()
+                if gid:
+                    datasets.append({"id": gid, "title": "", "description": ""})
 
-    await db.commit()
-    await db.refresh(task)
+        task.total = len(datasets)
+        task.candidate_count = len(datasets)
+        for d in datasets:
+            sr = ScreeningResult(
+                task_id=task.id,
+                dataset_id=d["id"],
+                title=d.get("title", ""),
+                description=d.get("description") or d.get("summary", ""),
+                keyword_matched=True,
+                gse_type=d.get("gse_type", ""),
+                pubdate=d.get("pubdate", ""),
+                update_date=d.get("update_date", ""),
+                has_raw_data=d.get("has_raw_data", False),
+                n_samples=d.get("n_samples", 0),
+            )
+            db.add(sr)
+            await db.flush()
+            if source == "geo":
+                try:
+                    gsm_list = await fetch_gsm_samples(d["id"])
+                except httpx.HTTPError:
+                    gsm_list = []
+                for gsm in gsm_list:
+                    db.add(GeoSample(
+                        result_id=sr.id,
+                        gsm_id=gsm["gsm_id"],
+                        title=gsm.get("title", ""),
+                        organism=gsm.get("organism", ""),
+                        biosample_id=gsm.get("biosample_id", ""),
+                    ))
+
+        if source == "geo" and not criteria_text.strip():
+            task.status = "done"
+
+        await db.commit()
+        await db.refresh(task)
+    except OperationalError as exc:
+        await db.rollback()
+        if "database is locked" in str(exc).lower():
+            raise HTTPException(status_code=503, detail="Database is busy. Please retry in a moment.")
+        raise
 
     if source != "geo" or criteria_text.strip():
-        from backend.worker.tasks import run_screening
-        run_screening.delay(task.id)
+        from backend.worker.tasks import run_screening, _run_screening_async
+        dispatch_or_run_inline(
+            delay_call=lambda: run_screening.delay(task.id),
+            inline_coro_factory=lambda: _run_screening_async(task.id),
+        )
 
     return {
         "id": task.id,
@@ -151,7 +169,10 @@ async def get_results(
     count_result = await db.execute(count_query)
     total = count_result.scalar()
     rows_result = await db.execute(
-        base_query.options(selectinload(ScreeningResult.samples)).offset(offset).limit(page_size)
+        base_query.options(
+            selectinload(ScreeningResult.samples),
+            selectinload(ScreeningResult.labels),
+        ).offset(offset).limit(page_size)
     )
     rows = rows_result.scalars().all()
     return {
@@ -164,6 +185,7 @@ async def get_results(
                    "gse_type": r.gse_type, "pubdate": r.pubdate,
                    "update_date": r.update_date, "has_raw_data": r.has_raw_data,
                    "n_samples": r.n_samples,
+                   "labels": [{"key": label.key, "value": label.value, "source": label.source} for label in r.labels],
                    "samples": [{"gsm_id": s.gsm_id, "title": s.title,
                                 "organism": s.organism, "biosample_id": s.biosample_id,
                                 "cell_count": s.cell_count} for s in r.samples]} for r in rows],

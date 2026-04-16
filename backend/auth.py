@@ -33,6 +33,14 @@ async def get_current_user(
     access_token: Optional[str] = Cookie(default=None),
     db: AsyncSession = Depends(get_db),
 ) -> User:
+    return await resolve_current_user(token=token, access_token=access_token, db=db)
+
+
+async def resolve_current_user(
+    token: Optional[str],
+    access_token: Optional[str],
+    db: AsyncSession,
+) -> User:
     tok = token or access_token
     if not tok:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")

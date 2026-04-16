@@ -24,3 +24,34 @@ async def test_screen_dataset_calls_api():
     with patch.object(client._client.chat.completions, "create", new=AsyncMock(return_value=mock_resp)):
         result = await client.screen_dataset("GSE001", "Test", "A study", "Must be human")
     assert result["decision"] == "include"
+
+
+@pytest.mark.asyncio
+async def test_extract_labels_uses_standardized_geo_screening_prompt():
+    client = LLMClient(provider="deepseek", api_key="fake")
+    mock_resp = MagicMock()
+    mock_resp.choices[0].message.content = '{"reasoning_text":"证据不足，待确认。","final_conclusion":"待确认"}'
+
+    with patch.object(client._client.chat.completions, "create", new=AsyncMock(return_value=mock_resp)) as create:
+        await client.extract_labels("GSE001", "PSC differentiation", "Summary text", ["最终结论"])
+
+    prompt = create.await_args.kwargs["messages"][0]["content"]
+    assert "人源多能干细胞分化过程中的单细胞数据" in prompt
+    assert '"reasoning_text"' in prompt
+    assert '"data_type"' not in prompt
+    assert '"starting_cell"' not in prompt
+    assert '"genetic_background"' not in prompt
+    assert '"differentiation_system"' not in prompt
+    assert '"experimental_environment"' not in prompt
+    assert '"final_conclusion": "可用 / 不可用 / 待确认"' in prompt
+    assert "不要分条、不要分块、不要按 1-5 点输出" in prompt
+    assert "reasoning_text 必须是一整段连续文字" in prompt
+    assert "reasoning_text 必须按固定顺序依次覆盖：数据类型、起始细胞、遗传背景、分化体系、实验环境、最终判断" in prompt
+    assert "可以在同一段中使用“数据类型：”“起始细胞：”“遗传背景：”“分化体系：”“实验环境：”“最终判断：”作为句内标签" in prompt
+    assert "请严格输出 JSON" in prompt
+    assert "只有当数据类型、起始细胞、遗传背景、分化体系、实验环境均明确符合时" in prompt
+    assert "任一关键项为“信息不足”，且没有明确排除证据时，必须判定为“待确认”" in prompt
+    assert "必须存在明确分化路径或分化目标" not in prompt
+    assert "不要求 GEO 明确写出完整分化过程、路径或目标的详细信息" in prompt
+    assert "除明确 embryo model、organoid、3D suspension" in prompt
+    assert "不得因为未明确写出 2D 而判定为信息不足或不符合" in prompt

@@ -1,11 +1,18 @@
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from fastapi import FastAPI, Request
+from typing import Optional
+from fastapi import Cookie, Depends, FastAPI, Request
+from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import RedirectResponse
 from backend.database import init_db
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from backend.auth import resolve_current_user
+from backend.database import get_db
+from backend.models import Library
 from backend.routers import auth as auth_router
 from backend.routers import criteria as criteria_router
 from backend.routers import llm as llm_router
@@ -21,6 +28,7 @@ if not FRONTEND_DIR.is_absolute():
     FRONTEND_DIR = (BASE_DIR / FRONTEND_DIR).resolve()
 
 templates = Jinja2Templates(directory=str(FRONTEND_DIR / "templates"))
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -63,6 +71,37 @@ async def criteria_page(request: Request):
 async def settings_page(request: Request):
     return templates.TemplateResponse(request, "settings.html")
 
+
+@app.get("/library")
+async def library_list_page(
+    request: Request,
+    token: Optional[str] = Depends(oauth2_scheme),
+    access_token: Optional[str] = Cookie(default=None),
+    db: AsyncSession = Depends(get_db),
+):
+    accepts_html = "text/html" in request.headers.get("accept", "")
+    if accepts_html:
+        return templates.TemplateResponse(request, "library_list.html")
+
+    user = await resolve_current_user(token=token, access_token=access_token, db=db)
+    rows = (
+        await db.execute(
+            select(Library)
+            .where(Library.owner_id == user.id)
+            .order_by(Library.created_at.desc())
+        )
+    ).scalars().all()
+    return [
+        {
+            "id": row.id,
+            "name": row.name,
+            "description": row.description,
+            "search_query": row.search_query,
+            "created_at": row.created_at,
+        }
+        for row in rows
+    ]
+
 app.include_router(auth_router.router)
 app.include_router(criteria_router.router)
 app.include_router(llm_router.router)
@@ -70,10 +109,6 @@ app.include_router(tasks_router.router)
 app.include_router(geo_router.router)
 app.include_router(annotate_router.router)
 app.include_router(library_router.router)
-
-@app.get("/library")
-async def library_list_page(request: Request):
-    return templates.TemplateResponse(request, "library_list.html")
 
 @app.get("/library/{library_id}")
 async def library_detail_page(request: Request, library_id: int):

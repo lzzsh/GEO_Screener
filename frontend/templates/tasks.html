@@ -47,10 +47,24 @@
   function tasksPage() {
     return {
       tasks: [], loading: true,
+      async readError(response, fallback) {
+        const text = await response.text();
+        try {
+          const payload = JSON.parse(text);
+          return payload.detail || fallback;
+        } catch (e) {
+          return text || fallback;
+        }
+      },
       async load() {
         this.loading = true;
         const r = await fetch('/tasks');
         if (r.status === 401) { window.location.href = '/login'; return; }
+        if (!r.ok) {
+          alert(await this.readError(r, '任务列表加载失败'));
+          this.loading = false;
+          return;
+        }
         this.tasks = await r.json();
         this.loading = false;
       },

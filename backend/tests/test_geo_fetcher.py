@@ -75,14 +75,30 @@ async def test_search_geo_returns_enriched_fields():
 @pytest.mark.asyncio
 async def test_fetch_gsm_samples():
     from backend.worker.geo_fetcher import fetch_gsm_samples
+    xml = '''<?xml version="1.0"?>
+<MINiML xmlns="http://www.ncbi.nlm.nih.gov/geo/info/MINiML">
+  <Sample iid="GSM9162575">
+    <Accession>GSM9162575</Accession>
+    <Title>Experiment 23-001</Title>
+    <Channel>
+      <Organism>Homo sapiens</Organism>
+    </Channel>
+    <Relation type="BioSample" target="https://www.ncbi.nlm.nih.gov/biosample/SAMN50564034"/>
+  </Sample>
+  <Sample iid="GSM9162576">
+    <Accession>GSM9162576</Accession>
+    <Title>Experiment 23-006</Title>
+    <Channel>
+      <Organism>Homo sapiens</Organism>
+    </Channel>
+    <Relation type="BioSample" target="https://www.ncbi.nlm.nih.gov/biosample/SAMN50564033"/>
+  </Sample>
+</MINiML>'''
 
     async def mock_get(url, params=None, **kwargs):
         m = MagicMock()
         m.raise_for_status = MagicMock()
-        if "esearch" in url:
-            m.json.return_value = MOCK_GSM_ESEARCH
-        else:
-            m.json.return_value = MOCK_GSM_ESUMMARY
+        m.text = xml
         return m
 
     with patch("httpx.AsyncClient") as mock_client_cls:
@@ -144,6 +160,8 @@ async def test_parse_miniml_extracts_all_fields():
     <Contact-Ref ref="contrib1"/>
     <Supplementary-Data type="TAR">ftp://test.com/file.tar</Supplementary-Data>
     <Relation type="BioProject" target="https://www.ncbi.nlm.nih.gov/bioproject/PRJNA1304480"/>
+    <Relation type="SuperSeries of" target="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111"/>
+    <Relation type="SubSeries of" target="https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE222"/>
   </Series>
 </MINiML>'''
 
@@ -157,6 +175,60 @@ async def test_parse_miniml_extracts_all_fields():
     assert result["contact"]["city"] == "Stockholm"
     assert len(result["supplementary_files"]) == 1
     assert result["supplementary_files"][0]["name"] == "file.tar"
+    assert result["series_relations"] == [
+        {"type": "SuperSeries of", "accession": "GSE111", "target": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE111"},
+        {"type": "SubSeries of", "accession": "GSE222", "target": "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE222"},
+    ]
+
+
+@pytest.mark.asyncio
+async def test_fetch_gsm_samples_extracts_sample_characteristics():
+    from backend.worker.geo_fetcher import fetch_gsm_samples
+
+    xml = '''<?xml version="1.0"?>
+<MINiML xmlns="http://www.ncbi.nlm.nih.gov/geo/info/MINiML">
+  <Sample iid="GSM001">
+    <Accession>GSM001</Accession>
+    <Title>Day 10 cardiomyocyte sample</Title>
+    <Channel>
+      <Source>human iPSC-derived cardiomyocytes</Source>
+      <Organism>Homo sapiens</Organism>
+      <Characteristics tag="cell type">iPSC-derived cardiomyocyte</Characteristics>
+      <Characteristics tag="time point">day 10</Characteristics>
+      <Molecule>polyA RNA</Molecule>
+    </Channel>
+    <Library-Strategy>RNA-Seq</Library-Strategy>
+    <Growth-Protocol>in vitro directed differentiation</Growth-Protocol>
+    <Relation type="BioSample" target="https://www.ncbi.nlm.nih.gov/biosample/SAMN001"/>
+  </Sample>
+</MINiML>'''
+
+    async def mock_get(url, params=None, **kwargs):
+        m = MagicMock()
+        m.raise_for_status = MagicMock()
+        m.text = xml
+        return m
+
+    with patch("httpx.AsyncClient") as mock_client_cls:
+        mock_client = AsyncMock()
+        mock_client.get = AsyncMock(side_effect=mock_get)
+        mock_client.__aenter__ = AsyncMock(return_value=mock_client)
+        mock_client.__aexit__ = AsyncMock(return_value=False)
+        mock_client_cls.return_value = mock_client
+        samples = await fetch_gsm_samples("GSE001")
+
+    assert samples == [{
+        "gsm_id": "GSM001",
+        "title": "Day 10 cardiomyocyte sample",
+        "organism": "Homo sapiens",
+        "biosample_id": "SAMN001",
+        "source_name": "human iPSC-derived cardiomyocytes",
+        "characteristics": {"cell type": "iPSC-derived cardiomyocyte", "time point": "day 10"},
+        "molecule": "polyA RNA",
+        "library_strategy": "RNA-Seq",
+        "growth_protocol": "in vitro directed differentiation",
+        "treatment_protocol": "",
+    }]
 
 
 @pytest.mark.asyncio

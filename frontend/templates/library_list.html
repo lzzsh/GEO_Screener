@@ -1,0 +1,98 @@
+{% extends "base.html" %}
+{% block title %}文献库 — GEO Screener{% endblock %}
+{% block content %}
+<div x-data="libraryListPage()" x-init="load()">
+  <div class="flex items-center justify-between mb-6">
+    <h1 class="text-2xl font-bold">文献库</h1>
+    <button @click="showCreate=true"
+            class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700">
+      + 新建集合
+    </button>
+  </div>
+
+  <div x-show="showCreate" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+       @click.self="showCreate=false">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 z-10">
+      <h2 class="text-lg font-semibold mb-4">新建集合</h2>
+      <div class="space-y-3">
+        <input x-model="newName" placeholder="集合名称（必填）"
+               class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <textarea x-model="newDesc" placeholder="描述（可选）" rows="2"
+                  class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+      </div>
+      <div class="flex gap-2 mt-4 justify-end">
+        <button @click="showCreate=false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
+        <button @click="createLib()" :disabled="!newName.trim()"
+                class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+          创建
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div x-show="libraries.length === 0 && !loading" class="text-center text-gray-400 py-16 text-sm">
+    暂无文献库集合，点击「新建集合」开始
+  </div>
+
+  <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+    <template x-for="lib in libraries" :key="lib.id">
+      <a :href="'/library/' + lib.id"
+         class="bg-white rounded-xl border border-gray-200 p-5 hover:border-blue-300 hover:shadow-sm transition block">
+        <div class="flex items-start justify-between">
+          <div class="flex-1 min-w-0">
+            <p class="font-semibold text-gray-900 truncate" x-text="lib.name"></p>
+            <p class="text-xs text-gray-400 mt-1 line-clamp-2" x-text="lib.description || lib.search_query || '—'"></p>
+          </div>
+          <button @click.prevent="deleteLib(lib.id)"
+                  class="text-gray-300 hover:text-red-500 ml-2 text-lg leading-none shrink-0">✕</button>
+        </div>
+        <p class="text-xs text-gray-400 mt-3" x-text="formatDate(lib.created_at)"></p>
+      </a>
+    </template>
+  </div>
+</div>
+
+<script>
+  function libraryListPage() {
+    return {
+      libraries: [],
+      loading: false,
+      showCreate: false,
+      newName: '',
+      newDesc: '',
+
+      formatDate(value) {
+        if (!value) return '—';
+        return new Date(value).toLocaleDateString('zh-CN');
+      },
+      async load() {
+        this.loading = true;
+        const r = await fetch('/library');
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) this.libraries = await r.json();
+        this.loading = false;
+      },
+      async createLib() {
+        if (!this.newName.trim()) return;
+        const r = await fetch('/library', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({name: this.newName, description: this.newDesc}),
+        });
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) {
+          const lib = await r.json();
+          window.location.href = '/library/' + lib.id;
+        }
+      },
+      async deleteLib(id) {
+        if (!confirm('确认删除该集合及其所有数据？')) return;
+        const r = await fetch('/library/' + id, {method: 'DELETE'});
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) this.libraries = this.libraries.filter(l => l.id !== id);
+      },
+    }
+  }
+</script>
+{% endblock %}
