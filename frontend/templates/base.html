@@ -8,18 +8,25 @@
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
   <script src="/static/app.js"></script>
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen">
-  <nav class="bg-white border-b border-gray-200 px-6 py-3 flex items-center justify-between">
-    <a href="/search" class="font-semibold text-blue-600 text-lg">GEO Screener</a>
-    <div class="flex gap-4 text-sm">
-      <a href="/search" class="hover:text-blue-600">Search</a>
-      <a href="/tasks-list" class="hover:text-blue-600">Tasks</a>
-      <a href="/criteria-page" class="hover:text-blue-600">Criteria</a>
-      <a href="/settings" class="hover:text-blue-600">Settings</a>
-      <button @click="logout()" class="text-red-500 hover:text-red-700">Logout</button>
+<body class="bg-gray-50 text-gray-900 min-h-screen flex">
+  <!-- Left Sidebar -->
+  <aside class="w-40 bg-white border-r border-gray-200 fixed h-full flex flex-col z-10">
+    <div class="px-4 py-4 border-b border-gray-100">
+      <a href="/search" class="font-semibold text-blue-600 text-sm">GEO Screener</a>
     </div>
-  </nav>
-  <main class="max-w-6xl mx-auto px-6 py-8">
+    <nav class="flex-1 py-2 overflow-y-auto">
+      <a href="/search" class="block px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">论文列表</a>
+      <a href="/tasks-list" class="block px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">任务管理</a>
+      <a href="/library" class="block px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">文献库</a>
+      <a href="/criteria-page" class="block px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">配置管理</a>
+      <a href="/settings" class="block px-4 py-2.5 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">Settings</a>
+    </nav>
+    <div class="px-4 py-3 border-t border-gray-100">
+      <button @click="logout()" class="text-xs text-red-500 hover:text-red-700">退出登录</button>
+    </div>
+  </aside>
+  <!-- Main Content -->
+  <main class="ml-40 flex-1 px-6 py-6 min-w-0">
     {% block content %}{% endblock %}
   </main>
 </body>
