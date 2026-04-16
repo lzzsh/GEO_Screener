@@ -1,0 +1,486 @@
+{% extends "base.html" %}
+{% block title %}文献库详情 — GEO Screener{% endblock %}
+{% block content %}
+<div x-data="libraryDetailPage({{ library_id }})" x-init="init()">
+  <div x-show="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4"
+       @click.self="modal.open=false">
+    <div class="absolute inset-0 bg-black/40"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 z-10">
+      <div class="flex justify-between items-start mb-6">
+        <div>
+          <p class="font-mono text-sm text-blue-700 font-semibold" x-text="modal.gse_id"></p>
+          <p class="text-lg font-semibold text-gray-900 mt-2" x-text="modal.title"></p>
+        </div>
+        <button @click="modal.open=false" class="text-gray-400 hover:text-gray-600 text-xl leading-none ml-4">✕</button>
+      </div>
+
+      <!-- Section 1: 数据信息 -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">数据信息</h3>
+        <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-2 text-sm">
+          <div>
+            <p class="text-gray-500">原始数据ID</p>
+            <p class="text-gray-900 font-mono" x-text="modal.detail?.bioproject_id || '—'"></p>
+          </div>
+          <div>
+            <p class="text-gray-500">原始数据链接</p>
+            <p x-show="modal.detail?.bioproject_link">
+              <a :href="modal.detail?.bioproject_link" target="_blank" class="text-blue-600 hover:text-blue-700 break-all" x-text="modal.detail?.bioproject_link"></a>
+            </p>
+            <p x-show="!modal.detail?.bioproject_link" class="text-gray-400">—</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 2: 其他信息 -->
+      <div class="mb-6">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">其他信息</h3>
+        <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-3 text-sm">
+          <div>
+            <p class="text-gray-500 mb-1">论文摘要</p>
+            <p class="text-gray-700 leading-relaxed" x-text="modal.detail?.abstract || '—'"></p>
+          </div>
+          <div>
+            <p class="text-gray-500 mb-1">整体设计</p>
+            <p class="text-gray-700 leading-relaxed" x-text="modal.detail?.overall_design || '—'"></p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 3: 联系人信息 -->
+      <div class="mb-6" x-show="modal.detail?.contact && Object.keys(modal.detail.contact).length > 0">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">联系人信息</h3>
+        <div class="grid grid-cols-2 gap-4 text-sm">
+          <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-2">
+            <div>
+              <p class="text-gray-500">联系人姓名</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.name || '—'"></p>
+            </div>
+            <div>
+              <p class="text-gray-500">联系人地址</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.address || '—'"></p>
+            </div>
+            <div>
+              <p class="text-gray-500">联系人州</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.state || '—'"></p>
+            </div>
+            <div>
+              <p class="text-gray-500">联系人国家</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.country || '—'"></p>
+            </div>
+          </div>
+          <div class="bg-gray-50 rounded-lg px-4 py-3 space-y-2">
+            <div>
+              <p class="text-gray-500">联系人邮箱</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.email || '—'"></p>
+            </div>
+            <div>
+              <p class="text-gray-500">联系人城市</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.city || '—'"></p>
+            </div>
+            <div>
+              <p class="text-gray-500">联系人邮编</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.zip || '—'"></p>
+            </div>
+            <div>
+              <p class="text-gray-500">联系人部门</p>
+              <p class="text-gray-900" x-text="modal.detail?.contact?.department || '—'"></p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Section 4: Supplementary data files -->
+      <div class="mb-6" x-show="modal.detail?.supplementary_files && modal.detail.supplementary_files.length > 0">
+        <h3 class="text-sm font-semibold text-gray-900 mb-3">Supplementary data files</h3>
+        <div class="bg-gray-50 rounded-lg overflow-hidden">
+          <table class="w-full text-sm">
+            <thead class="bg-gray-100 border-b">
+              <tr>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">文件名称</th>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">下载地址</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y">
+              <template x-for="file in modal.detail?.supplementary_files" :key="file.name">
+                <tr>
+                  <td class="px-4 py-2 text-gray-900" x-text="file.name"></td>
+                  <td class="px-4 py-2">
+                    <a :href="file.url" target="_blank" class="text-blue-600 hover:text-blue-700 break-all" x-text="file.url"></a>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div x-show="modal.loadingDetail" class="text-sm text-gray-400 mb-6">加载详情中…</div>
+
+      <div class="mb-4" x-data="labelEditor(() => modal.entry_id)" x-init="loadLabels()">
+        <p class="text-xs text-gray-400 mb-2">标注</p>
+        <div class="flex flex-wrap gap-2 mb-2">
+          <template x-for="lbl in labels" :key="lbl.key">
+            <div class="flex items-center gap-1 bg-gray-50 border rounded-lg px-2 py-1 text-xs">
+              <span class="text-gray-500" x-text="lbl.key + ':'"></span>
+              <span x-show="!lbl.editing"
+                    :class="lbl.source==='human' ? 'text-blue-700 font-medium' : 'text-gray-700'"
+                    x-text="lbl.value || '—'"></span>
+              <input x-show="lbl.editing" x-model="lbl.editVal"
+                     @keydown.enter="saveLabel(lbl)" @keydown.escape="lbl.editing=false"
+                     class="border-b border-blue-400 outline-none text-xs w-24 px-1" />
+              <button @click="lbl.editing ? saveLabel(lbl) : startEdit(lbl)"
+                      class="text-gray-400 hover:text-blue-600 ml-1"
+                      x-text="lbl.editing ? '✓' : '✎'"></button>
+            </div>
+          </template>
+        </div>
+        <div class="flex gap-2 mt-2">
+          <input x-model="newKey" placeholder="新标注维度" class="border rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+          <input x-model="newVal" placeholder="值" class="border rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+          <button @click="addLabel()" class="text-xs text-blue-600 hover:text-blue-800 px-2">+ 添加</button>
+        </div>
+      </div>
+
+      <div x-show="modal.samples && modal.samples.length > 0">
+        <p class="text-xs text-gray-400 mb-2">样本列表 (GSM)</p>
+        <table class="w-full text-xs border rounded-lg overflow-hidden">
+          <thead class="bg-gray-50">
+            <tr>
+              <th class="text-left px-3 py-2 font-medium text-gray-600">GSM ID</th>
+              <th class="text-left px-3 py-2 font-medium text-gray-600">标题</th>
+              <th class="text-left px-3 py-2 font-medium text-gray-600">生物体</th>
+              <th class="text-left px-3 py-2 font-medium text-gray-600">BioSample</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y bg-white">
+            <template x-for="s in modal.samples" :key="s.gsm_id">
+              <tr>
+                <td class="px-3 py-2 font-mono text-blue-700" x-text="s.gsm_id"></td>
+                <td class="px-3 py-2 text-gray-700" x-text="s.title || '—'"></td>
+                <td class="px-3 py-2 text-gray-500" x-text="s.organism || '—'"></td>
+                <td class="px-3 py-2 text-blue-600" x-text="s.biosample_id || '—'"></td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <div class="flex items-center gap-3 mb-6">
+    <a href="/library" class="text-gray-400 hover:text-gray-600 text-sm">← 文献库</a>
+    <h1 class="text-2xl font-bold" x-text="library.name || 'Loading…'"></h1>
+    <span class="text-xs text-gray-400" x-text="'共 ' + total + ' 条'"></span>
+  </div>
+
+  <div class="flex flex-wrap items-center gap-3 mb-4">
+    <select x-model="statusFilter" @change="reload()"
+            class="border rounded-lg px-3 py-2 text-sm bg-white">
+      <option value="">全部状态</option>
+      <option value="new">New</option>
+      <option value="reviewing">Reviewing</option>
+      <option value="confirmed">Confirmed</option>
+      <option value="excluded">Excluded</option>
+    </select>
+    <a :href="'/library/' + libraryId + '/export'"
+       class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
+  </div>
+
+  <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
+    <div class="overflow-x-auto">
+      <table class="w-full text-sm table-fixed">
+        <colgroup>
+          <col class="w-28"><col><col class="w-28"><col class="w-16"><col class="w-12">
+          <col class="w-48"><col class="w-28"><col class="w-24">
+        </colgroup>
+        <thead class="bg-gray-50 border-b">
+          <tr>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">Accession</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">Title</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">Organism</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">Samples</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">Raw</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">实验类型</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">来源</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">状态</th>
+          </tr>
+        </thead>
+        <tbody class="divide-y">
+          <template x-for="entry in entries" :key="entry.id">
+            <tr class="hover:bg-gray-50 cursor-pointer" @click="openModal(entry)">
+              <td class="px-4 py-3 font-mono text-xs text-blue-700 align-top" x-text="entry.gse_id"></td>
+              <td class="px-4 py-3 align-top">
+                <p class="text-sm font-medium text-gray-900 line-clamp-2" x-text="entry.title || '—'"></p>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-500 align-top" x-text="entry.organism || '—'"></td>
+              <td class="px-4 py-3 text-xs text-gray-500 align-top text-center" x-text="entry.n_samples || '—'"></td>
+              <td class="px-4 py-3 text-center align-top">
+                <span x-show="entry.has_raw_data" class="text-green-500">✓</span>
+                <span x-show="!entry.has_raw_data" class="text-gray-300">—</span>
+              </td>
+              <td class="px-4 py-3 text-xs text-gray-500 align-top truncate" x-text="entry.gse_type || '—'"></td>
+              <td class="px-4 py-3 text-xs align-top">
+                <span :class="entry.source==='task' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
+                      class="px-2 py-0.5 rounded-full text-xs font-medium"
+                      x-text="entry.source==='task' ? '任务筛选' : '直接搜索'"></span>
+              </td>
+              <td class="px-4 py-3 align-top" @click.stop>
+                <select :value="entry.status"
+                        @change="updateStatus(entry, $event.target.value)"
+                        class="border rounded px-2 py-1 text-xs bg-white"
+                        :class="{
+                          'text-gray-500': entry.status==='new',
+                          'text-blue-600': entry.status==='reviewing',
+                          'text-green-600': entry.status==='confirmed',
+                          'text-red-500': entry.status==='excluded'
+                        }">
+                  <option value="new">New</option>
+                  <option value="reviewing">Reviewing</option>
+                  <option value="confirmed">Confirmed</option>
+                  <option value="excluded">Excluded</option>
+                </select>
+              </td>
+            </tr>
+          </template>
+        </tbody>
+      </table>
+    </div>
+    <div x-show="entries.length === 0 && !loading" class="text-center text-gray-400 py-12 text-sm">暂无数据</div>
+    <div class="px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3">
+      <button @click="prevPage()" :disabled="page<=1"
+              class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-sm">← Prev</button>
+      <div class="flex flex-wrap items-center justify-center gap-2">
+        <span class="text-sm text-gray-500">
+          第 <span x-text="page"></span> 页，共 <span x-text="totalPages"></span> 页
+        </span>
+        <template x-for="item in visiblePaginationItems" :key="item.key">
+          <template x-if="item.type === 'page'">
+            <button @click="goToPage(item.value)"
+                    :class="item.value === page ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                    class="min-w-9 px-3 py-1.5 rounded-lg text-sm font-medium"
+                    x-text="item.value"></button>
+          </template>
+          <template x-if="item.type === 'ellipsis'">
+            <span class="px-1 text-sm text-gray-400">…</span>
+          </template>
+        </template>
+        <div class="flex items-center gap-2 ml-2">
+          <label class="text-sm text-gray-500">跳至页码</label>
+          <input x-model.number="jumpPageInput" type="number" min="1" :max="totalPages"
+                 class="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          <button @click="jumpToPage()"
+                  class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Go</button>
+        </div>
+      </div>
+      <button @click="nextPage()" :disabled="page>=totalPages"
+              class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-sm">Next →</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  function libraryDetailPage(libraryId) {
+    return {
+      libraryId,
+      library: {},
+      entries: [],
+      total: 0,
+      page: 1,
+      pageSize: 20,
+      jumpPageInput: 1,
+      statusFilter: '',
+      loading: false,
+      modal: {
+        open: false,
+        entry_id: null,
+        gse_id: '',
+        title: '',
+        organism: '',
+        n_samples: 0,
+        has_raw_data: false,
+        gse_type: '',
+        samples: [],
+        detail: null,
+        loadingDetail: false,
+      },
+
+      async init() {
+        const r = await fetch('/library');
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) {
+          const libs = await r.json();
+          this.library = libs.find(l => l.id === this.libraryId) || {};
+        }
+        await this.loadEntries();
+      },
+      get totalPages() {
+        return Math.max(1, Math.ceil(this.total / this.pageSize));
+      },
+      get visiblePaginationItems() {
+        return buildPaginationItems(this.page, this.totalPages);
+      },
+      async loadEntries() {
+        this.loading = true;
+        const params = new URLSearchParams({page: this.page, page_size: this.pageSize});
+        if (this.statusFilter) params.set('status', this.statusFilter);
+        const r = await fetch('/library/' + this.libraryId + '/entries?' + params.toString());
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) {
+          const data = await r.json();
+          this.entries = data.items;
+          this.total = data.total;
+          this.jumpPageInput = this.page;
+        }
+        this.loading = false;
+      },
+      async reload() {
+        this.page = 1;
+        await this.loadEntries();
+      },
+      async goToPage(nextPage) {
+        if (nextPage < 1 || nextPage > this.totalPages || nextPage === this.page) return;
+        this.page = nextPage;
+        await this.loadEntries();
+      },
+      async prevPage() {
+        if (this.page > 1) await this.goToPage(this.page - 1);
+      },
+      async nextPage() {
+        if (this.page < this.totalPages) await this.goToPage(this.page + 1);
+      },
+      async jumpToPage() {
+        const target = Number(this.jumpPageInput);
+        if (!Number.isInteger(target) || target < 1 || target > this.totalPages) return;
+        await this.goToPage(target);
+      },
+      async updateStatus(entry, status) {
+        const r = await fetch('/library/' + this.libraryId + '/entries/' + entry.id, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({status}),
+        });
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) entry.status = status;
+      },
+      async openModal(entry) {
+        this.modal = {
+          open: true,
+          entry_id: entry.id,
+          gse_id: entry.gse_id,
+          title: entry.title,
+          organism: entry.organism,
+          n_samples: entry.n_samples,
+          has_raw_data: entry.has_raw_data,
+          gse_type: entry.gse_type,
+          samples: entry.samples || [],
+          detail: null,
+          loadingDetail: true,
+        };
+
+        // Fetch detail
+        try {
+          const r = await fetch(`/geo/gse/${entry.gse_id}/detail`);
+          if (r.ok) {
+            this.modal.detail = await r.json();
+          }
+        } catch(e) {}
+
+        this.modal.loadingDetail = false;
+      },
+    }
+  }
+
+  function labelEditor(getEntryId) {
+    return {
+      labels: [],
+      newKey: '',
+      newVal: '',
+      currentEntryId() {
+        return typeof getEntryId === 'function' ? getEntryId() : getEntryId;
+      },
+      async loadLabels() {
+        const entryId = this.currentEntryId();
+        if (!entryId) return;
+        const r = await fetch('/library/entries/' + entryId + '/labels');
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) {
+          const data = await r.json();
+          this.labels = data.map(l => ({...l, editing: false, editVal: l.value}));
+        }
+      },
+      startEdit(lbl) {
+        lbl.editVal = lbl.value;
+        lbl.editing = true;
+      },
+      async saveLabel(lbl) {
+        const entryId = this.currentEntryId();
+        const r = await fetch('/library/entries/' + entryId + '/labels', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({key: lbl.key, value: lbl.editVal}),
+        });
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) {
+          const updated = await r.json();
+          lbl.value = updated.value;
+          lbl.source = updated.source;
+          lbl.editing = false;
+        }
+      },
+      async addLabel() {
+        const entryId = this.currentEntryId();
+        if (!entryId || !this.newKey.trim()) return;
+        const r = await fetch('/library/entries/' + entryId + '/labels', {
+          method: 'PUT',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({key: this.newKey, value: this.newVal}),
+        });
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (r.ok) {
+          const created = await r.json();
+          this.labels.push({...created, editing: false, editVal: created.value});
+          this.newKey = '';
+          this.newVal = '';
+        }
+      },
+    }
+  }
+
+  function buildPaginationItems(currentPage, totalPages) {
+    if (totalPages <= 7) {
+      return Array.from({length: totalPages}, (_, i) => ({
+        key: `page-${i + 1}`,
+        type: 'page',
+        value: i + 1,
+      }));
+    }
+
+    const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+
+    if (currentPage <= 3) {
+      pages.add(2);
+      pages.add(3);
+    }
+
+    if (currentPage >= totalPages - 2) {
+      pages.add(totalPages - 1);
+      pages.add(totalPages - 2);
+    }
+
+    const sortedPages = Array.from(pages)
+      .filter((page) => page >= 1 && page <= totalPages)
+      .sort((a, b) => a - b);
+
+    const items = [];
+    for (let index = 0; index < sortedPages.length; index++) {
+      const value = sortedPages[index];
+      if (index > 0 && value - sortedPages[index - 1] > 1) {
+        items.push({key: `ellipsis-${sortedPages[index - 1]}-${value}`, type: 'ellipsis'});
+      }
+      items.push({key: `page-${value}`, type: 'page', value});
+    }
+    return items;
+  }
+</script>
+{% endblock %}
