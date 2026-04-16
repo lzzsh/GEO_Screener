@@ -2,6 +2,7 @@
 {% block title %}Task Detail — GEO Screener{% endblock %}
 {% block content %}
 <div x-data="taskDetailPage({{ task_id }})" x-init="init()">
+  <div x-show="annotationError" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="annotationError"></div>
   <div class="flex items-center gap-3 mb-6">
     <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
     <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
@@ -56,8 +57,28 @@
         <option value="uncertain">Uncertain</option>
       </select>
     </div>
-    <a :href="'/tasks/' + taskId + '/export'"
-       class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
+    <div class="flex items-center gap-2">
+      <a :href="'/tasks/' + taskId + '/export'"
+         class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
+      <div class="relative" x-data="{libOpen:false}">
+        <button @click="libOpen=!libOpen"
+                class="border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 flex items-center gap-1">
+          存入文献库 <span x-text="libOpen ? '▲' : '▼'" class="text-xs"></span>
+        </button>
+        <div x-show="libOpen" @click.outside="libOpen=false"
+             class="absolute right-0 mt-1 bg-white border rounded-xl shadow-lg z-10 w-52 py-1">
+          <template x-for="lib in libs" :key="lib.id">
+            <button @click="saveToLib(lib.id); libOpen=false"
+                    class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 truncate"
+                    x-text="lib.name"></button>
+          </template>
+          <div x-show="libs.length===0" class="px-4 py-2 text-xs text-gray-400">暂无文献库</div>
+          <div class="border-t mt-1 pt-1">
+            <a href="/library" class="block px-4 py-2 text-xs text-blue-600 hover:bg-gray-50">管理文献库 →</a>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 
   <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
@@ -75,15 +96,15 @@
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">操作</th>
         </tr>
       </thead>
-      <tbody class="divide-y" id="results-tbody">
-        <template x-for="r in results" :key="r.id">
-          <tbody>
+      <template x-for="r in results" :key="r.id">
+        <tbody class="divide-y" id="results-tbody">
           <tr @click="toggleExpand(r.id)" class="cursor-pointer hover:bg-gray-50">
             <td class="px-4 py-3">
               <p class="font-mono text-xs font-semibold text-blue-700" x-text="r.dataset_id"></p>
             </td>
             <td class="px-4 py-3 text-xs text-gray-800">
-              <p class="line-clamp-2" x-text="r.title || '—'"></p>
+              <p class="line-clamp-2 font-medium text-gray-900" x-text="r.title || '无标题数据集'"></p>
+              <p class="mt-1 text-[11px] text-gray-500" x-text="(r.labels && r.labels.length) ? ('已标注 ' + r.labels.length + ' 项') : '未生成标注'"></p>
             </td>
             <td class="px-4 py-3 text-xs text-center" x-text="r.n_samples || '—'"></td>
             <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" x-text="r.gse_type || '—'"></td>
@@ -101,7 +122,7 @@
           </tr>
           <tr x-show="expanded.has(r.id)" class="bg-slate-50">
             <td colspan="9" class="px-4 py-4">
-              <div class="mb-4" x-data="labelEditor(r.id)" x-init="loadLabels()">
+              <div class="mb-4" x-data="labelEditor(r)">
                 <p class="text-xs font-semibold text-gray-500 mb-2">标注</p>
                 <div class="flex flex-wrap gap-2">
                   <template x-for="lbl in labels" :key="lbl.key">
@@ -130,6 +151,7 @@
                       <th class="text-left px-3 py-2 font-medium text-gray-600">标题</th>
                       <th class="text-left px-3 py-2 font-medium text-gray-600">生物体</th>
                       <th class="text-left px-3 py-2 font-medium text-gray-600">生物样本关系ID</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">cellCount</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y bg-white">
@@ -139,6 +161,7 @@
                         <td class="px-3 py-2 text-gray-700" x-text="s.title || '—'"></td>
                         <td class="px-3 py-2 text-gray-500" x-text="s.organism || '—'"></td>
                         <td class="px-3 py-2 text-blue-600" x-text="s.biosample_id || '—'"></td>
+                        <td class="px-3 py-2 text-gray-700" x-text="s.cell_count || '—'"></td>
                       </tr>
                     </template>
                   </tbody>
@@ -150,17 +173,38 @@
               </div>
             </td>
           </tr>
-          </tbody>
-        </template>
-      </tbody>
+        </tbody>
+      </template>
     </table>
     <div x-show="results.length === 0 && !loading" class="text-center text-gray-400 py-8 text-sm">暂无结果</div>
   </div>
 
-  <div class="flex justify-between items-center mt-4 text-sm">
+  <div class="flex flex-wrap justify-between items-center mt-4 gap-3 text-sm">
     <button @click="prevPage()" :disabled="page <= 1"
             class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">← Prev</button>
-    <span class="text-gray-400" x-text="'第 ' + page + ' 页，共 ' + totalPages + ' 页'"></span>
+    <div class="flex flex-wrap items-center justify-center gap-2">
+      <span class="text-gray-400">
+        第 <span x-text="page"></span> 页，共 <span x-text="totalPages"></span> 页
+      </span>
+      <template x-for="item in visiblePaginationItems" :key="item.key">
+        <template x-if="item.type === 'page'">
+          <button @click="goToPage(item.value)"
+                  :class="item.value === page ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'"
+                  class="min-w-9 px-3 py-1.5 rounded-lg text-sm font-medium"
+                  x-text="item.value"></button>
+        </template>
+        <template x-if="item.type === 'ellipsis'">
+          <span class="px-1 text-sm text-gray-400">…</span>
+        </template>
+      </template>
+      <div class="flex items-center gap-2 ml-2">
+        <label class="text-sm text-gray-500">跳至页码</label>
+        <input x-model.number="jumpPageInput" type="number" min="1" :max="totalPages"
+               class="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <button @click="jumpToPage()"
+                class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Go</button>
+      </div>
+    </div>
     <button @click="nextPage()" :disabled="page >= totalPages"
             class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">Next →</button>
   </div>
@@ -170,11 +214,12 @@
   function taskDetailPage(taskId) {
     return {
       taskId, task: {}, results: [], loading: true,
-      page: 1, pageSize: 20, total: 0, expanded: new Set(),
-      decisionFilter: '', annotating: false, pollTimer: null,
+      page: 1, pageSize: 20, total: 0, jumpPageInput: 1, expanded: new Set(),
+      decisionFilter: '', annotating: false, annotationError: '', pollTimer: null, libs: [],
 
       async init() {
         await this.loadTask();
+        await this.loadLibs();
         await this.loadResults();
         if (this.task.status === 'running' || this.task.status === 'pending') {
           this.pollTimer = setInterval(() => this.poll(), 3000);
@@ -189,7 +234,12 @@
         const params = new URLSearchParams({page: this.page, page_size: this.pageSize});
         if (this.decisionFilter) params.set('decision', this.decisionFilter);
         const r = await fetch('/tasks/' + this.taskId + '/results?' + params.toString());
-        if (r.ok) { const d = await r.json(); this.results = d.items; this.total = d.total; }
+        if (r.ok) {
+          const d = await r.json();
+          this.results = d.items;
+          this.total = d.total;
+          this.jumpPageInput = this.page;
+        }
         this.loading = false;
       },
       async reloadResults() { this.page = 1; await this.loadResults(); },
@@ -200,12 +250,59 @@
       },
       async triggerAnnotation() {
         this.annotating = true;
-        await fetch('/annotate/tasks/' + this.taskId + '/run', {method: 'POST'});
-        this.annotating = false;
+        this.annotationError = '';
+        try {
+          const response = await fetch('/annotate/tasks/' + this.taskId + '/run', {method: 'POST'});
+          if (!response.ok) {
+            const payload = await response.json().catch(() => ({}));
+            throw new Error(payload.detail || 'Run LLM Annotation failed');
+          }
+          setTimeout(async () => {
+            await this.loadResults();
+          }, 1500);
+        } catch (error) {
+          this.annotationError = error.message;
+        } finally {
+          this.annotating = false;
+        }
+      },
+      async loadLibs() {
+        const r = await fetch('/library');
+        if (r.ok) this.libs = await r.json();
       },
       get totalPages() { return Math.max(1, Math.ceil(this.total / this.pageSize)); },
-      async prevPage() { if (this.page > 1) { this.page--; await this.loadResults(); } },
-      async nextPage() { if (this.page < this.totalPages) { this.page++; await this.loadResults(); } },
+      get visiblePaginationItems() { return buildPaginationItems(this.page, this.totalPages); },
+      async goToPage(nextPage) {
+        if (nextPage < 1 || nextPage > this.totalPages || nextPage === this.page) return;
+        this.page = nextPage;
+        await this.loadResults();
+      },
+      async prevPage() { if (this.page > 1) { await this.goToPage(this.page - 1); } },
+      async nextPage() { if (this.page < this.totalPages) { await this.goToPage(this.page + 1); } },
+      async jumpToPage() {
+        const target = Number(this.jumpPageInput);
+        if (!Number.isInteger(target) || target < 1 || target > this.totalPages) return;
+        await this.goToPage(target);
+      },
+      async saveToLib(libId) {
+        const entries = this.results
+          .filter(r => r.decision === 'include' || !r.decision)
+          .map(r => ({
+            gse_id: r.dataset_id, title: r.title, organism: '',
+            n_samples: r.n_samples || 0, gse_type: r.gse_type || '',
+            has_raw_data: r.has_raw_data || false, summary: r.summary || '',
+            pubdate: r.pubdate || '', update_date: r.update_date || '',
+          }));
+        const r = await fetch('/library/' + libId + '/entries', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({entries, source: 'task', task_id: this.taskId}),
+        });
+        if (r.ok) {
+          const data = await r.json();
+          alert(`已存入 ${data.added} 条（跳过重复 ${data.skipped} 条）`);
+        }
+      },
       toggleExpand(id) {
         if (this.expanded.has(id)) this.expanded.delete(id); else this.expanded.add(id);
         this.expanded = new Set(this.expanded);
@@ -221,16 +318,10 @@
     }
   }
 
-  function labelEditor(resultId) {
+  function labelEditor(result) {
     return {
-      resultId, labels: [],
-      async loadLabels() {
-        const r = await fetch('/annotate/results/' + this.resultId + '/labels');
-        if (r.ok) {
-          const data = await r.json();
-          this.labels = data.map(l => ({...l, editing: false, editVal: l.value}));
-        }
-      },
+      resultId: result.id,
+      labels: (result.labels || []).map(l => ({...l, editing: false, editVal: l.value})),
       startEdit(lbl) { lbl.editVal = lbl.value; lbl.editing = true; },
       async saveLabel(lbl) {
         const r = await fetch('/annotate/results/' + this.resultId + '/labels', {
@@ -246,6 +337,42 @@
         }
       }
     }
+  }
+
+  function buildPaginationItems(currentPage, totalPages) {
+    if (totalPages <= 7) {
+      return Array.from({length: totalPages}, (_, i) => ({
+        key: `page-${i + 1}`,
+        type: 'page',
+        value: i + 1,
+      }));
+    }
+
+    const pages = new Set([1, totalPages, currentPage - 1, currentPage, currentPage + 1]);
+
+    if (currentPage <= 3) {
+      pages.add(2);
+      pages.add(3);
+    }
+
+    if (currentPage >= totalPages - 2) {
+      pages.add(totalPages - 1);
+      pages.add(totalPages - 2);
+    }
+
+    const sortedPages = Array.from(pages)
+      .filter((page) => page >= 1 && page <= totalPages)
+      .sort((a, b) => a - b);
+
+    const items = [];
+    for (let index = 0; index < sortedPages.length; index++) {
+      const value = sortedPages[index];
+      if (index > 0 && value - sortedPages[index - 1] > 1) {
+        items.push({key: `ellipsis-${sortedPages[index - 1]}-${value}`, type: 'ellipsis'});
+      }
+      items.push({key: `page-${value}`, type: 'page', value});
+    }
+    return items;
   }
 </script>
 {% endblock %}
