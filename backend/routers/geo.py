@@ -1,8 +1,9 @@
-from fastapi import APIRouter, Depends, Query
+import httpx
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
 from backend.auth import get_current_user
 from backend.models import User
-from backend.worker.geo_fetcher import search_geo as fetch_geo_candidates, fetch_gsm_samples
+from backend.worker.geo_fetcher import search_geo_page, fetch_gsm_samples, fetch_gse_detail
 
 router = APIRouter(prefix="/geo", tags=["geo"])
 
@@ -15,17 +16,15 @@ class GeoSearchRequest(BaseModel):
 
 
 async def _search_payload(q: str, retmax: int, page: int, page_size: int):
-    results = await fetch_geo_candidates(q, retmax=retmax)
-    start = (page - 1) * page_size
-    end = start + page_size
-    return {
-        "query": q,
-        "retmax": retmax,
-        "total": len(results),
-        "page": page,
-        "page_size": page_size,
-        "items": results[start:end],
-    }
+    try:
+        return await search_geo_page(q, retmax=retmax, page=page, page_size=page_size)
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        if status_code == 429:
+            raise HTTPException(status_code=503, detail="NCBI rate limit reached. Please retry in a moment.")
+        raise HTTPException(status_code=502, detail="GEO upstream request failed.")
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Unable to reach GEO right now.")
 
 @router.get("/search")
 async def geo_search(
@@ -51,5 +50,30 @@ async def get_gse_samples(
     gse_id: str,
     user: User = Depends(get_current_user),
 ):
-    samples = await fetch_gsm_samples(gse_id)
-    return {"gse_id": gse_id, "samples": samples}
+    try:
+        samples = await fetch_gsm_samples(gse_id)
+        return {"gse_id": gse_id, "samples": samples}
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        if status_code == 429:
+            raise HTTPException(status_code=503, detail="NCBI rate limit reached. Please retry in a moment.")
+        raise HTTPException(status_code=502, detail="GEO upstream request failed.")
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Unable to reach GEO right now.")
+
+
+@router.get("/gse/{gse_id}/detail")
+async def get_gse_detail(
+    gse_id: str,
+    user: User = Depends(get_current_user),
+):
+    try:
+        detail = await fetch_gse_detail(gse_id)
+        return detail
+    except httpx.HTTPStatusError as exc:
+        status_code = exc.response.status_code if exc.response is not None else None
+        if status_code == 429:
+            raise HTTPException(status_code=503, detail="NCBI rate limit reached. Please retry in a moment.")
+        raise HTTPException(status_code=502, detail="GEO upstream request failed.")
+    except httpx.HTTPError:
+        raise HTTPException(status_code=502, detail="Unable to reach GEO right now.")
