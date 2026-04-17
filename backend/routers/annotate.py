@@ -4,7 +4,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
 from backend.label_schema import default_label_schema_json
-from backend.models import ScreeningResult, GeoLabel, ScreeningTask, User
+from backend.models import ScreeningResult, GeoLabel, ScreeningTask, User, GeoSample, GsmLabel
 from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 
@@ -60,5 +60,50 @@ async def trigger_annotation(task_id: int, db: AsyncSession = Depends(get_db),
     status = dispatch_or_run_inline(
         delay_call=lambda: run_annotation.delay(task_id),
         inline_coro_factory=lambda: _run_annotation_async(task_id),
+    )
+    return {"status": status}
+
+
+@router.get("/samples/{sample_id}/labels")
+async def get_gsm_labels(sample_id: int, db: AsyncSession = Depends(get_db),
+                          user: User = Depends(get_current_user)):
+    rows = (await db.execute(
+        select(GsmLabel).where(GsmLabel.sample_id == sample_id)
+    )).scalars().all()
+    return [{"id": r.id, "key": r.key, "value": r.value, "source": r.source} for r in rows]
+
+
+@router.put("/samples/{sample_id}/labels")
+async def upsert_gsm_label(sample_id: int, body: LabelUpsert,
+                            db: AsyncSession = Depends(get_db),
+                            user: User = Depends(get_current_user)):
+    existing = (await db.execute(
+        select(GsmLabel).where(GsmLabel.sample_id == sample_id, GsmLabel.key == body.key)
+    )).scalar_one_or_none()
+    if existing:
+        existing.value = body.value
+        existing.source = "human"
+        await db.commit()
+        await db.refresh(existing)
+        return {"id": existing.id, "key": existing.key, "value": existing.value, "source": existing.source}
+    label = GsmLabel(sample_id=sample_id, key=body.key, value=body.value, source="human")
+    db.add(label)
+    await db.commit()
+    await db.refresh(label)
+    return {"id": label.id, "key": label.key, "value": label.value, "source": label.source}
+
+
+@router.post("/results/{result_id}/gsm-labels/run")
+async def trigger_gsm_annotation(result_id: int, db: AsyncSession = Depends(get_db),
+                                   user: User = Depends(get_current_user)):
+    sr = (await db.execute(
+        select(ScreeningResult).where(ScreeningResult.id == result_id)
+    )).scalar_one_or_none()
+    if not sr:
+        raise HTTPException(status_code=404, detail="Not found")
+    from backend.worker.tasks import _run_gsm_annotation_async
+    status = dispatch_or_run_inline(
+        delay_call=lambda: None,
+        inline_coro_factory=lambda: _run_gsm_annotation_async(result_id),
     )
     return {"status": status}

@@ -246,3 +246,50 @@ async def test_run_gsm_annotation_async_persists_labels(auth_client):
     assert label_map["细胞来源"] == "iPSC"
     assert label_map["gsm_available"] == "可用"
     assert all(l.source == "llm" for l in labels)
+
+
+@pytest.mark.asyncio
+async def test_gsm_label_api_get_put_and_trigger(auth_client):
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask, ScreeningResult, GeoSample, LLMConfig
+    from unittest.mock import patch
+
+    async with AsyncSessionLocal() as db:
+        task = ScreeningTask(name="gsm_api_task", source="geo", criteria_text="", owner_id=1)
+        db.add(task)
+        await db.flush()
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE_API1")
+        db.add(sr)
+        await db.flush()
+        sample = GeoSample(result_id=sr.id, gsm_id="GSM_API1", title="API sample")
+        db.add(sample)
+        from sqlalchemy import select as sa_select
+        existing_cfg = (await db.execute(sa_select(LLMConfig).where(LLMConfig.owner_id == 1))).scalar_one_or_none()
+        if not existing_cfg:
+            db.add(LLMConfig(owner_id=1, provider="deepseek", api_key="sk-api", model="deepseek-chat"))
+        await db.commit()
+        result_id = sr.id
+        sample_id = sample.id
+
+    # GET labels — empty
+    r = await auth_client.get(f"/annotate/samples/{sample_id}/labels")
+    assert r.status_code == 200
+    assert r.json() == []
+
+    # PUT label — human
+    r = await auth_client.put(f"/annotate/samples/{sample_id}/labels",
+                               json={"key": "细胞来源", "value": "iPSC"})
+    assert r.status_code == 200
+    assert r.json()["source"] == "human"
+    assert r.json()["value"] == "iPSC"
+
+    # GET labels — now has one
+    r = await auth_client.get(f"/annotate/samples/{sample_id}/labels")
+    assert len(r.json()) == 1
+
+    # POST trigger
+    with patch("backend.routers.annotate.dispatch_or_run_inline", return_value="queued") as m:
+        r = await auth_client.post(f"/annotate/results/{result_id}/gsm-labels/run")
+    assert r.status_code == 200
+    assert r.json()["status"] == "queued"
+    m.assert_called_once()
