@@ -15,7 +15,7 @@ MOCK_ESUMMARY = {
             "entrytype": "GSE",
             "gdstype": "Expression profiling by high throughput sequencing",
             "pdat": "2026/04/01",
-            "update_date": "2026/04/14",
+            "updatedate": "2026/04/14",
             "ftplink": "ftp://ftp.ncbi.nlm.nih.gov/geo/series/GSE305nnn/GSE305128/",
         }
     }

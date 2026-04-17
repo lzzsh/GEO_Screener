@@ -80,7 +80,7 @@ async def test_trigger_annotation_backfills_default_label_schema(auth_client):
 
     async with AsyncSessionLocal() as db:
         saved = await db.get(ScreeningTask, task_id)
-        assert json.loads(saved.label_schema) == ["起始细胞类型", "分化体系", "数据平台", "是否提供原始测序数据", "单细胞测序数据类型"]
+        assert json.loads(saved.label_schema) == ["数据模态", "分化起点", "扰动类型", "分化体系", "分化终点", "数据平台", "是否提供原始测序数据"]
 
 
 @pytest.mark.asyncio
@@ -123,7 +123,7 @@ async def test_run_annotation_async_persists_labels_and_keeps_human_edits(auth_c
         )
         db.add(task)
         await db.flush()
-        sr = ScreeningResult(task_id=task.id, dataset_id="GSE777", title="Test", description="desc")
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE777", title="Test", description="desc", has_raw_data=True)
         db.add(sr)
         await db.flush()
         db.add(GeoSample(result_id=sr.id, gsm_id="GSMOLD", title="stored sample", organism="Homo sapiens"))
@@ -156,6 +156,7 @@ async def test_run_annotation_async_persists_labels_and_keeps_human_edits(auth_c
         await _run_annotation_async(task_id)
 
     description = mock_llm.extract_labels.await_args.kwargs["description"]
+    assert "GEO Raw Data Availability: yes" in description
     assert "GSE Overall Design: Overall design says in vitro directed differentiation" in description
     assert "Series Relations: SubSeries of GSESUPER" in description
     assert "GSMNEW | Day 10 sample | Homo sapiens | human iPSC-derived cardiomyocytes" in description

@@ -24,6 +24,14 @@ def _relation_accession(target: str) -> str:
     return match.group(0).upper() if match else ""
 
 
+def _first_value(doc: dict, *keys: str):
+    for key in keys:
+        value = doc.get(key)
+        if value not in (None, ""):
+            return value
+    return ""
+
+
 async def search_geo(query: str, retmax: int = 20) -> list[dict]:
     """Search GEO datasets. Returns enriched list with GSE metadata."""
     ids = await _esearch("gds", _normalize_geo_query(query), retmax, retstart=0)
@@ -169,8 +177,8 @@ async def _efetch_gse_summaries(ids: list[str]) -> list[dict]:
                             "organism": doc.get("taxon", ""),
                             "n_samples": doc.get("n_samples", 0),
                             "gse_type": doc.get("gdstype", ""),
-                            "pubdate": doc.get("pdat", ""),
-                            "update_date": doc.get("update_date", ""),
+                            "pubdate": _first_value(doc, "pdat", "pubdate", "PDAT"),
+                            "update_date": _first_value(doc, "update_date", "updatedate", "updateDate", "UpdateDate"),
                             "has_raw_data": bool(doc.get("ftplink", "")),
                         })
                     break

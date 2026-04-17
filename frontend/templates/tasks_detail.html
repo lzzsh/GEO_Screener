@@ -116,7 +116,8 @@
             </td>
             <td class="px-4 py-3">
               <span :class="decisionClass(r.decision)"
-                    class="text-xs font-semibold px-2 py-0.5 rounded-full" x-text="r.decision || '—'"></span>
+                    class="text-xs font-semibold px-2 py-0.5 rounded-full"
+                    x-text="({include:'Included',exclude:'Excluded',uncertain:'Uncertain'})[r.decision] || '—'"></span>
             </td>
             <td class="px-4 py-3 text-xs text-blue-600" x-text="expanded.has(r.id) ? '收起' : '展开'"></td>
           </tr>

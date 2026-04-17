@@ -50,8 +50,15 @@ def _format_sample_for_prompt(sample: dict) -> str:
     return line
 
 
-def _build_geo_metadata_context(base_description: str, detail: dict | None, samples: list[dict]) -> str:
+def _build_geo_metadata_context(
+    base_description: str,
+    detail: dict | None,
+    samples: list[dict],
+    has_raw_data: bool | None = None,
+) -> str:
     sections = [f"GSE Summary / Description: {base_description or ''}".strip()]
+    if has_raw_data is not None:
+        sections.append(f"GEO Raw Data Availability: {'yes' if has_raw_data else 'no'}")
     detail = detail or {}
     if detail.get("abstract"):
         sections.append(f"GSE Abstract: {detail['abstract']}")
@@ -90,7 +97,7 @@ async def _geo_context_for_result(sr: ScreeningResult) -> str:
         logger.warning("GSM fetch failed for %s: %s", sr.dataset_id, exc)
     if not samples:
         samples = _stored_samples_to_dicts(sr)
-    return _build_geo_metadata_context(sr.description or "", detail, samples)
+    return _build_geo_metadata_context(sr.description or "", detail, samples, sr.has_raw_data)
 
 @celery_app.task(bind=True, name="worker.tasks.run_screening")
 def run_screening(self, task_id: int):
@@ -194,6 +201,9 @@ async def _run_annotation_async(task_id: int):
             .options(selectinload(ScreeningResult.samples))
             .where(ScreeningResult.task_id == task_id)
         )).scalars().all()
+
+        conclusion_to_decision = {"可用": "include", "不可用": "exclude", "待确认": "uncertain"}
+
         for sr in results:
             try:
                 description = await _geo_context_for_result(sr)
@@ -214,6 +224,11 @@ async def _run_annotation_async(task_id: int):
                     else:
                         db.add(GeoLabel(result_id=sr.id, key=key,
                                         value=str(value) if value is not None else None, source="llm"))
+                # Sync decision from final_conclusion
+                final = extracted.get("final_conclusion")
+                if final and final in conclusion_to_decision:
+                    sr.decision = conclusion_to_decision[final]
+                    sr.status = "done"
                 await db.commit()
             except OperationalError as exc:
                 await db.rollback()
@@ -221,3 +236,13 @@ async def _run_annotation_async(task_id: int):
             except Exception as exc:
                 await db.rollback()
                 logger.warning("Annotation LLM error for %s: %s", sr.dataset_id, exc)
+
+        # Recalculate task counts from all results
+        all_results = (await db.execute(
+            select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalars().all()
+        task.included_count = sum(1 for r in all_results if r.decision == "include")
+        task.excluded_count = sum(1 for r in all_results if r.decision == "exclude")
+        task.uncertain_count = sum(1 for r in all_results if r.decision == "uncertain")
+        task.processed = sum(1 for r in all_results if r.status == "done")
+        await db.commit()

@@ -17,19 +17,29 @@
 
   <div class="space-y-3">
     <template x-for="t in tasks" :key="t.id">
-      <a :href="'/tasks/' + t.id + '/detail'"
-         class="block bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-blue-300 transition">
+      <div class="bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-blue-300 transition">
         <div class="flex items-center justify-between">
-          <div>
+          <a :href="'/tasks/' + t.id + '/detail'" class="min-w-0 flex-1">
             <p class="font-medium" x-text="t.name"></p>
-            <p class="text-xs text-blue-600 mt-1" x-show="t.search_query" x-text="t.search_query"></p>
+            <p class="text-xs text-blue-600 mt-1 truncate" x-show="t.search_query" x-text="t.search_query"></p>
             <p class="text-xs text-gray-400 mt-1" x-text="new Date(t.created_at).toLocaleString()"></p>
-          </div>
-          <div class="text-right">
-            <span :class="statusClass(t.status)"
-                  class="text-xs font-semibold px-2 py-1 rounded-full" x-text="t.status"></span>
-            <p class="text-xs text-gray-400 mt-1" x-text="`${t.processed} / ${t.total} screened`"></p>
-            <p class="text-xs text-gray-400 mt-1" x-text="`${t.candidate_count || t.total} candidates · ${t.included_count || 0} included`"></p>
+          </a>
+          <div class="flex items-center gap-3">
+            <a :href="'/tasks/' + t.id + '/detail'" class="text-right">
+              <span :class="statusClass(t.status)"
+                    class="text-xs font-semibold px-2 py-1 rounded-full" x-text="t.status"></span>
+              <p class="text-xs text-gray-400 mt-1" x-text="`${t.processed} / ${t.total} screened`"></p>
+              <p class="text-xs text-gray-400 mt-1" x-text="`${t.candidate_count || t.total} candidates · ${t.included_count || 0} included`"></p>
+            </a>
+            <button type="button"
+                    @click="deleteTask(t)"
+                    :disabled="deletingId === t.id"
+                    class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
+                    :title="'Delete ' + t.name"
+                    aria-label="Delete task">
+              <span x-show="deletingId !== t.id">×</span>
+              <span x-show="deletingId === t.id">…</span>
+            </button>
           </div>
         </div>
         <div x-show="t.status === 'running'" class="mt-3">
@@ -38,7 +48,7 @@
                  :style="'width:' + (t.total ? Math.round(t.processed/t.total*100) : 0) + '%'"></div>
           </div>
         </div>
-      </a>
+      </div>
     </template>
   </div>
 </div>
@@ -46,7 +56,7 @@
 <script>
   function tasksPage() {
     return {
-      tasks: [], loading: true,
+      tasks: [], loading: true, deletingId: null,
       async readError(response, fallback) {
         const text = await response.text();
         try {
@@ -67,6 +77,19 @@
         }
         this.tasks = await r.json();
         this.loading = false;
+      },
+      async deleteTask(task) {
+        if (!confirm('确认删除任务“' + task.name + '”及其所有筛选结果？')) return;
+        this.deletingId = task.id;
+        const r = await fetch('/tasks/' + task.id, {method: 'DELETE'});
+        if (r.status === 401) { window.location.href = '/login'; return; }
+        if (!r.ok) {
+          alert(await this.readError(r, '任务删除失败'));
+          this.deletingId = null;
+          return;
+        }
+        this.tasks = this.tasks.filter(t => t.id !== task.id);
+        this.deletingId = null;
       },
       statusClass(s) {
         return {

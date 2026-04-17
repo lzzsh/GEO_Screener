@@ -55,10 +55,12 @@ async def create_task(
         elif source == "geo" and search_query:
             datasets = await search_geo(search_query, retmax=20)
         elif source == "geo" and geo_ids:
-            for gid in geo_ids.split(","):
-                gid = gid.strip()
-                if gid:
-                    datasets.append({"id": gid, "title": "", "description": ""})
+            gid_list = [gid.strip() for gid in geo_ids.split(",") if gid.strip()]
+            if gid_list:
+                try:
+                    datasets = await search_geo(",".join(gid_list), retmax=len(gid_list))
+                except Exception:
+                    datasets = [{"id": gid, "title": "", "description": ""} for gid in gid_list]
 
         task.total = len(datasets)
         task.candidate_count = len(datasets)
@@ -228,15 +230,27 @@ async def export_results(task_id: int, db: AsyncSession = Depends(get_db), user:
     task = task_result.scalar_one_or_none()
     if not task:
         raise HTTPException(status_code=404, detail="Not found")
-    rows_result = await db.execute(select(ScreeningResult).where(ScreeningResult.task_id == task_id))
+    rows_result = await db.execute(
+        select(ScreeningResult)
+        .where(ScreeningResult.task_id == task_id)
+        .options(selectinload(ScreeningResult.labels))
+    )
     rows = rows_result.scalars().all()
+    conclusion_map = {"可用": "true", "不可用": "false", "待确认": "unknown"}
     decision_map = {"include": "true", "exclude": "false", "uncertain": "unknown"}
     output = io.StringIO()
+    output.write('\ufeff')  # UTF-8 BOM for Excel
     writer = csv.writer(output)
-    writer.writerow(["gse_id", "title", "available", "reason"])
+    writer.writerow(["gse_id", "title", "n_samples", "gse_type", "pubdate", "update_date", "has_raw_data", "available", "reason"])
     for r in rows:
-        available = decision_map.get(r.decision, "unknown")
-        writer.writerow([r.dataset_id, r.title, available, r.summary or ""])
+        label_map = {l.key: l.value for l in r.labels}
+        if "final_conclusion" in label_map:
+            available = conclusion_map.get(label_map["final_conclusion"], "unknown")
+            reason = label_map.get("reasoning_text", "")
+        else:
+            available = decision_map.get(r.decision, "unknown")
+            reason = r.summary or ""
+        writer.writerow([r.dataset_id, r.title, r.n_samples, r.gse_type, r.pubdate, r.update_date, r.has_raw_data, available, reason])
     output.seek(0)
-    return StreamingResponse(output, media_type="text/csv",
+    return StreamingResponse(output, media_type="text/csv; charset=utf-8",
                              headers={"Content-Disposition": f"attachment; filename=task_{task_id}_results.csv"})

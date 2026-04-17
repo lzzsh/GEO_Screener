@@ -157,9 +157,9 @@
   <div class="bg-white rounded-2xl border border-gray-200 p-5 mb-6">
     <div class="flex gap-4 items-start">
       <div class="flex-1">
-        <textarea x-model="query" @keydown.enter.ctrl="search()" rows="3"
+        <textarea x-model="query" @keydown.enter.ctrl="search()" rows="5"
                   placeholder="(iPSC OR ESC) AND (differentiation OR organoid) AND (scRNA OR spatial) AND human"
-                  class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm resize-y"></textarea>
+                  class="w-full min-h-[128px] border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm resize-y leading-6"></textarea>
         <p class="text-xs text-gray-400 mt-1">支持关键词、GSE/GSM accession、BioSample ID，以及 AND / OR / NOT / 引号短语 · Ctrl+Enter 搜索</p>
       </div>
       <div class="flex flex-col gap-2 shrink-0">
@@ -230,44 +230,56 @@
 
   <!-- Results table -->
   <div x-show="hasResults" class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
-    <table class="w-full text-sm">
+    <table class="w-full table-fixed text-sm">
       <colgroup>
-        <col style="width:100px">
-        <col>
-        <col style="width:60px">
-        <col style="width:220px">
-        <col style="width:90px">
-        <col style="width:50px">
-        <col style="width:60px">
+        <col style="width:92px">
+        <col style="width:38%">
+        <col style="width:70px">
+        <col style="width:180px">
+        <col style="width:92px">
+        <col style="width:78px">
+        <col style="width:96px">
       </colgroup>
-      <thead class="bg-gray-50 border-b">
+      <thead class="bg-gray-50 border-b text-sm uppercase tracking-wide">
         <tr>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">Accession</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">标题</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">样本数</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">实验类型</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">更新日期</th>
-          <th class="text-center px-4 py-3 font-medium text-gray-600">原始数据</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">操作</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">
+            <button @click="sortBy('id')" class="inline-flex items-center gap-1 hover:text-gray-900">Accession <span x-text="sortIndicator('id')"></span></button>
+          </th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">
+            <button @click="sortBy('title')" class="inline-flex items-center gap-1 hover:text-gray-900">标题 <span x-text="sortIndicator('title')"></span></button>
+          </th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">
+            <button @click="sortBy('n_samples')" class="inline-flex items-center gap-1 hover:text-gray-900">样本数 <span x-text="sortIndicator('n_samples')"></span></button>
+          </th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">
+            <button @click="sortBy('gse_type')" class="inline-flex items-center gap-1 hover:text-gray-900">实验类型 <span x-text="sortIndicator('gse_type')"></span></button>
+          </th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">
+            <button @click="sortBy('pubdate')" class="inline-flex items-center gap-1 hover:text-gray-900">Submission date <span x-text="sortIndicator('pubdate')"></span></button>
+          </th>
+          <th class="text-center px-4 py-3 font-medium text-gray-600">
+            <button @click="sortBy('has_raw_data')" class="inline-flex items-center justify-center gap-1 hover:text-gray-900">原始数据 <span x-text="sortIndicator('has_raw_data')"></span></button>
+          </th>
+          <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">操作</th>
         </tr>
       </thead>
       <tbody class="divide-y">
-        <template x-for="item in visibleItems" :key="item.id">
+        <template x-for="item in sortedItems" :key="item.id">
           <tr class="hover:bg-gray-50 cursor-pointer" @click="openModal(item)">
-            <td class="px-4 py-3 font-mono text-xs text-blue-700 align-top" x-text="item.id"></td>
+            <td class="px-4 py-3 font-mono text-sm text-blue-700 align-top whitespace-nowrap" x-text="item.id"></td>
             <td class="px-4 py-3 align-top">
-              <p class="text-sm font-medium text-gray-900 line-clamp-2" x-text="item.title"></p>
+              <p class="text-sm font-medium text-gray-900 leading-5 line-clamp-2 break-words" x-text="item.title" :title="item.title"></p>
             </td>
-            <td class="px-4 py-3 text-xs text-gray-500 align-top text-center" x-text="item.n_samples || '—'"></td>
-            <td class="px-4 py-3 text-xs text-gray-500 align-top">
+            <td class="px-4 py-3 text-sm text-gray-500 align-top whitespace-nowrap" x-text="item.n_samples || '—'"></td>
+            <td class="px-4 py-3 text-sm text-gray-500 align-top">
               <p class="line-clamp-1" x-text="item.gse_type || '—'" :title="item.gse_type || ''"></p>
             </td>
-            <td class="px-4 py-3 text-xs text-gray-500 align-top whitespace-nowrap" x-text="item.update_date || '—'"></td>
+            <td class="px-4 py-3 text-sm text-gray-500 align-top whitespace-nowrap" x-text="item.pubdate || '—'"></td>
             <td class="px-4 py-3 text-center align-top">
               <span x-show="item.has_raw_data" class="text-green-500">✓</span>
               <span x-show="!item.has_raw_data" class="text-gray-300">—</span>
             </td>
-            <td class="px-4 py-3 text-xs align-top">
+            <td class="px-4 py-3 text-sm align-top text-left">
               <button @click.stop="openModal(item)" class="text-blue-600 hover:text-blue-700 font-medium whitespace-nowrap">详情 →</button>
             </td>
           </tr>
@@ -322,6 +334,7 @@
       loading: false, creating: false, error: '',
       summary: {query: '', total: 0, retmax: 1000},
       visibleItems: [],
+      sortKey: '', sortDir: 'asc',
       libraries: [],
       modal: {open: false, id: '', title: '', detail: null, loadingDetail: false},
 
@@ -348,6 +361,17 @@
       get hasResults() { return this.summary.total > 0; },
       get totalPages() { return Math.max(1, Math.ceil((this.summary.total || 0) / this.pageSize)); },
       get visiblePaginationItems() { return buildPaginationItems(this.page, this.totalPages); },
+      get sortedItems() {
+        if (!this.sortKey) return this.visibleItems;
+        const direction = this.sortDir === 'desc' ? -1 : 1;
+        return [...this.visibleItems].sort((a, b) => {
+          const av = sortValue(a, this.sortKey);
+          const bv = sortValue(b, this.sortKey);
+          if (av < bv) return -1 * direction;
+          if (av > bv) return 1 * direction;
+          return 0;
+        });
+      },
       persistState() {
         sessionStorage.setItem(storageKey, JSON.stringify({
           query: this.query,
@@ -357,6 +381,8 @@
           pageSize: this.pageSize,
           summary: this.summary,
           visibleItems: this.visibleItems,
+          sortKey: this.sortKey,
+          sortDir: this.sortDir,
         }));
       },
       restoreState() {
@@ -371,6 +397,8 @@
           this.pageSize = data.pageSize || 100;
           this.summary = data.summary || {query: '', total: 0, retmax: this.retmax};
           this.visibleItems = data.visibleItems || [];
+          this.sortKey = data.sortKey || '';
+          this.sortDir = data.sortDir || 'asc';
           this.jumpPageInput = this.page;
         } catch (e) {}
       },
@@ -384,7 +412,22 @@
         this.error = '';
         this.summary = {query: '', total: 0, retmax: 1000};
         this.visibleItems = [];
+        this.sortKey = '';
+        this.sortDir = 'asc';
         sessionStorage.removeItem(storageKey);
+      },
+      sortBy(key) {
+        if (this.sortKey === key) {
+          this.sortDir = this.sortDir === 'asc' ? 'desc' : 'asc';
+        } else {
+          this.sortKey = key;
+          this.sortDir = 'asc';
+        }
+        this.persistState();
+      },
+      sortIndicator(key) {
+        if (this.sortKey !== key) return '';
+        return this.sortDir === 'asc' ? '▲' : '▼';
       },
 
       async openModal(item) {
@@ -523,6 +566,14 @@
       items.push({key: `page-${value}`, type: 'page', value});
     }
     return items;
+  }
+
+  function sortValue(item, key) {
+    const value = item[key];
+    if (key === 'n_samples') return Number(value || 0);
+    if (key === 'has_raw_data') return value ? 1 : 0;
+    if (key === 'pubdate') return Date.parse(value || '') || 0;
+    return String(value || '').toLowerCase();
   }
 </script>
 {% endblock %}

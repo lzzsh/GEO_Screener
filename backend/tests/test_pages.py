@@ -53,6 +53,20 @@ async def test_search_and_task_detail_include_library_actions():
         assert "支持关键词、GSE/GSM accession、BioSample ID" in search_response.text
         assert "跳至页码" in search_response.text
         assert "清空搜索" in search_response.text
+        assert 'rows="5"' in search_response.text
+        assert "min-h-[128px]" in search_response.text
+        assert "table-fixed" in search_response.text
+        assert "width:38%" in search_response.text
+        assert "break-words" in search_response.text
+        assert "Submission date" in search_response.text
+        assert "item.pubdate || '—'" in search_response.text
+        assert "sortBy('pubdate')" in search_response.text
+        assert "sortedItems" in search_response.text
+        assert "sortIndicator" in search_response.text
+        assert "text-sm uppercase tracking-wide" in search_response.text
+        assert "text-sm font-medium text-gray-900" in search_response.text
+        assert "text-sm text-gray-500" in search_response.text
+        assert "px-4 py-3 text-left text-sm font-medium text-gray-600\">操作" in search_response.text
         assert "retmax: 1000" in search_response.text
         assert "visiblePaginationItems" in search_response.text
         assert "第 <span x-text=\"page\"></span> 页，共 <span x-text=\"totalPages\"></span> 页" in search_response.text
