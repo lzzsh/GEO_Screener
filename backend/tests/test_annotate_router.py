@@ -221,7 +221,11 @@ async def test_run_gsm_annotation_async_persists_labels(auth_client):
         sample = GeoSample(result_id=sr.id, gsm_id="GSM_ANN1",
                            title="Day 10 iPSC", organism="Homo sapiens", biosample_id="SAMN001")
         db.add(sample)
-        db.add(LLMConfig(owner_id=1, provider="deepseek", api_key="sk-test2", model="deepseek-chat"))
+        existing_cfg = (await db.execute(
+            __import__("sqlalchemy").select(LLMConfig).where(LLMConfig.owner_id == 1)
+        )).scalar_one_or_none()
+        if not existing_cfg:
+            db.add(LLMConfig(owner_id=1, provider="deepseek", api_key="sk-test2", model="deepseek-chat"))
         await db.commit()
         result_id = sr.id
         sample_id = sample.id
