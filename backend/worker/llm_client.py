@@ -113,6 +113,48 @@ JSON 必须使用以下结构：
 - 若 GEO 元数据上下文包含“GEO Raw Data Availability: no”，则“是否提供原始测序数据”填写“否”
 """
 
+GSM_LABEL_PROMPT_TEMPLATE = """\
+你是一个严格的样本级数据标注助手，需要根据提供的 GSM 元数据和所属 GSE 背景，判断该样本是否符合纳入标准。
+
+你只能基于提供的元数据进行判断，不允许猜测未提供的信息。若关键信息缺失，标注为"信息不足"，gsm_available 使用"待确认"。
+
+## 纳入标准
+
+1. 细胞来源：必须为人源 iPSC、ESC 或 PSC
+2. 分化终点：必须有明确的分化目标细胞类型或阶段
+3. 实验环境：必须为 in vitro
+
+## GSE 背景
+
+{gse_summary}
+
+## GSM 元数据
+
+GSM_ID: {gsm_id}
+Title: {title}
+Organism: {organism}
+BioSample: {biosample_id}
+Characteristics: {characteristics}
+
+## 输出要求
+
+请严格输出 JSON，不要输出 Markdown，不要输出代码块。
+
+{{
+  "细胞来源": "iPSC / ESC / PSC / 其他 / 信息不足",
+  "分化终点": "简短终点描述，无明确证据则为空字符串",
+  "分化时间点": "D7 / D14 等，无明确证据则为空字符串",
+  "是否有原始数据": "是 / 否 / 不明确",
+  "gsm_available": "可用 / 不可用 / 待确认"
+}}
+
+## 判定规则
+
+- gsm_available = 可用：细胞来源明确为 iPSC/ESC/PSC，分化终点有证据，in vitro
+- gsm_available = 不可用：任一关键项明确不符合
+- gsm_available = 待确认：关键信息不足
+"""
+
 SCREENING_PROMPT_TEMPLATE = """\
 You are a systematic review screener. Evaluate the following dataset against the criteria.
 
@@ -164,6 +206,21 @@ class LLMClient:
         prompt = LABEL_PROMPT_TEMPLATE.format(
             dimensions="\n".join(f"- {d}" for d in dimensions),
             dataset_id=dataset_id, title=title, description=description,
+        )
+        response = await self._client.chat.completions.create(
+            model=self.model, temperature=0,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.choices[0].message.content.strip()
+        return self._parse_json(raw)
+
+    async def annotate_gsm(self, gsm_id: str, title: str, organism: str,
+                            biosample_id: str, characteristics: str,
+                            gse_summary: str) -> dict:
+        prompt = GSM_LABEL_PROMPT_TEMPLATE.format(
+            gsm_id=gsm_id, title=title, organism=organism,
+            biosample_id=biosample_id, characteristics=characteristics,
+            gse_summary=gse_summary,
         )
         response = await self._client.chat.completions.create(
             model=self.model, temperature=0,
