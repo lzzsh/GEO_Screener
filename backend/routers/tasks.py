@@ -5,12 +5,12 @@ import httpx
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import delete, select, func, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.label_schema import default_label_schema_json
-from backend.models import ScreeningTask, ScreeningResult, User, GeoSample
+from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, LibraryEntry
 from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
@@ -146,6 +146,34 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_db), user: User 
             "search_query": task.search_query, "created_at": task.created_at}
 
 
+@router.delete("/{task_id}")
+async def delete_task(task_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(ScreeningTask).where(ScreeningTask.id == task_id, ScreeningTask.owner_id == user.id)
+    )
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Not found")
+
+    result_ids = (await db.execute(
+        select(ScreeningResult.id).where(ScreeningResult.task_id == task_id)
+    )).scalars().all()
+    try:
+        if result_ids:
+            await db.execute(delete(GeoLabel).where(GeoLabel.result_id.in_(result_ids)))
+            await db.execute(delete(GeoSample).where(GeoSample.result_id.in_(result_ids)))
+            await db.execute(delete(ScreeningResult).where(ScreeningResult.id.in_(result_ids)))
+        await db.execute(update(LibraryEntry).where(LibraryEntry.task_id == task_id).values(task_id=None))
+        await db.delete(task)
+        await db.commit()
+    except OperationalError as exc:
+        await db.rollback()
+        if "database is locked" in str(exc).lower():
+            raise HTTPException(status_code=503, detail="Database is busy. Please retry in a moment.")
+        raise
+    return {"status": "deleted"}
+
+
 @router.get("/{task_id}/results")
 async def get_results(
     task_id: int,
@@ -202,11 +230,13 @@ async def export_results(task_id: int, db: AsyncSession = Depends(get_db), user:
         raise HTTPException(status_code=404, detail="Not found")
     rows_result = await db.execute(select(ScreeningResult).where(ScreeningResult.task_id == task_id))
     rows = rows_result.scalars().all()
+    decision_map = {"include": "true", "exclude": "false", "uncertain": "unknown"}
     output = io.StringIO()
     writer = csv.writer(output)
-    writer.writerow(["dataset_id", "title", "description", "keyword_matched", "decision", "confidence", "summary", "rule_checks", "status"])
+    writer.writerow(["gse_id", "title", "available", "reason"])
     for r in rows:
-        writer.writerow([r.dataset_id, r.title, r.description, r.keyword_matched, r.decision, r.confidence, r.summary, r.rule_checks, r.status])
+        available = decision_map.get(r.decision, "unknown")
+        writer.writerow([r.dataset_id, r.title, available, r.summary or ""])
     output.seek(0)
     return StreamingResponse(output, media_type="text/csv",
                              headers={"Content-Disposition": f"attachment; filename=task_{task_id}_results.csv"})

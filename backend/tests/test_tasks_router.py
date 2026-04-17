@@ -39,7 +39,7 @@ async def test_create_geo_task(auth_client):
     from backend.models import ScreeningTask
     async with AsyncSessionLocal() as db:
         task = await db.get(ScreeningTask, r.json()["id"])
-        assert json.loads(task.label_schema) == ["起始细胞类型", "分化体系", "数据平台", "是否提供原始测序数据", "单细胞测序数据类型"]
+        assert json.loads(task.label_schema) == ["数据模态", "分化起点", "扰动类型", "分化体系", "分化终点", "数据平台", "是否提供原始测序数据"]
 
 
 @pytest.mark.asyncio
@@ -165,6 +165,56 @@ async def test_task_results_include_labels(auth_client):
 
 
 @pytest.mark.asyncio
+async def test_delete_task_removes_owned_task_and_related_rows(auth_client):
+    geo_candidates = [{"id": "GSE778", "title": "Study delete", "summary": "iPSC study"}]
+    gsm_samples = [
+        {"gsm_id": "GSM778", "title": "Sample delete", "organism": "Homo sapiens", "biosample_id": "SAMN778"},
+    ]
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=gsm_samples)), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        created = await auth_client.post("/tasks", params={
+            "name": "Delete Test",
+            "criteria_text": "human iPSC",
+            "source": "geo",
+            "search_query": "iPSC delete",
+        })
+    task_id = created.json()["id"]
+
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningResult, GeoLabel, GeoSample
+    async with AsyncSessionLocal() as db:
+        result = (await db.execute(
+            __import__("sqlalchemy").select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalar_one()
+        result_id = result.id
+        db.add(GeoLabel(result_id=result_id, key="数据模态", value="scRNA-seq", source="llm"))
+        await db.commit()
+
+    deleted = await auth_client.delete(f"/tasks/{task_id}")
+    assert deleted.status_code == 200
+    assert deleted.json() == {"status": "deleted"}
+
+    assert (await auth_client.get(f"/tasks/{task_id}")).status_code == 404
+    listed = await auth_client.get("/tasks")
+    assert all(task["id"] != task_id for task in listed.json())
+
+    async with AsyncSessionLocal() as db:
+        remaining_results = (await db.execute(
+            __import__("sqlalchemy").select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalars().all()
+        remaining_samples = (await db.execute(
+            __import__("sqlalchemy").select(GeoSample).where(GeoSample.result_id == result_id)
+        )).scalars().all()
+        remaining_labels = (await db.execute(
+            __import__("sqlalchemy").select(GeoLabel).where(GeoLabel.result_id == result_id)
+        )).scalars().all()
+    assert remaining_results == []
+    assert remaining_samples == []
+    assert remaining_labels == []
+
+
+@pytest.mark.asyncio
 async def test_create_geo_task_survives_gsm_fetch_failure(auth_client):
     geo_candidates = [
         {"id": "GSE900", "title": "Paper one", "summary": "human liver cohort"},
@@ -204,3 +254,57 @@ async def test_create_geo_task_returns_success_when_dispatch_falls_back(auth_cli
     assert r.status_code == 201
     assert r.json()["candidate_count"] == 1
     dispatch_mock.assert_called_once()
+
+
+@pytest.mark.asyncio
+async def test_export_available_csv(auth_client):
+    geo_candidates = [
+        {"id": "GSE100", "title": "Study include", "summary": "human iPSC data"},
+        {"id": "GSE101", "title": "Study exclude", "summary": "mouse only"},
+        {"id": "GSE102", "title": "Study uncertain", "summary": "unclear origin"},
+    ]
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        r = await auth_client.post("/tasks", params={
+            "name": "Export Test",
+            "criteria_text": "human iPSC",
+            "source": "geo",
+            "search_query": "iPSC",
+        })
+    task_id = r.json()["id"]
+
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningResult
+    import sqlalchemy
+    async with AsyncSessionLocal() as db:
+        rows = (await db.execute(
+            sqlalchemy.select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalars().all()
+        rows[0].decision = "include"
+        rows[0].summary = "human iPSC data"
+        rows[0].status = "done"
+        rows[1].decision = "exclude"
+        rows[1].summary = "mouse only"
+        rows[1].status = "done"
+        rows[2].decision = "uncertain"
+        rows[2].summary = "unclear origin"
+        rows[2].status = "done"
+        await db.commit()
+
+    export_r = await auth_client.get(f"/tasks/{task_id}/export")
+    assert export_r.status_code == 200
+    assert "text/csv" in export_r.headers["content-type"]
+
+    import csv, io
+    reader = csv.DictReader(io.StringIO(export_r.text))
+    rows_out = list(reader)
+    assert len(rows_out) == 3
+
+    by_gse = {row["gse_id"]: row for row in rows_out}
+    assert by_gse["GSE100"]["available"] == "true"
+    assert by_gse["GSE100"]["reason"] == "human iPSC data"
+    assert by_gse["GSE101"]["available"] == "false"
+    assert by_gse["GSE101"]["reason"] == "mouse only"
+    assert by_gse["GSE102"]["available"] == "unknown"
+    assert by_gse["GSE102"]["reason"] == "unclear origin"
