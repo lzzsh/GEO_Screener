@@ -200,3 +200,49 @@ async def test_gsm_label_model_persists(auth_client):
     assert labels[0].key == "细胞来源"
     assert labels[0].value == "iPSC"
     assert labels[0].source == "llm"
+
+
+@pytest.mark.asyncio
+async def test_run_gsm_annotation_async_persists_labels(auth_client):
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask, ScreeningResult, GeoSample, GsmLabel, LLMConfig
+    from backend.worker.tasks import _run_gsm_annotation_async
+    from unittest.mock import AsyncMock, MagicMock, patch
+    import sqlalchemy
+
+    async with AsyncSessionLocal() as db:
+        task = ScreeningTask(name="gsm_ann_task", source="geo", criteria_text="", owner_id=1)
+        db.add(task)
+        await db.flush()
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE_ANN1",
+                             description="iPSC differentiation study")
+        db.add(sr)
+        await db.flush()
+        sample = GeoSample(result_id=sr.id, gsm_id="GSM_ANN1",
+                           title="Day 10 iPSC", organism="Homo sapiens", biosample_id="SAMN001")
+        db.add(sample)
+        db.add(LLMConfig(owner_id=1, provider="deepseek", api_key="sk-test2", model="deepseek-chat"))
+        await db.commit()
+        result_id = sr.id
+        sample_id = sample.id
+
+    mock_llm = MagicMock()
+    mock_llm.annotate_gsm = AsyncMock(return_value={
+        "细胞来源": "iPSC",
+        "分化终点": "神经细胞",
+        "分化时间点": "D10",
+        "是否有原始数据": "是",
+        "gsm_available": "可用",
+    })
+    with patch("backend.worker.tasks.LLMClient", return_value=mock_llm):
+        await _run_gsm_annotation_async(result_id)
+
+    async with AsyncSessionLocal() as db:
+        labels = (await db.execute(
+            sqlalchemy.select(GsmLabel).where(GsmLabel.sample_id == sample_id).order_by(GsmLabel.key)
+        )).scalars().all()
+
+    label_map = {l.key: l.value for l in labels}
+    assert label_map["细胞来源"] == "iPSC"
+    assert label_map["gsm_available"] == "可用"
+    assert all(l.source == "llm" for l in labels)

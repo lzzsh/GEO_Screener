@@ -6,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.worker.celery_app import celery_app
 from backend.database import AsyncSessionLocal
-from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel
+from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel, GsmLabel
 from backend.worker.geo_fetcher import fetch_gse_detail, fetch_gsm_samples
 from backend.worker.llm_client import LLMClient
 
@@ -246,3 +246,55 @@ async def _run_annotation_async(task_id: int):
         task.uncertain_count = sum(1 for r in all_results if r.decision == "uncertain")
         task.processed = sum(1 for r in all_results if r.status == "done")
         await db.commit()
+
+
+async def _run_gsm_annotation_async(result_id: int):
+    async with AsyncSessionLocal() as db:
+        sr = (await db.execute(
+            select(ScreeningResult)
+            .options(selectinload(ScreeningResult.samples))
+            .where(ScreeningResult.id == result_id)
+        )).scalar_one_or_none()
+        if not sr:
+            return
+        task = (await db.execute(
+            select(ScreeningTask).where(ScreeningTask.id == sr.task_id)
+        )).scalar_one_or_none()
+        if not task:
+            return
+        cfg = (await db.execute(
+            select(LLMConfig).where(LLMConfig.owner_id == task.owner_id)
+        )).scalar_one_or_none()
+        if not cfg or not cfg.api_key:
+            return
+        llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
+                        base_url=cfg.base_url, model=cfg.model, temperature=0)
+        gse_summary = sr.description or ""
+        for sample in sr.samples:
+            try:
+                extracted = await llm.annotate_gsm(
+                    gsm_id=sample.gsm_id,
+                    title=sample.title or "",
+                    organism=sample.organism or "",
+                    biosample_id=sample.biosample_id or "",
+                    characteristics="",
+                    gse_summary=gse_summary,
+                )
+                existing = (await db.execute(
+                    select(GsmLabel).where(GsmLabel.sample_id == sample.id)
+                )).scalars().all()
+                existing_by_key = {l.key: l for l in existing}
+                for key, value in extracted.items():
+                    ex = existing_by_key.get(key)
+                    if ex and ex.source == "human":
+                        continue
+                    if ex:
+                        ex.value = str(value) if value is not None else None
+                    else:
+                        db.add(GsmLabel(sample_id=sample.id, key=key,
+                                        value=str(value) if value is not None else None,
+                                        source="llm"))
+                await db.commit()
+            except Exception as exc:
+                await db.rollback()
+                logger.warning("GSM annotation error for %s: %s", sample.gsm_id, exc)
