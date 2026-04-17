@@ -83,6 +83,7 @@ class GeoSample(Base):
     organism: Mapped[str | None] = mapped_column(String(128), nullable=True)
     biosample_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     cell_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    labels: Mapped[list["GsmLabel"]] = relationship(back_populates="sample", cascade="all, delete-orphan")
     result: Mapped["ScreeningResult"] = relationship(back_populates="samples")
 
 class GeoLabel(Base):
@@ -147,3 +148,13 @@ class LibraryEntrySample(Base):
     biosample_id: Mapped[str | None] = mapped_column(String(64), nullable=True)
     cell_count: Mapped[int | None] = mapped_column(Integer, nullable=True)
     entry: Mapped["LibraryEntry"] = relationship(back_populates="samples")
+
+
+class GsmLabel(Base):
+    __tablename__ = "gsm_labels"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    sample_id: Mapped[int] = mapped_column(ForeignKey("geo_samples.id"), nullable=False)
+    key: Mapped[str] = mapped_column(String(128), nullable=False)
+    value: Mapped[str | None] = mapped_column(Text, nullable=True)
+    source: Mapped[str] = mapped_column(String(16), default="llm")
+    sample: Mapped["GeoSample"] = relationship(back_populates="labels")

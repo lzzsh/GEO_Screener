@@ -171,3 +171,32 @@ async def test_run_annotation_async_persists_labels_and_keeps_human_edits(auth_c
         ("分化体系", "3D organoid", "llm"),
         ("起始细胞类型", "human curated", "human"),
     ]
+
+
+@pytest.mark.asyncio
+async def test_gsm_label_model_persists(auth_client):
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask, ScreeningResult, GeoSample, GsmLabel
+    import sqlalchemy
+    async with AsyncSessionLocal() as db:
+        task = ScreeningTask(name="gsm_model_task", source="geo", criteria_text="", owner_id=1)
+        db.add(task)
+        await db.flush()
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE_GSMTEST")
+        db.add(sr)
+        await db.flush()
+        sample = GeoSample(result_id=sr.id, gsm_id="GSM_TEST1", title="Test sample")
+        db.add(sample)
+        await db.flush()
+        db.add(GsmLabel(sample_id=sample.id, key="细胞来源", value="iPSC", source="llm"))
+        await db.commit()
+        sample_id = sample.id
+
+    async with AsyncSessionLocal() as db:
+        labels = (await db.execute(
+            sqlalchemy.select(GsmLabel).where(GsmLabel.sample_id == sample_id)
+        )).scalars().all()
+    assert len(labels) == 1
+    assert labels[0].key == "细胞来源"
+    assert labels[0].value == "iPSC"
+    assert labels[0].source == "llm"
