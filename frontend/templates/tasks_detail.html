@@ -144,7 +144,13 @@
                 </div>
               </div>
               <div x-show="r.samples && r.samples.length > 0">
-                <p class="text-xs font-semibold text-gray-500 mb-2">样本列表 (GSM)</p>
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs font-semibold text-gray-500">样本列表 (GSM)</p>
+                  <button @click="runGsmAnnotation(r.id)"
+                          class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg border border-blue-200">
+                    标注 GSM
+                  </button>
+                </div>
                 <table class="w-full text-xs border rounded-lg overflow-hidden">
                   <thead class="bg-gray-100">
                     <tr>
@@ -157,12 +163,24 @@
                   </thead>
                   <tbody class="divide-y bg-white">
                     <template x-for="s in r.samples" :key="s.gsm_id">
-                      <tr>
+                      <tr @click="toggleGsm(s.gsm_id)" class="cursor-pointer hover:bg-gray-50">
                         <td class="px-3 py-2 font-mono text-blue-700" x-text="s.gsm_id"></td>
                         <td class="px-3 py-2 text-gray-700" x-text="s.title || '—'"></td>
                         <td class="px-3 py-2 text-gray-500" x-text="s.organism || '—'"></td>
                         <td class="px-3 py-2 text-blue-600" x-text="s.biosample_id || '—'"></td>
                         <td class="px-3 py-2 text-gray-700" x-text="s.cell_count || '—'"></td>
+                      </tr>
+                      <tr x-show="expandedGsm.has(s.gsm_id)" x-data="gsmLabelEditor(s)" x-init="init()">
+                        <td colspan="5" class="px-3 py-2 bg-slate-50">
+                          <div class="flex flex-wrap gap-1">
+                            <template x-for="lbl in gsmLabels" :key="lbl.key">
+                              <span :class="lbl.key === 'gsm_available' ? gsmAvailClass(lbl.value) : 'bg-gray-100 text-gray-700'"
+                                    class="text-xs px-2 py-0.5 rounded-full font-medium"
+                                    x-text="lbl.key + ': ' + (lbl.value || '—')"></span>
+                            </template>
+                            <span x-show="gsmLabels.length === 0" class="text-xs text-gray-400">暂无标注</span>
+                          </div>
+                        </td>
                       </tr>
                     </template>
                   </tbody>
@@ -217,6 +235,7 @@
       taskId, task: {}, results: [], loading: true,
       page: 1, pageSize: 20, total: 0, jumpPageInput: 1, expanded: new Set(),
       decisionFilter: '', annotating: false, annotationError: '', pollTimer: null, libs: [],
+      expandedGsm: new Set(),
 
       async init() {
         await this.loadTask();
@@ -308,6 +327,17 @@
         if (this.expanded.has(id)) this.expanded.delete(id); else this.expanded.add(id);
         this.expanded = new Set(this.expanded);
       },
+      toggleGsm(gsmId) {
+        if (this.expandedGsm.has(gsmId)) this.expandedGsm.delete(gsmId);
+        else this.expandedGsm.add(gsmId);
+        this.expandedGsm = new Set(this.expandedGsm);
+      },
+      async runGsmAnnotation(resultId) {
+        const r = await fetch('/annotate/results/' + resultId + '/gsm-labels/run', {method: 'POST'});
+        if (r.ok) {
+          await this.loadResults();
+        }
+      },
       statusClass(s) {
         return {pending:'bg-gray-100 text-gray-600', running:'bg-blue-100 text-blue-700',
                 done:'bg-green-100 text-green-700', error:'bg-red-100 text-red-700'}[s] || 'bg-gray-100 text-gray-600';
@@ -336,6 +366,24 @@
           lbl.source = updated.source;
           lbl.editing = false;
         }
+      }
+    }
+  }
+
+  function gsmLabelEditor(sample) {
+    return {
+      sampleId: sample.id,
+      gsmLabels: [],
+      async init() {
+        const r = await fetch('/annotate/samples/' + this.sampleId + '/labels');
+        if (r.ok) this.gsmLabels = await r.json();
+      },
+      gsmAvailClass(v) {
+        return {
+          '可用': 'bg-green-100 text-green-700',
+          '不可用': 'bg-red-100 text-red-700',
+          '待确认': 'bg-yellow-100 text-yellow-700',
+        }[v] || 'bg-gray-100 text-gray-700';
       }
     }
   }
