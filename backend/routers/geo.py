@@ -12,7 +12,7 @@ class GeoSearchRequest(BaseModel):
     q: str = Field(..., min_length=2)
     retmax: int = Field(default=100, ge=1, le=10000)
     page: int = Field(default=1, ge=1)
-    page_size: int = Field(default=100, ge=1, le=200)
+    page_size: int = Field(default=100, ge=1, le=10000)
 
 
 async def _search_payload(q: str, retmax: int, page: int, page_size: int):

@@ -11,6 +11,15 @@ async def auth_client():
         await client.post("/auth/register", json={"username": "annuser", "email": "ann@test.com", "password": "pw"})
         r = await client.post("/auth/login", json={"username": "annuser", "password": "pw"})
         client.headers["Authorization"] = f"Bearer {r.json()['access_token']}"
+        # Resolve actual user id
+        from backend.database import AsyncSessionLocal
+        from backend.models import User
+        import sqlalchemy
+        async with AsyncSessionLocal() as db:
+            user = (await db.execute(
+                sqlalchemy.select(User).where(User.username == "annuser")
+            )).scalar_one()
+            client._ann_user_id = user.id
         yield client
 
 
@@ -19,7 +28,7 @@ async def test_get_labels_empty(auth_client):
     from backend.database import AsyncSessionLocal
     from backend.models import ScreeningTask, ScreeningResult
     async with AsyncSessionLocal() as db:
-        task = ScreeningTask(name="ann_task", source="geo", criteria_text="", owner_id=1,
+        task = ScreeningTask(name="ann_task", source="geo", criteria_text="", owner_id=auth_client._ann_user_id,
                              label_schema='["起始细胞类型"]')
         db.add(task)
         await db.flush()
@@ -38,7 +47,7 @@ async def test_upsert_label_human(auth_client):
     from backend.database import AsyncSessionLocal
     from backend.models import ScreeningTask, ScreeningResult
     async with AsyncSessionLocal() as db:
-        task = ScreeningTask(name="ann_task2", source="geo", criteria_text="", owner_id=1,
+        task = ScreeningTask(name="ann_task2", source="geo", criteria_text="", owner_id=auth_client._ann_user_id,
                              label_schema='["起始细胞类型"]')
         db.add(task)
         await db.flush()
@@ -66,7 +75,7 @@ async def test_trigger_annotation_backfills_default_label_schema(auth_client):
     from backend.database import AsyncSessionLocal
     from backend.models import ScreeningTask
     async with AsyncSessionLocal() as db:
-        task = ScreeningTask(name="ann_task3", source="geo", criteria_text="find iPSC", owner_id=1)
+        task = ScreeningTask(name="ann_task3", source="geo", criteria_text="find iPSC", owner_id=auth_client._ann_user_id)
         db.add(task)
         await db.commit()
         task_id = task.id
@@ -92,7 +101,7 @@ async def test_trigger_annotation_returns_inline_status_when_dispatch_falls_back
             name="ann_task4",
             source="geo",
             criteria_text="find iPSC",
-            owner_id=1,
+            owner_id=auth_client._ann_user_id,
             label_schema='["起始细胞类型"]',
         )
         db.add(task)
@@ -118,7 +127,7 @@ async def test_run_annotation_async_persists_labels_and_keeps_human_edits(auth_c
             name="ann_task5",
             source="geo",
             criteria_text="find iPSC",
-            owner_id=1,
+            owner_id=auth_client._ann_user_id,
             label_schema='["起始细胞类型","分化体系"]',
         )
         db.add(task)
@@ -127,7 +136,7 @@ async def test_run_annotation_async_persists_labels_and_keeps_human_edits(auth_c
         db.add(sr)
         await db.flush()
         db.add(GeoSample(result_id=sr.id, gsm_id="GSMOLD", title="stored sample", organism="Homo sapiens"))
-        db.add(LLMConfig(owner_id=1, provider="deepseek", api_key="sk-test", model="deepseek-chat"))
+        db.add(LLMConfig(owner_id=auth_client._ann_user_id, provider="deepseek", api_key="sk-test", model="deepseek-chat"))
         db.add(GeoLabel(result_id=sr.id, key="起始细胞类型", value="human curated", source="human"))
         await db.commit()
         task_id = task.id
@@ -179,7 +188,7 @@ async def test_gsm_label_model_persists(auth_client):
     from backend.models import ScreeningTask, ScreeningResult, GeoSample, GsmLabel
     import sqlalchemy
     async with AsyncSessionLocal() as db:
-        task = ScreeningTask(name="gsm_model_task", source="geo", criteria_text="", owner_id=1)
+        task = ScreeningTask(name="gsm_model_task", source="geo", criteria_text="", owner_id=auth_client._ann_user_id)
         db.add(task)
         await db.flush()
         sr = ScreeningResult(task_id=task.id, dataset_id="GSE_GSMTEST")
@@ -211,7 +220,7 @@ async def test_run_gsm_annotation_async_persists_labels(auth_client):
     import sqlalchemy
 
     async with AsyncSessionLocal() as db:
-        task = ScreeningTask(name="gsm_ann_task", source="geo", criteria_text="", owner_id=1)
+        task = ScreeningTask(name="gsm_ann_task", source="geo", criteria_text="", owner_id=auth_client._ann_user_id)
         db.add(task)
         await db.flush()
         sr = ScreeningResult(task_id=task.id, dataset_id="GSE_ANN1",
@@ -222,10 +231,10 @@ async def test_run_gsm_annotation_async_persists_labels(auth_client):
                            title="Day 10 iPSC", organism="Homo sapiens", biosample_id="SAMN001")
         db.add(sample)
         existing_cfg = (await db.execute(
-            __import__("sqlalchemy").select(LLMConfig).where(LLMConfig.owner_id == 1)
+            __import__("sqlalchemy").select(LLMConfig).where(LLMConfig.owner_id == auth_client._ann_user_id)
         )).scalar_one_or_none()
         if not existing_cfg:
-            db.add(LLMConfig(owner_id=1, provider="deepseek", api_key="sk-test2", model="deepseek-chat"))
+            db.add(LLMConfig(owner_id=auth_client._ann_user_id, provider="deepseek", api_key="sk-test2", model="deepseek-chat"))
         await db.commit()
         result_id = sr.id
         sample_id = sample.id
@@ -259,7 +268,7 @@ async def test_gsm_label_api_get_put_and_trigger(auth_client):
     from unittest.mock import patch
 
     async with AsyncSessionLocal() as db:
-        task = ScreeningTask(name="gsm_api_task", source="geo", criteria_text="", owner_id=1)
+        task = ScreeningTask(name="gsm_api_task", source="geo", criteria_text="", owner_id=auth_client._ann_user_id)
         db.add(task)
         await db.flush()
         sr = ScreeningResult(task_id=task.id, dataset_id="GSE_API1")
@@ -268,9 +277,9 @@ async def test_gsm_label_api_get_put_and_trigger(auth_client):
         sample = GeoSample(result_id=sr.id, gsm_id="GSM_API1", title="API sample")
         db.add(sample)
         from sqlalchemy import select as sa_select
-        existing_cfg = (await db.execute(sa_select(LLMConfig).where(LLMConfig.owner_id == 1))).scalar_one_or_none()
+        existing_cfg = (await db.execute(sa_select(LLMConfig).where(LLMConfig.owner_id == auth_client._ann_user_id))).scalar_one_or_none()
         if not existing_cfg:
-            db.add(LLMConfig(owner_id=1, provider="deepseek", api_key="sk-api", model="deepseek-chat"))
+            db.add(LLMConfig(owner_id=auth_client._ann_user_id, provider="deepseek", api_key="sk-api", model="deepseek-chat"))
         await db.commit()
         result_id = sr.id
         sample_id = sample.id

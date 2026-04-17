@@ -132,8 +132,8 @@ async def test_create_geo_task_persists_gsm_samples(auth_client):
     assert len(items) == 1
     assert items[0]["gse_type"] == "Expression profiling by high throughput sequencing"
     assert items[0]["has_raw_data"] is True
-    assert len(items[0]["samples"]) == 2
-    assert items[0]["samples"][0]["gsm_id"] == "GSM001"
+    # GSM samples are no longer fetched at task creation time (fetched on-demand during annotation)
+    assert items[0]["n_samples"] == 2
 
 
 @pytest.mark.asyncio
@@ -297,7 +297,7 @@ async def test_export_available_csv(auth_client):
     assert "text/csv" in export_r.headers["content-type"]
 
     import csv, io
-    reader = csv.DictReader(io.StringIO(export_r.text))
+    reader = csv.DictReader(io.StringIO(export_r.text.lstrip('\ufeff')))
     rows_out = list(reader)
     assert len(rows_out) == 3
 

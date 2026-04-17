@@ -198,13 +198,19 @@ async def _run_annotation_async(task_id: int):
                         base_url=cfg.base_url, model=cfg.model, temperature=0)
         results = (await db.execute(
             select(ScreeningResult)
-            .options(selectinload(ScreeningResult.samples))
+            .options(selectinload(ScreeningResult.samples), selectinload(ScreeningResult.labels))
             .where(ScreeningResult.task_id == task_id)
         )).scalars().all()
 
+        # Only process results that have no final_conclusion label yet (resume support)
+        pending_results = [
+            sr for sr in results
+            if not any(l.key == "final_conclusion" for l in sr.labels)
+        ]
+
         conclusion_to_decision = {"可用": "include", "不可用": "exclude", "待确认": "uncertain"}
 
-        for sr in results:
+        for sr in pending_results:
             try:
                 description = await _geo_context_for_result(sr)
                 extracted = await llm.extract_labels(
