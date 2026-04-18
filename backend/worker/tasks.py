@@ -6,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.worker.celery_app import celery_app
 from backend.database import AsyncSessionLocal
-from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel, GsmLabel
+from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel, GsmLabel, GeoSample
 from backend.worker.geo_fetcher import fetch_gse_detail, fetch_gsm_samples
 from backend.worker.llm_client import LLMClient
 
@@ -254,6 +254,57 @@ async def _run_annotation_async(task_id: int):
         await db.commit()
 
 
+async def _run_single_result_annotation_async(result_id: int):
+    """Re-annotate a single GSE result, overwriting existing llm labels."""
+    import json as _json
+    async with AsyncSessionLocal() as db:
+        sr = (await db.execute(
+            select(ScreeningResult)
+            .options(selectinload(ScreeningResult.samples), selectinload(ScreeningResult.labels))
+            .where(ScreeningResult.id == result_id)
+        )).scalar_one_or_none()
+        if not sr:
+            return
+        task = (await db.execute(
+            select(ScreeningTask).where(ScreeningTask.id == sr.task_id)
+        )).scalar_one_or_none()
+        if not task or not task.label_schema:
+            return
+        cfg = (await db.execute(
+            select(LLMConfig).where(LLMConfig.owner_id == task.owner_id)
+        )).scalar_one_or_none()
+        if not cfg or not cfg.api_key:
+            return
+        dimensions = _json.loads(task.label_schema)
+        llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
+                        base_url=cfg.base_url, model=cfg.model, temperature=0)
+        conclusion_to_decision = {"可用": "include", "不可用": "exclude", "待确认": "uncertain"}
+        try:
+            description = await _geo_context_for_result(sr)
+            extracted = await llm.extract_labels(
+                dataset_id=sr.dataset_id, title=sr.title or "",
+                description=description, dimensions=dimensions,
+            )
+            existing_by_key = {l.key: l for l in sr.labels}
+            for key, value in extracted.items():
+                existing = existing_by_key.get(key)
+                if existing and existing.source == "human":
+                    continue
+                if existing:
+                    existing.value = str(value) if value is not None else None
+                else:
+                    db.add(GeoLabel(result_id=sr.id, key=key,
+                                    value=str(value) if value is not None else None, source="llm"))
+            final = extracted.get("final_conclusion")
+            if final and final in conclusion_to_decision:
+                sr.decision = conclusion_to_decision[final]
+                sr.status = "done"
+            await db.commit()
+        except Exception as exc:
+            await db.rollback()
+            logger.warning("Single result annotation error for %s: %s", sr.dataset_id, exc)
+
+
 async def _run_gsm_annotation_async(result_id: int):
     async with AsyncSessionLocal() as db:
         sr = (await db.execute(
@@ -278,6 +329,13 @@ async def _run_gsm_annotation_async(result_id: int):
         gse_summary = sr.description or ""
         for sample in sr.samples:
             try:
+                # Resume support: skip samples already annotated
+                existing = (await db.execute(
+                    select(GsmLabel).where(GsmLabel.sample_id == sample.id)
+                )).scalars().all()
+                existing_by_key = {l.key: l for l in existing}
+                if "gsm_available" in existing_by_key:
+                    continue
                 extracted = await llm.annotate_gsm(
                     gsm_id=sample.gsm_id,
                     title=sample.title or "",
@@ -286,10 +344,6 @@ async def _run_gsm_annotation_async(result_id: int):
                     characteristics="",
                     gse_summary=gse_summary,
                 )
-                existing = (await db.execute(
-                    select(GsmLabel).where(GsmLabel.sample_id == sample.id)
-                )).scalars().all()
-                existing_by_key = {l.key: l for l in existing}
                 for key, value in extracted.items():
                     ex = existing_by_key.get(key)
                     if ex and ex.source == "human":
@@ -304,3 +358,92 @@ async def _run_gsm_annotation_async(result_id: int):
             except Exception as exc:
                 await db.rollback()
                 logger.warning("GSM annotation error for %s: %s", sample.gsm_id, exc)
+
+
+async def _run_gsm_task_async(task_id: int):
+    async with AsyncSessionLocal() as db:
+        task = await db.get(
+            ScreeningTask, task_id,
+            options=[selectinload(ScreeningTask.results).selectinload(ScreeningResult.samples).selectinload(GeoSample.labels)]
+        )
+        if not task:
+            logger.error("GSM task %s not found", task_id)
+            return
+
+        cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))).scalar_one_or_none()
+        if not cfg or not cfg.api_key:
+            logger.error("No LLM config for user %s", task.owner_id)
+            task.status = "error"
+            await db.commit()
+            return
+
+        llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
+                        base_url=cfg.base_url, model=cfg.model, temperature=0)
+        task.status = "running"
+        await db.commit()
+
+        try:
+            for result in task.results:
+                # Fetch samples if not yet fetched
+                if not result.samples:
+                    try:
+                        fetched = await fetch_gsm_samples(result.dataset_id)
+                        for s in fetched:
+                            db.add(GeoSample(
+                                result_id=result.id,
+                                gsm_id=s.get("gsm_id", ""),
+                                title=s.get("title"),
+                                organism=s.get("organism"),
+                                biosample_id=s.get("biosample_id"),
+                            ))
+                        await db.commit()
+                        await db.refresh(result, ["samples"])
+                    except Exception as e:
+                        logger.error("Failed to fetch samples for %s: %s", result.dataset_id, e)
+                        continue
+
+                gse_detail = None
+                try:
+                    gse_detail = await fetch_gse_detail(result.dataset_id)
+                except Exception:
+                    pass
+
+                context = _build_geo_metadata_context(
+                    result.description or "",
+                    gse_detail,
+                    [],
+                    result.has_raw_data,
+                )
+
+                for sample in result.samples:
+                    # Skip if already annotated (resume support)
+                    existing_keys = {lbl.key for lbl in sample.labels}
+                    if "avail" in existing_keys:
+                        continue
+
+                    try:
+                        annotation = await llm.annotate_gsm(
+                            gsm_id=sample.gsm_id,
+                            title=sample.title or "",
+                            organism=sample.organism or "",
+                            biosample_id=sample.biosample_id or "",
+                            characteristics="",
+                            gse_summary=context,
+                        )
+                        if annotation:
+                            for key, value in annotation.items():
+                                db.add(GsmLabel(sample_id=sample.id, key=key,
+                                                value=str(value) if value is not None else None,
+                                                source="llm"))
+                        task.processed += 1
+                        await db.commit()
+                    except Exception as e:
+                        logger.error("Failed to annotate %s: %s", sample.gsm_id, e)
+                        continue
+
+            task.status = "done"
+            await db.commit()
+        except Exception as e:
+            logger.error("Error in _run_gsm_task_async for task %s: %s", task_id, e)
+            task.status = "error"
+            await db.commit()
