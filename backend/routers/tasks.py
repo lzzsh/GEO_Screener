@@ -28,6 +28,7 @@ async def create_task(
     search_query: Optional[str] = Query(default=None),
     geo_ids: Optional[str] = Query(default=None),
     label_schema: Optional[str] = Query(default=None),
+    retmax: int = Query(default=20),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -53,7 +54,7 @@ async def create_task(
             content = await file.read()
             datasets = parse_csv(content)
         elif source == "geo" and search_query:
-            datasets = await search_geo(search_query, retmax=20)
+            datasets = await search_geo(search_query, retmax=retmax)
         elif source == "geo" and geo_ids:
             gid_list = [gid.strip() for gid in geo_ids.split(",") if gid.strip()]
             if gid_list:
@@ -79,19 +80,6 @@ async def create_task(
             )
             db.add(sr)
             await db.flush()
-            if source == "geo":
-                try:
-                    gsm_list = await fetch_gsm_samples(d["id"])
-                except httpx.HTTPError:
-                    gsm_list = []
-                for gsm in gsm_list:
-                    db.add(GeoSample(
-                        result_id=sr.id,
-                        gsm_id=gsm["gsm_id"],
-                        title=gsm.get("title", ""),
-                        organism=gsm.get("organism", ""),
-                        biosample_id=gsm.get("biosample_id", ""),
-                    ))
 
         if source == "geo" and not criteria_text.strip():
             task.status = "done"
@@ -216,7 +204,7 @@ async def get_results(
                    "update_date": r.update_date, "has_raw_data": r.has_raw_data,
                    "n_samples": r.n_samples,
                    "labels": [{"key": label.key, "value": label.value, "source": label.source} for label in r.labels],
-                   "samples": [{"gsm_id": s.gsm_id, "title": s.title,
+                   "samples": [{"id": s.id, "gsm_id": s.gsm_id, "title": s.title,
                                 "organism": s.organism, "biosample_id": s.biosample_id,
                                 "cell_count": s.cell_count} for s in r.samples]} for r in rows],
     }
@@ -254,3 +242,111 @@ async def export_results(task_id: int, db: AsyncSession = Depends(get_db), user:
     output.seek(0)
     return StreamingResponse(output, media_type="text/csv; charset=utf-8",
                              headers={"Content-Disposition": f"attachment; filename=task_{task_id}_results.csv"})
+
+
+@router.post("/{task_id}/results/{result_id}/fetch-samples")
+async def fetch_and_store_samples(
+    task_id: int, result_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    task_result = await db.execute(
+        select(ScreeningTask).where(ScreeningTask.id == task_id, ScreeningTask.owner_id == user.id)
+    )
+    if not task_result.scalar_one_or_none():
+        raise HTTPException(status_code=404, detail="Not found")
+    sr = (await db.execute(
+        select(ScreeningResult)
+        .options(selectinload(ScreeningResult.samples))
+        .where(ScreeningResult.id == result_id, ScreeningResult.task_id == task_id)
+    )).scalar_one_or_none()
+    if not sr:
+        raise HTTPException(status_code=404, detail="Not found")
+    if sr.samples:
+        return [{"gsm_id": s.gsm_id, "title": s.title, "organism": s.organism,
+                 "biosample_id": s.biosample_id, "cell_count": s.cell_count} for s in sr.samples]
+    try:
+        gsm_list = await fetch_gsm_samples(sr.dataset_id)
+    except httpx.HTTPError:
+        gsm_list = []
+    for gsm in gsm_list:
+        db.add(GeoSample(
+            result_id=sr.id,
+            gsm_id=gsm["gsm_id"],
+            title=gsm.get("title", ""),
+            organism=gsm.get("organism", ""),
+            biosample_id=gsm.get("biosample_id", ""),
+        ))
+    await db.commit()
+    return [{"gsm_id": g["gsm_id"], "title": g.get("title", ""), "organism": g.get("organism", ""),
+             "biosample_id": g.get("biosample_id", ""), "cell_count": None} for g in gsm_list]
+
+
+@router.post("/{task_id}/create-gsm-task", status_code=201)
+async def create_gsm_task(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    parent_task = await db.get(ScreeningTask, task_id)
+    if not parent_task:
+        raise HTTPException(status_code=404, detail="Parent task not found")
+    if parent_task.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+
+    gsm_task = ScreeningTask(
+        name=f"{parent_task.name} - GSM Annotation",
+        source=parent_task.source,
+        task_type="gsm_annotation",
+        parent_task_id=parent_task.id,
+        criteria_text=parent_task.criteria_text,
+        owner_id=user.id,
+        label_schema=parent_task.label_schema,
+    )
+    db.add(gsm_task)
+    await db.flush()
+
+    stmt = select(ScreeningResult).where(
+        ScreeningResult.task_id == parent_task.id,
+        ScreeningResult.decision.in_(["include", "uncertain"]),
+    )
+    parent_results = (await db.execute(stmt)).scalars().all()
+
+    for pr in parent_results:
+        db.add(ScreeningResult(
+            task_id=gsm_task.id,
+            dataset_id=pr.dataset_id,
+            title=pr.title,
+            description=pr.description,
+            decision=pr.decision,
+            gse_type=pr.gse_type,
+            pubdate=pr.pubdate,
+            update_date=pr.update_date,
+            has_raw_data=pr.has_raw_data,
+            n_samples=pr.n_samples,
+        ))
+
+    gsm_task.total = len(parent_results)
+    gsm_task.candidate_count = len(parent_results)
+    await db.commit()
+    return {"id": gsm_task.id, "name": gsm_task.name}
+
+
+@router.post("/{task_id}/run-gsm-annotation")
+async def run_gsm_annotation(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    import asyncio as _asyncio
+    task = await db.get(ScreeningTask, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if task.task_type != "gsm_annotation":
+        raise HTTPException(status_code=400, detail="Task is not a GSM annotation task")
+
+    from backend.worker.tasks import _run_gsm_task_async
+    _asyncio.create_task(_run_gsm_task_async(task_id))
+    return {"status": "running_inline"}
