@@ -196,7 +196,7 @@
         <div class="relative" x-data="{open:false}">
           <button @click="open=!open"
                   class="bg-gray-900 text-white rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-800 flex items-center gap-1">
-            创建任务 <span x-text="open ? '▲' : '▼'" class="text-xs"></span>
+            创建任务
           </button>
           <div x-show="open" @click.outside="open=false"
                class="absolute right-0 mt-1 bg-white border rounded-xl shadow-lg z-10 w-48 py-1">
@@ -209,7 +209,7 @@
         <div class="relative" x-data="{open:false}">
           <button @click="open=!open" :disabled="!hasResults"
                   class="border border-gray-300 text-gray-700 rounded-lg px-4 py-1.5 text-sm font-medium hover:bg-gray-50 flex items-center gap-1 disabled:opacity-40">
-            存入文献库 <span x-text="open ? '▲' : '▼'" class="text-xs"></span>
+            存入文献库
           </button>
           <div x-show="open" @click.outside="open=false"
                class="absolute right-0 mt-1 bg-white border rounded-xl shadow-lg z-10 w-52 py-1">
@@ -245,26 +245,20 @@
           <th class="text-left px-4 py-3 font-medium text-gray-600">
             <button @click="sortBy('id')" class="inline-flex items-center gap-1 hover:text-gray-900">Accession <span x-text="sortIndicator('id')"></span></button>
           </th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">
-            <button @click="sortBy('title')" class="inline-flex items-center gap-1 hover:text-gray-900">标题 <span x-text="sortIndicator('title')"></span></button>
-          </th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">标题</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">
             <button @click="sortBy('n_samples')" class="inline-flex items-center gap-1 hover:text-gray-900">样本数 <span x-text="sortIndicator('n_samples')"></span></button>
           </th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">
-            <button @click="sortBy('gse_type')" class="inline-flex items-center gap-1 hover:text-gray-900">实验类型 <span x-text="sortIndicator('gse_type')"></span></button>
-          </th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">实验类型</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">
             <button @click="sortBy('pubdate')" class="inline-flex items-center gap-1 hover:text-gray-900">Submission date <span x-text="sortIndicator('pubdate')"></span></button>
           </th>
-          <th class="text-center px-4 py-3 font-medium text-gray-600">
-            <button @click="sortBy('has_raw_data')" class="inline-flex items-center justify-center gap-1 hover:text-gray-900">原始数据 <span x-text="sortIndicator('has_raw_data')"></span></button>
-          </th>
+          <th class="text-center px-4 py-3 font-medium text-gray-600">原始数据</th>
           <th class="px-4 py-3 text-left text-sm font-medium text-gray-600">操作</th>
         </tr>
       </thead>
       <tbody class="divide-y">
-        <template x-for="item in sortedItems" :key="item.id">
+        <template x-for="item in visibleItems" :key="item.id">
           <tr class="hover:bg-gray-50 cursor-pointer" @click="openModal(item)">
             <td class="px-4 py-3 font-mono text-sm text-blue-700 align-top whitespace-nowrap" x-text="item.id"></td>
             <td class="px-4 py-3 align-top">
@@ -333,7 +327,7 @@
       jumpPageInput: 1,
       loading: false, creating: false, error: '',
       summary: {query: '', total: 0, retmax: 1000},
-      visibleItems: [],
+      allItems: [],
       sortKey: '', sortDir: 'asc',
       libraries: [],
       modal: {open: false, id: '', title: '', detail: null, loadingDetail: false},
@@ -359,18 +353,22 @@
         }
       },
       get hasResults() { return this.summary.total > 0; },
-      get totalPages() { return Math.max(1, Math.ceil((this.summary.total || 0) / this.pageSize)); },
+      get totalPages() { return Math.max(1, Math.ceil(this.allItems.length / this.pageSize)); },
       get visiblePaginationItems() { return buildPaginationItems(this.page, this.totalPages); },
-      get sortedItems() {
-        if (!this.sortKey) return this.visibleItems;
+      get sortedAllItems() {
+        if (!this.sortKey) return this.allItems;
         const direction = this.sortDir === 'desc' ? -1 : 1;
-        return [...this.visibleItems].sort((a, b) => {
+        return [...this.allItems].sort((a, b) => {
           const av = sortValue(a, this.sortKey);
           const bv = sortValue(b, this.sortKey);
           if (av < bv) return -1 * direction;
           if (av > bv) return 1 * direction;
           return 0;
         });
+      },
+      get visibleItems() {
+        const start = (this.page - 1) * this.pageSize;
+        return this.sortedAllItems.slice(start, start + this.pageSize);
       },
       persistState() {
         sessionStorage.setItem(storageKey, JSON.stringify({
@@ -380,7 +378,7 @@
           page: this.page,
           pageSize: this.pageSize,
           summary: this.summary,
-          visibleItems: this.visibleItems,
+          allItems: this.allItems,
           sortKey: this.sortKey,
           sortDir: this.sortDir,
         }));
@@ -396,7 +394,7 @@
           this.page = data.page || 1;
           this.pageSize = data.pageSize || 100;
           this.summary = data.summary || {query: '', total: 0, retmax: this.retmax};
-          this.visibleItems = data.visibleItems || [];
+          this.allItems = data.allItems || [];
           this.sortKey = data.sortKey || '';
           this.sortDir = data.sortDir || 'asc';
           this.jumpPageInput = this.page;
@@ -411,7 +409,7 @@
         this.jumpPageInput = 1;
         this.error = '';
         this.summary = {query: '', total: 0, retmax: 1000};
-        this.visibleItems = [];
+        this.allItems = [];
         this.sortKey = '';
         this.sortDir = 'asc';
         sessionStorage.removeItem(storageKey);
@@ -423,6 +421,8 @@
           this.sortKey = key;
           this.sortDir = 'asc';
         }
+        this.page = 1;
+        this.jumpPageInput = 1;
         this.persistState();
       },
       sortIndicator(key) {
@@ -457,20 +457,21 @@
 
       async search(nextPage) {
         if (!this.query.trim()) { this.error = '请输入关键词'; return; }
-        if (nextPage) this.page = nextPage;
+        if (nextPage) { this.page = nextPage; this.jumpPageInput = nextPage; this.persistState(); return; }
+        this.page = 1;
         this.loading = true; this.error = '';
         try {
           const r = await fetch('/geo/search', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({q: this.query, retmax: this.retmax, page: this.page, page_size: this.pageSize}),
+            body: JSON.stringify({q: this.query, retmax: this.retmax, page: 1, page_size: this.retmax}),
           });
           if (r.status === 401) { window.location.href = '/login'; return; }
           if (!r.ok) throw new Error(await this.readError(r, 'Search failed'));
           const payload = await r.json();
           this.summary = payload;
-          this.visibleItems = payload.items;
-          this.jumpPageInput = this.page;
+          this.allItems = payload.items;
+          this.jumpPageInput = 1;
           this.persistState();
         } catch(err) { this.error = err.message; }
         finally { this.loading = false; }
@@ -478,12 +479,15 @@
       async changePage(delta) {
         const next = this.page + delta;
         if (next < 1 || next > this.totalPages) return;
-        await this.search(next);
+        this.page = next;
+        this.jumpPageInput = next;
+        this.persistState();
       },
       async jumpToPage() {
         const target = Number(this.jumpPageInput);
         if (!Number.isInteger(target) || target < 1 || target > this.totalPages) return;
-        await this.search(target);
+        this.page = target;
+        this.persistState();
       },
       async createTask(mode) {
         if (!this.query.trim()) { this.error = '请先搜索'; return; }
@@ -494,8 +498,12 @@
             source: 'geo', criteria_text: this.criteriaText,
             label_schema: JSON.stringify(defaultLabelSchema),
           });
-          if (mode === 'all') params.set('search_query', this.query);
-          else params.set('geo_ids', this.visibleItems.map(i => i.id).join(','));
+          if (mode === 'all') {
+            params.set('search_query', this.query);
+            params.set('retmax', this.retmax);
+          } else {
+            params.set('geo_ids', this.allItems.map(i => i.id).join(','));
+          }
           const r = await fetch('/tasks?' + params.toString(), {method: 'POST'});
           if (!r.ok) throw new Error(await this.readError(r, 'Failed'));
           const payload = await r.json();
@@ -504,8 +512,8 @@
         finally { this.creating = false; }
       },
       async saveToLib(libId) {
-        if (!this.visibleItems.length) return;
-        const entries = this.visibleItems.map(item => ({
+        if (!this.allItems.length) return;
+        const entries = this.allItems.map(item => ({
           gse_id: item.id,
           title: item.title,
           organism: item.organism,

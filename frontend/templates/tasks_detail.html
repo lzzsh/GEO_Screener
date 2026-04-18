@@ -8,9 +8,12 @@
     <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
     <span :class="statusClass(task.status)"
           class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>
+    <template x-if="task.task_type !== 'gsm_annotation'">
+      <button id="create-gsm-btn" onclick="createGsmTask()" style="background:#0d9488;color:white;padding:6px 14px;border:none;border-radius:6px;cursor:pointer;">创建 GSM 注释任务</button>
+    </template>
   </div>
 
-  <div class="grid gap-3 md:grid-cols-5 mb-6">
+  <div class="grid gap-3 md:grid-cols-6 mb-6">
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
       <p class="text-xs text-gray-400">GEO Candidates</p>
       <p class="text-2xl font-semibold" x-text="task.candidate_count || 0"></p>
@@ -30,7 +33,13 @@
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center">
       <button @click="triggerAnnotation()" :disabled="annotating"
               class="w-full text-sm bg-blue-600 text-white rounded-lg py-1.5 hover:bg-blue-700 disabled:opacity-50">
-        <span x-text="annotating ? 'Running…' : 'Run LLM Annotation'"></span>
+        <span x-text="annotating ? 'Running…' : 'Run GSE Annotation'"></span>
+      </button>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center">
+      <button @click="runAllGsmAnnotation()" :disabled="gsmAnnotating"
+              class="w-full text-sm bg-teal-600 text-white rounded-lg py-1.5 hover:bg-teal-700 disabled:opacity-50">
+        <span x-text="gsmAnnotating ? 'GSM 标注中…' : 'Run GSM Annotation'"></span>
       </button>
     </div>
   </div>
@@ -124,7 +133,13 @@
           <tr x-show="expanded.has(r.id)" class="bg-slate-50">
             <td colspan="9" class="px-4 py-4">
               <div class="mb-4" x-data="labelEditor(r)">
-                <p class="text-xs font-semibold text-gray-500 mb-2">标注</p>
+                <div class="flex items-center justify-between mb-2">
+                  <p class="text-xs font-semibold text-gray-500">标注</p>
+                  <button @click="runGseAnnotation(r.id)"
+                          class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg border border-indigo-200">
+                    重新标注此 GSE
+                  </button>
+                </div>
                 <div class="flex flex-wrap gap-2">
                   <template x-for="lbl in labels" :key="lbl.key">
                     <div class="flex items-center gap-1 bg-white border rounded-lg px-2 py-1 text-xs">
@@ -146,7 +161,8 @@
               <div x-show="r.samples && r.samples.length > 0">
                 <div class="flex items-center justify-between mb-2">
                   <p class="text-xs font-semibold text-gray-500">样本列表 (GSM)</p>
-                  <button @click="runGsmAnnotation(r.id)"
+                  <button x-show="r.decision === 'include' || r.decision === 'uncertain' || !r.decision"
+                          @click="runGsmAnnotation(r.id)"
                           class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg border border-blue-200">
                     标注 GSM
                   </button>
@@ -234,7 +250,7 @@
     return {
       taskId, task: {}, results: [], loading: true,
       page: 1, pageSize: 20, total: 0, jumpPageInput: 1, expanded: new Set(),
-      decisionFilter: '', annotating: false, annotationError: '', pollTimer: null, libs: [],
+      decisionFilter: '', annotating: false, annotationError: '', gsmAnnotating: false, pollTimer: null, libs: [],
       expandedGsm: new Set(),
 
       async init() {
@@ -277,9 +293,12 @@
             const payload = await response.json().catch(() => ({}));
             throw new Error(payload.detail || 'Run LLM Annotation failed');
           }
-          setTimeout(async () => {
+          let polls = 0;
+          const annotationPoll = setInterval(async () => {
             await this.loadResults();
-          }, 1500);
+            polls++;
+            if (polls >= 20) clearInterval(annotationPoll);
+          }, 3000);
         } catch (error) {
           this.annotationError = error.message;
         } finally {
@@ -333,9 +352,43 @@
         this.expandedGsm = new Set(this.expandedGsm);
       },
       async runGsmAnnotation(resultId) {
+        // Fetch and store GSM samples first if not yet loaded
+        await fetch('/tasks/' + this.taskId + '/results/' + resultId + '/fetch-samples', {method: 'POST'});
         const r = await fetch('/annotate/results/' + resultId + '/gsm-labels/run', {method: 'POST'});
         if (r.ok) {
           await this.loadResults();
+        }
+      },
+      async runGseAnnotation(resultId) {
+        const r = await fetch('/annotate/results/' + resultId + '/run', {method: 'POST'});
+        if (r.ok) {
+          await this.loadResults();
+        }
+      },
+      async runAllGsmAnnotation() {
+        this.gsmAnnotating = true;
+        try {
+          // Fetch all include+uncertain results across all pages
+          let allEligible = [];
+          let page = 1;
+          while (true) {
+            const r = await fetch('/tasks/' + this.taskId + '/results?page=' + page + '&page_size=100');
+            if (!r.ok) break;
+            const data = await r.json();
+            const eligible = data.items.filter(item =>
+              item.decision === 'include' || item.decision === 'uncertain' || !item.decision
+            );
+            allEligible = allEligible.concat(eligible);
+            if (page * 100 >= data.total) break;
+            page++;
+          }
+          for (const item of allEligible) {
+            await fetch('/tasks/' + this.taskId + '/results/' + item.id + '/fetch-samples', {method: 'POST'});
+            await fetch('/annotate/results/' + item.id + '/gsm-labels/run', {method: 'POST'});
+          }
+          await this.loadResults();
+        } finally {
+          this.gsmAnnotating = false;
         }
       },
       statusClass(s) {
@@ -385,6 +438,27 @@
           '待确认': 'bg-yellow-100 text-yellow-700',
         }[v] || 'bg-gray-100 text-gray-700';
       }
+    }
+  }
+
+  async function createGsmTask() {
+    const btn = document.getElementById('create-gsm-btn');
+    btn.disabled = true;
+    btn.textContent = '创建中...';
+    try {
+      const resp = await fetch(`/tasks/{{ task_id }}/create-gsm-task`, {method: 'POST'});
+      if (resp.ok) {
+        const data = await resp.json();
+        window.location.href = `/tasks/${data.id}/detail`;
+      } else {
+        alert('创建失败');
+        btn.disabled = false;
+        btn.textContent = '创建 GSM 注释任务';
+      }
+    } catch(e) {
+      alert('创建失败: ' + e);
+      btn.disabled = false;
+      btn.textContent = '创建 GSM 注释任务';
     }
   }
 

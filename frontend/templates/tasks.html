@@ -20,7 +20,12 @@
       <div class="bg-white rounded-xl border border-gray-200 px-5 py-4 hover:border-blue-300 transition">
         <div class="flex items-center justify-between">
           <a :href="'/tasks/' + t.id + '/detail'" class="min-w-0 flex-1">
-            <p class="font-medium" x-text="t.name"></p>
+            <div class="flex items-center gap-2">
+              <p class="font-medium" x-text="t.name"></p>
+              <span x-show="t.task_type === 'gsm_annotation'" style="background:#0d9488;color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">GSM注释</span>
+              <span x-show="t.task_type !== 'gsm_annotation'" style="background:#2563eb;color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">GSE筛选</span>
+            </div>
+            <div x-show="t.task_type === 'gsm_annotation' && t.parent_task_name" style="font-size:0.8rem;color:#6b7280;" x-text="'来源: ' + t.parent_task_name"></div>
             <p class="text-xs text-blue-600 mt-1 truncate" x-show="t.search_query" x-text="t.search_query"></p>
             <p class="text-xs text-gray-400 mt-1" x-text="new Date(t.created_at).toLocaleString()"></p>
           </a>

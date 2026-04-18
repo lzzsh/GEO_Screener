@@ -114,11 +114,23 @@ async def list_tasks(db: AsyncSession = Depends(get_db), user: User = Depends(ge
         select(ScreeningTask).where(ScreeningTask.owner_id == user.id).order_by(ScreeningTask.created_at.desc())
     )
     tasks = result.scalars().all()
+
+    # Collect parent task ids and fetch their names
+    parent_ids = {t.parent_task_id for t in tasks if t.parent_task_id}
+    parent_names: dict[int, str] = {}
+    if parent_ids:
+        parent_result = await db.execute(
+            select(ScreeningTask.id, ScreeningTask.name).where(ScreeningTask.id.in_(parent_ids))
+        )
+        parent_names = {row.id: row.name for row in parent_result}
+
     return [{"id": t.id, "name": t.name, "status": t.status, "total": t.total,
              "candidate_count": t.candidate_count, "processed": t.processed,
              "included_count": t.included_count, "excluded_count": t.excluded_count,
              "uncertain_count": t.uncertain_count, "search_query": t.search_query,
-             "created_at": t.created_at} for t in tasks]
+             "created_at": t.created_at, "task_type": t.task_type,
+             "parent_task_name": parent_names.get(t.parent_task_id) if t.parent_task_id else None}
+            for t in tasks]
 
 
 @router.get("/{task_id}")
@@ -133,7 +145,8 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_db), user: User 
             "total": task.total, "candidate_count": task.candidate_count,
             "processed": task.processed, "included_count": task.included_count,
             "excluded_count": task.excluded_count, "uncertain_count": task.uncertain_count,
-            "search_query": task.search_query, "created_at": task.created_at}
+            "search_query": task.search_query, "created_at": task.created_at,
+            "task_type": task.task_type}
 
 
 @router.delete("/{task_id}")
@@ -330,6 +343,14 @@ async def create_gsm_task(
     gsm_task.candidate_count = len(parent_results)
     await db.commit()
     return {"id": gsm_task.id, "name": gsm_task.name}
+
+
+@router.get("/{task_id}/status")
+async def get_task_status(task_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    task = await db.get(ScreeningTask, task_id)
+    if not task or task.owner_id != user.id:
+        raise HTTPException(status_code=404)
+    return {"status": task.status, "processed": task.processed, "total": task.total}
 
 
 @router.post("/{task_id}/run-gsm-annotation")
