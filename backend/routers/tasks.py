@@ -10,7 +10,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.label_schema import default_label_schema_json
-from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, LibraryEntry
+from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry
 from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
@@ -365,9 +365,91 @@ async def run_gsm_annotation(
         raise HTTPException(status_code=404, detail="Task not found")
     if task.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
+
+    from backend.worker.tasks import _run_gsm_task_async
+
+    # If called on a screening task, auto-create the GSM child task first
+    if task.task_type == "screening":
+        # Check if a GSM task already exists for this parent
+        existing = (await db.execute(
+            select(ScreeningTask).where(
+                ScreeningTask.parent_task_id == task_id,
+                ScreeningTask.task_type == "gsm_annotation",
+            )
+        )).scalar_one_or_none()
+
+        if existing:
+            gsm_task = existing
+        else:
+            gsm_task = ScreeningTask(
+                name=f"{task.name} - GSM Annotation",
+                source=task.source,
+                task_type="gsm_annotation",
+                parent_task_id=task.id,
+                criteria_text=task.criteria_text,
+                owner_id=user.id,
+                label_schema=task.label_schema,
+            )
+            db.add(gsm_task)
+            await db.flush()
+
+            stmt = select(ScreeningResult).where(
+                ScreeningResult.task_id == task.id,
+                ScreeningResult.decision.in_(["include", "uncertain"]),
+            )
+            parent_results = (await db.execute(stmt)).scalars().all()
+            for pr in parent_results:
+                db.add(ScreeningResult(
+                    task_id=gsm_task.id,
+                    dataset_id=pr.dataset_id,
+                    title=pr.title,
+                    description=pr.description,
+                    decision=pr.decision,
+                    gse_type=pr.gse_type,
+                    pubdate=pr.pubdate,
+                    update_date=pr.update_date,
+                    has_raw_data=pr.has_raw_data,
+                    n_samples=pr.n_samples,
+                ))
+            gsm_task.total = len(parent_results)
+            gsm_task.candidate_count = len(parent_results)
+            await db.commit()
+
+        _asyncio.create_task(_run_gsm_task_async(gsm_task.id))
+        return {"status": "running_inline", "gsm_task_id": gsm_task.id}
+
+    # Called directly on a gsm_annotation task
     if task.task_type != "gsm_annotation":
         raise HTTPException(status_code=400, detail="Task is not a GSM annotation task")
 
-    from backend.worker.tasks import _run_gsm_task_async
     _asyncio.create_task(_run_gsm_task_async(task_id))
-    return {"status": "running_inline"}
+    return {"status": "running_inline", "gsm_task_id": task_id}
+
+
+@router.delete("/{task_id}/gsm-labels")
+async def clear_gsm_labels(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    task = await db.get(ScreeningTask, task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="Task not found")
+    if task.owner_id != user.id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    if task.task_type != "gsm_annotation":
+        raise HTTPException(status_code=400, detail="Task is not a GSM annotation task")
+
+    # Delete all gsm_labels for samples belonging to this task's results
+    sample_ids = (await db.execute(
+        select(GeoSample.id).join(ScreeningResult, GeoSample.result_id == ScreeningResult.id)
+        .where(ScreeningResult.task_id == task_id)
+    )).scalars().all()
+
+    if sample_ids:
+        await db.execute(delete(GsmLabel).where(GsmLabel.sample_id.in_(sample_ids)))
+
+    task.processed = 0
+    task.status = "pending"
+    await db.commit()
+    return {"deleted": len(sample_ids), "status": "cleared"}

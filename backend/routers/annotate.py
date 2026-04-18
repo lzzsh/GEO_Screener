@@ -64,6 +64,22 @@ async def trigger_annotation(task_id: int, db: AsyncSession = Depends(get_db),
     return {"status": status}
 
 
+@router.post("/results/{result_id}/run")
+async def trigger_single_result_annotation(result_id: int, db: AsyncSession = Depends(get_db),
+                                            user: User = Depends(get_current_user)):
+    sr = (await db.execute(
+        select(ScreeningResult).where(ScreeningResult.id == result_id)
+    )).scalar_one_or_none()
+    if not sr:
+        raise HTTPException(status_code=404, detail="Not found")
+    from backend.worker.tasks import _run_single_result_annotation_async
+    status = dispatch_or_run_inline(
+        delay_call=None,
+        inline_coro_factory=lambda: _run_single_result_annotation_async(result_id),
+    )
+    return {"status": status}
+
+
 @router.get("/samples/{sample_id}/labels")
 async def get_gsm_labels(sample_id: int, db: AsyncSession = Depends(get_db),
                           user: User = Depends(get_current_user)):
@@ -103,7 +119,7 @@ async def trigger_gsm_annotation(result_id: int, db: AsyncSession = Depends(get_
         raise HTTPException(status_code=404, detail="Not found")
     from backend.worker.tasks import _run_gsm_annotation_async
     status = dispatch_or_run_inline(
-        delay_call=lambda: None,
+        delay_call=None,
         inline_coro_factory=lambda: _run_gsm_annotation_async(result_id),
     )
     return {"status": status}

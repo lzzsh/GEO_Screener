@@ -101,6 +101,7 @@ async def task_detail_page(
                     "id": s.id,
                     "gsm_id": s.gsm_id,
                     "title": s.title,
+                    "organism": s.organism,
                     "labels": {l.key: l.value for l in s.labels},
                 }
                 for s in r.samples

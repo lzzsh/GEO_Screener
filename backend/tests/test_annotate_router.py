@@ -117,6 +117,35 @@ async def test_trigger_annotation_returns_inline_status_when_dispatch_falls_back
 
 
 @pytest.mark.asyncio
+async def test_trigger_single_result_annotation_runs_inline(auth_client):
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask, ScreeningResult
+
+    async with AsyncSessionLocal() as db:
+        task = ScreeningTask(
+            name="single_result_task",
+            source="geo",
+            criteria_text="find iPSC",
+            owner_id=auth_client._ann_user_id,
+            label_schema='["起始细胞类型"]',
+        )
+        db.add(task)
+        await db.flush()
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE_SINGLE")
+        db.add(sr)
+        await db.commit()
+        result_id = sr.id
+
+    with patch("backend.routers.annotate.dispatch_or_run_inline", return_value="running_inline") as dispatch_mock:
+        r = await auth_client.post(f"/annotate/results/{result_id}/run")
+
+    assert r.status_code == 200
+    assert r.json() == {"status": "running_inline"}
+    dispatch_mock.assert_called_once()
+    assert dispatch_mock.call_args.kwargs["delay_call"] is None
+
+
+@pytest.mark.asyncio
 async def test_run_annotation_async_persists_labels_and_keeps_human_edits(auth_client):
     from backend.database import AsyncSessionLocal
     from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel, GeoSample

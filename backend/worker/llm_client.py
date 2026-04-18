@@ -114,15 +114,20 @@ JSON 必须使用以下结构：
 """
 
 GSM_LABEL_PROMPT_TEMPLATE = """\
-你是一个严格的样本级数据标注助手，需要根据提供的 GSM 元数据和所属 GSE 背景，判断该样本是否符合纳入标准。
+你是一个严格的样本级数据标注助手，需要根据提供的 GSM 元数据和所属 GSE 背景，判断该样本是否符合纳入标准，并提取样本级标注信息。
 
-你只能基于提供的元数据进行判断，不允许猜测未提供的信息。若关键信息缺失，标注为"信息不足"，gsm_available 使用"待确认"。
+你只能基于提供的元数据原文进行判断，严禁猜测、推断或使用外部知识。标注字段的值必须能在下方元数据中找到直接文字依据，否则填 Unknown。
 
-## 纳入标准
+---
 
-1. 细胞来源：必须为人源 iPSC、ESC 或 PSC
-2. 分化终点：必须有明确的分化目标细胞类型或阶段
-3. 实验环境：必须为 in vitro
+## 纳入标准（与 GSE 筛选标准一致，在样本级别进一步确认）
+
+1. 起始细胞：必须为人源 iPSC、ESC 或 PSC；来源需为正常供体或标准细胞系；排除疾病来源或携带先天遗传缺陷的细胞系
+2. 数据类型：必须为单细胞数据（scRNA-seq、scATAC-seq、spatial transcriptomics、CITE-seq、multiome 等）；排除 bulk RNA-seq
+3. 分化体系：必须为 PSC 分化过程；可接受 2D 或 3D 模型（organoid、blastoid、gastruloid 等）
+4. 实验环境：必须为 in vitro；排除 in vivo 或体内移植后数据
+
+---
 
 ## GSE 背景
 
@@ -134,25 +139,65 @@ GSM_ID: {gsm_id}
 Title: {title}
 Organism: {organism}
 BioSample: {biosample_id}
-Characteristics: {characteristics}
+{characteristics}
+
+---
 
 ## 输出要求
 
-请严格输出 JSON，不要输出 Markdown，不要输出代码块。
+请严格输出 JSON，不要输出 Markdown，不要输出代码块，不要输出 JSON 之外的任何文字。
 
 {{
-  "细胞来源": "iPSC / ESC / PSC / 其他 / 信息不足",
-  "分化终点": "简短终点描述，无明确证据则为空字符串",
-  "分化时间点": "D7 / D14 等，无明确证据则为空字符串",
-  "是否有原始数据": "是 / 否 / 不明确",
-  "gsm_available": "可用 / 不可用 / 待确认"
+  "response": "分条推理，每条以序号开头，必须直接引用元数据原文词句（用单引号标注）。依次覆盖：1. avail/start_cell（起始细胞判断） 2. 数据类型/modality 3. 分化体系/culture_sys 4. 实验环境 5. raw_data 6. target_cell 7. diff_path/time_pts 8. platform/cell_line 9. perturb 10. 其余字段（sex/age/reprog/passage/matrix/medium/density/o2_lvl）。无原文证据时写'元数据中无明确记载'",
+  "avail": "true / false / unknown",
+  "start_cell": "iPSC / ESC / PSC；无原文直接依据则填 Unknown",
+  "target_cell": "分化终点英文名；无原文直接依据则填 Unknown",
+  "culture_sys": "2D / 3D / 2D/3D Mixed；无原文直接依据则填 Unknown",
+  "diff_path": "直接引用元数据中的分化方案描述；无原文直接依据则填 Unknown",
+  "time_pts": ["仅填元数据中明确出现的时间点"],
+  "modality": ["multiome / scRNA-seq / scATAC-seq / spatial transcriptomics / CITE-seq / bulk RNA-seq 等"],
+  "perturb": [{{"type": "None", "method": "Vehicle/Control", "dose": "N/A", "start": "", "end": "", "dur": ""}}],
+  "platform": "直接引用元数据中的测序平台；无原文直接依据则填 Unknown",
+  "cell_line": "直接引用元数据中的细胞系名称；无原文直接依据则填 Unknown",
+  "sex": "Female / Male / Unknown",
+  "age": "直接引用元数据中的年龄；无原文直接依据则填 Unknown",
+  "reprog": "直接引用元数据中的重编程方法；无原文直接依据则填 Unknown",
+  "passage": "直接引用元数据中的传代信息；无原文直接依据则填 Unknown",
+  "matrix": "直接引用元数据中的基质信息；无原文直接依据则填 Unknown",
+  "medium": "直接引用元数据中的培养基信息；无原文直接依据则填 Unknown",
+  "density": "直接引用元数据中的密度信息；无原文直接依据则填 Unknown",
+  "o2_lvl": "直接引用元数据中的氧气浓度；无原文直接依据则填 Unknown",
+  "raw_data": "Yes / No / Unspecified"
 }}
+
+---
 
 ## 判定规则
 
-- gsm_available = 可用：细胞来源明确为 iPSC/ESC/PSC，分化终点有证据，in vitro
-- gsm_available = 不可用：任一关键项明确不符合
-- gsm_available = 待确认：关键信息不足
+### avail 判定
+- avail = "true"：四条纳入标准在样本级别均明确符合
+- avail = "false"：任一纳入标准在样本级别原文明确不符合
+- avail = "unknown"：任一纳入标准信息不足，且无明确排除证据
+- GSE 已被判定为 include 不代表每个 GSM 都符合，需独立判断
+
+### start_cell 推断规则（重要）
+- Title 或 Characteristics 中出现 "iPSC-derived"、"hiPSC"、"human iPSC" 等词，start_cell = iPSC，avail 不得因此降为 unknown
+- "iPSC-derived microglia" 表示起始细胞为 iPSC，分化终点为 microglia
+- "ESC-derived"、"hESC" 等词，start_cell = ESC
+- 仅凭 GSE 背景中提及 iPSC 不足以确认该 GSM 的 start_cell，需 GSM 元数据本身有依据
+
+### modality 判定规则（重要）
+- Title 或 Library-Strategy 中出现 "multiome"、"10x Multiome"、"ATAC+RNA" 等词，modality = ["multiome"]，不要拆分为 scATAC-seq 和 snRNA-seq
+- "ATAC-seq" 单独出现（无 RNA 联合）→ ["scATAC-seq"]
+- "RNA-seq" 单独出现且有单细胞证据 → ["scRNA-seq"]
+- "RNA-seq" 单独出现且无单细胞证据 → ["bulk RNA-seq"]
+- Library-Strategy = "OTHER" 时，优先参考 Title 和 GSE 背景中的数据类型描述
+
+### 其他规则
+- time_pts 和 modality 必须为 JSON 数组；无原文证据则填 []
+- perturb 必须为 JSON 对象数组；无扰动原文证据时填 [{{"type": "None", "method": "Vehicle/Control", "dose": "N/A", "start": "", "end": "", "dur": ""}}]
+- 若 GSE 背景含 "GEO Raw Data Availability: yes" 则 raw_data 填 "Yes"；含 "no" 则填 "No"
+- 严禁根据 GSE 背景推断 GSM 级别细节字段（passage、matrix、medium、density、o2_lvl 必须来自 GSM 元数据本身）
 """
 
 SCREENING_PROMPT_TEMPLATE = """\

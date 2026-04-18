@@ -12,31 +12,46 @@
       {% else %}bg-gray-100 text-gray-600{% endif %}">{{ task.status }}</span>
   </div>
 
-  <div style="display:flex;gap:24px;margin:16px 0;">
-    <div><div style="font-size:1.5rem;font-weight:bold;">{{ task.total }}</div><div style="color:#6b7280;">Total GSEs</div></div>
-    <div><div style="font-size:1.5rem;font-weight:bold;">{{ total_samples }}</div><div style="color:#6b7280;">Total GSMs</div></div>
-    <div><div style="font-size:1.5rem;font-weight:bold;">{{ annotated_samples }}</div><div style="color:#6b7280;">已注释GSMs</div></div>
-    <div><div style="font-size:1.5rem;font-weight:bold;">{{ available_count }}</div><div style="color:#6b7280;">avail=true</div></div>
+  <div class="grid gap-3 md:grid-cols-5 mb-6">
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Total GSEs</p>
+      <p class="text-2xl font-semibold">{{ task.total }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Total GSMs</p>
+      <p class="text-2xl font-semibold">{{ total_samples }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Annotated GSMs</p>
+      <p class="text-2xl font-semibold text-green-700">{{ annotated_samples }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Available</p>
+      <p class="text-2xl font-semibold text-teal-700">{{ available_count }}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center">
+      <button id="run-btn" onclick="runAnnotation()"
+              class="w-full text-sm bg-blue-600 text-white rounded-lg py-1.5 hover:bg-blue-700 disabled:opacity-50">
+        Run GSM Annotation
+      </button>
+    </div>
   </div>
 
-  <div class="flex items-center gap-3 mb-6">
-    <button id="run-btn" onclick="runAnnotation()"
-            style="background:#2563eb;color:white;padding:6px 14px;border:none;border-radius:6px;cursor:pointer;">
-      Run GSM Annotation
-    </button>
-    <span id="task-status">{{ task.status }}</span>
+  <div class="flex items-center gap-2 mb-4 text-sm text-gray-500">
+    状态：<span id="task-status" class="font-medium text-gray-700">{{ task.status }}</span>
+    <button onclick="clearLabels()" class="ml-4 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1 rounded-lg">清除所有注释</button>
   </div>
 
   <div class="bg-white rounded-xl border border-gray-200 overflow-x-auto">
-    <table style="width:100%;border-collapse:collapse;">
+    <table class="w-full text-sm" style="border-collapse:collapse;">
       <thead class="bg-gray-50 border-b">
         <tr>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">Accession</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-36">Accession</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">Title</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">Samples</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">原决策</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">已注释</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600"></th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-20">Samples</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">原决策</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-20">已注释</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16"></th>
         </tr>
       </thead>
       <tbody>
@@ -45,9 +60,17 @@
         <td class="px-4 py-3 font-mono text-xs font-semibold text-blue-700">{{ result.dataset_id }}</td>
         <td class="px-4 py-3 text-xs text-gray-800">{{ result.title }}</td>
         <td class="px-4 py-3 text-xs text-center">{{ result.n_samples }}</td>
-        <td class="px-4 py-3 text-xs">{{ result.decision }}</td>
+        <td class="px-4 py-3">
+          <span class="text-xs font-semibold px-2 py-0.5 rounded-full
+            {% if result.decision == 'include' %}bg-green-100 text-green-700
+            {% elif result.decision == 'exclude' %}bg-red-100 text-red-700
+            {% elif result.decision == 'uncertain' %}bg-yellow-100 text-yellow-700
+            {% else %}bg-gray-100 text-gray-500{% endif %}">
+            {{ {'include':'Included','exclude':'Excluded','uncertain':'Uncertain'}.get(result.decision, result.decision or '—') }}
+          </span>
+        </td>
         <td class="px-4 py-3 text-xs text-center">{{ result.annotated_count }}</td>
-        <td class="px-4 py-3"><button onclick="toggleGsm('gsm-{{ result.id }}')" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg">展开</button></td>
+        <td class="px-4 py-3 whitespace-nowrap"><button onclick="toggleGsm('gsm-{{ result.id }}')" class="text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-lg whitespace-nowrap">展开</button></td>
       </tr>
       <tr id="gsm-{{ result.id }}" style="display:none;">
         <td colspan="6" class="px-4 py-2 bg-slate-50">
@@ -55,6 +78,8 @@
             <thead class="bg-gray-100">
               <tr>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">GSM ID</th>
+                <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">标题</th>
+                <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">生物体</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">avail</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">start_cell</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">target_cell</th>
@@ -68,31 +93,48 @@
             <tbody class="divide-y bg-white">
             {% for sample in result.samples %}
             <tr class="hover:bg-gray-50">
-              <td class="px-3 py-2 font-mono text-xs text-blue-700">{{ sample.gsm_id }}</td>
-              <td class="px-3 py-2 text-xs">{{ sample.labels.get('avail','') }}</td>
+              <td class="px-3 py-2 font-mono text-xs text-blue-700 whitespace-nowrap">{{ sample.gsm_id }}</td>
+              <td class="px-3 py-2 text-xs text-gray-800">{{ sample.title or '—' }}</td>
+              <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{{ sample.organism or '—' }}</td>
+              <td class="px-3 py-2 text-xs">
+                {% set av = sample.labels.get('avail','') %}
+                {% if av == 'true' or av == 'True' %}
+                  <span class="bg-green-100 text-green-700 text-xs font-semibold px-2 py-0.5 rounded-full">true</span>
+                {% elif av == 'false' or av == 'False' %}
+                  <span class="bg-red-100 text-red-700 text-xs font-semibold px-2 py-0.5 rounded-full">false</span>
+                {% elif av == 'unknown' or av == 'Unknown' %}
+                  <span class="bg-yellow-100 text-yellow-700 text-xs font-semibold px-2 py-0.5 rounded-full">unknown</span>
+                {% else %}
+                  <span class="text-gray-400">—</span>
+                {% endif %}
+              </td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('start_cell','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('target_cell','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('culture_sys','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('modality','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('platform','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('raw_data','') }}</td>
-              <td class="px-3 py-2"><button onclick="toggleDetail('detail-{{ sample.id }}')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">详情</button></td>
+              <td class="px-3 py-2 whitespace-nowrap"><button onclick="toggleDetail('detail-{{ sample.id }}')" class="text-xs bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded">详情</button></td>
             </tr>
             <tr id="detail-{{ sample.id }}" style="display:none;">
-              <td colspan="9" style="padding:8px;background:#f9fafb;" class="text-xs">
-                <b>diff_path:</b> {{ sample.labels.get('diff_path','') }}<br>
-                <b>cell_line:</b> {{ sample.labels.get('cell_line','') }}<br>
-                <b>sex:</b> {{ sample.labels.get('sex','') }} &nbsp;
-                <b>age:</b> {{ sample.labels.get('age','') }}<br>
-                <b>reprog:</b> {{ sample.labels.get('reprog','') }} &nbsp;
-                <b>passage:</b> {{ sample.labels.get('passage','') }}<br>
-                <b>matrix:</b> {{ sample.labels.get('matrix','') }}<br>
-                <b>medium:</b> {{ sample.labels.get('medium','') }}<br>
-                <b>density:</b> {{ sample.labels.get('density','') }} &nbsp;
-                <b>o2_lvl:</b> {{ sample.labels.get('o2_lvl','') }}<br>
-                <b>perturb:</b> {{ sample.labels.get('perturb','') }}<br>
-                <hr>
-                <b>LLM Reasoning:</b><br>{{ sample.labels.get('response','') }}
+              <td colspan="11" class="px-4 py-3 bg-gray-50 text-xs text-gray-700">
+                <div class="grid grid-cols-2 gap-x-8 gap-y-1 mb-2">
+                  <div><span class="font-semibold text-gray-500">diff_path:</span> {{ sample.labels.get('diff_path','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">cell_line:</span> {{ sample.labels.get('cell_line','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">sex:</span> {{ sample.labels.get('sex','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">age:</span> {{ sample.labels.get('age','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">reprog:</span> {{ sample.labels.get('reprog','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">passage:</span> {{ sample.labels.get('passage','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">matrix:</span> {{ sample.labels.get('matrix','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">medium:</span> {{ sample.labels.get('medium','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">density:</span> {{ sample.labels.get('density','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">o2_lvl:</span> {{ sample.labels.get('o2_lvl','—') }}</div>
+                  <div class="col-span-2"><span class="font-semibold text-gray-500">perturb:</span> {{ sample.labels.get('perturb','—') }}</div>
+                </div>
+                <div class="border-t pt-2 mt-1">
+                  <span class="font-semibold text-gray-500">LLM Reasoning:</span>
+                  <p class="mt-1 text-gray-600 leading-relaxed">{{ sample.labels.get('response','—') }}</p>
+                </div>
               </td>
             </tr>
             {% endfor %}
@@ -110,6 +152,16 @@
 </div>
 
 <script>
+async function clearLabels() {
+  if (!confirm('确认清除该任务所有 GSM 注释？清除后需重新运行 annotation。')) return;
+  const resp = await fetch(`/tasks/{{ task.id }}/gsm-labels`, {method: 'DELETE'});
+  if (resp.ok) {
+    location.reload();
+  } else {
+    alert('清除失败');
+  }
+}
+
 function toggleGsm(id) {
   const el = document.getElementById(id);
   el.style.display = el.style.display === 'none' ? '' : 'none';

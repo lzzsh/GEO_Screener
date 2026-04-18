@@ -384,11 +384,13 @@ async def _run_gsm_task_async(task_id: int):
 
         try:
             for result in task.results:
-                # Fetch samples if not yet fetched
+                # Fetch samples — keep full metadata in memory for LLM
+                fetched_meta: dict[str, dict] = {}
                 if not result.samples:
                     try:
                         fetched = await fetch_gsm_samples(result.dataset_id)
                         for s in fetched:
+                            fetched_meta[s["gsm_id"]] = s
                             db.add(GeoSample(
                                 result_id=result.id,
                                 gsm_id=s.get("gsm_id", ""),
@@ -401,6 +403,13 @@ async def _run_gsm_task_async(task_id: int):
                     except Exception as e:
                         logger.error("Failed to fetch samples for %s: %s", result.dataset_id, e)
                         continue
+                else:
+                    # Re-fetch to get full metadata (characteristics, protocols)
+                    try:
+                        fetched = await fetch_gsm_samples(result.dataset_id)
+                        fetched_meta = {s["gsm_id"]: s for s in fetched}
+                    except Exception:
+                        pass
 
                 gse_detail = None
                 try:
@@ -421,13 +430,30 @@ async def _run_gsm_task_async(task_id: int):
                     if "avail" in existing_keys:
                         continue
 
+                    meta = fetched_meta.get(sample.gsm_id, {})
+                    chars = meta.get("characteristics") or {}
+                    lines = []
+                    for k, v in chars.items():
+                        lines.append(f"Characteristics tag='{k}': {v}")
+                    for field, label in (
+                        ("source_name", "Source"),
+                        ("molecule", "Molecule"),
+                        ("library_strategy", "Library-Strategy"),
+                        ("growth_protocol", "Growth-Protocol"),
+                        ("treatment_protocol", "Treatment-Protocol"),
+                    ):
+                        val = meta.get(field, "")
+                        if val:
+                            lines.append(f"{label}: {val}")
+                    full_characteristics = "\n".join(lines)
+
                     try:
                         annotation = await llm.annotate_gsm(
                             gsm_id=sample.gsm_id,
                             title=sample.title or "",
                             organism=sample.organism or "",
                             biosample_id=sample.biosample_id or "",
-                            characteristics="",
+                            characteristics=full_characteristics,
                             gse_summary=context,
                         )
                         if annotation:
