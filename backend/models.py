@@ -38,6 +38,8 @@ class ScreeningTask(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     label_schema: Mapped[str | None] = mapped_column(Text, nullable=True)
+    task_type: Mapped[str] = mapped_column(String(32), default="screening")
+    parent_task_id: Mapped[int | None] = mapped_column(ForeignKey("screening_tasks.id"), nullable=True)
     owner: Mapped["User"] = relationship(back_populates="tasks")
     results: Mapped[list["ScreeningResult"]] = relationship(back_populates="task")
 
