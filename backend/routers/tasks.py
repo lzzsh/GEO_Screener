@@ -17,8 +17,13 @@ from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
 from backend.worker.geo_fetcher import search_geo, fetch_gsm_samples
 from backend.worker.tasks import _run_gsm_task_async, _fetch_papers_async, _run_paper_calibration_async
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+class DecisionUpdate(BaseModel):
+    decision: str  # include | exclude | uncertain
 
 
 @router.post("", status_code=201)
@@ -479,3 +484,39 @@ async def run_paper_calibration(
         raise HTTPException(status_code=404)
     asyncio.create_task(_run_paper_calibration_async(task_id))
     return {"status": "running_inline"}
+
+
+@router.patch("/{task_id}/results/{result_id}")
+async def update_result_decision(
+    task_id: int,
+    result_id: int,
+    body: DecisionUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if body.decision not in ("include", "exclude", "uncertain"):
+        raise HTTPException(status_code=422, detail="Invalid decision value")
+    task = await db.get(ScreeningTask, task_id)
+    if not task or task.owner_id != user.id:
+        raise HTTPException(status_code=404)
+    sr = await db.get(ScreeningResult, result_id)
+    if not sr or sr.task_id != task_id:
+        raise HTTPException(status_code=404)
+    sr.decision = body.decision
+    await db.flush()
+    counts = (await db.execute(
+        select(ScreeningResult.decision, func.count().label("n"))
+        .where(ScreeningResult.task_id == task_id)
+        .group_by(ScreeningResult.decision)
+    )).all()
+    count_map = {row.decision: row.n for row in counts}
+    task.included_count = count_map.get("include", 0)
+    task.excluded_count = count_map.get("exclude", 0)
+    task.uncertain_count = count_map.get("uncertain", 0)
+    await db.commit()
+    return {
+        "decision": sr.decision,
+        "included_count": task.included_count,
+        "excluded_count": task.excluded_count,
+        "uncertain_count": task.uncertain_count,
+    }
