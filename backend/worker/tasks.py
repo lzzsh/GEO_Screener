@@ -89,6 +89,8 @@ async def _geo_context_for_result(sr: ScreeningResult) -> str:
     samples = []
     try:
         detail = await fetch_gse_detail(sr.dataset_id)
+        if detail and detail.get("pmid") and not sr.pmid:
+            sr.pmid = detail["pmid"]
     except Exception as exc:
         logger.warning("GSE detail fetch failed for %s: %s", sr.dataset_id, exc)
     try:
