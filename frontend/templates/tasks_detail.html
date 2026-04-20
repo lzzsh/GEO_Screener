@@ -139,10 +139,21 @@
                     class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"
                     x-text="({include:'Included',exclude:'Excluded',uncertain:'Uncertain'})[r.original_decision] || r.original_decision"></span>
             </td>
-            <td class="px-4 py-3">
-              <span :class="decisionClass(r.decision)"
-                    class="text-xs font-semibold px-2 py-0.5 rounded-full"
+            <td class="px-4 py-3" @click.stop>
+              <span x-show="!r.editingDecision"
+                    :class="decisionClass(r.decision)"
+                    class="text-xs font-semibold px-2 py-0.5 rounded-full cursor-pointer"
+                    @click="r.editingDecision = true"
                     x-text="({include:'Included',exclude:'Excluded',uncertain:'Uncertain'})[r.decision] || '—'"></span>
+              <select x-show="r.editingDecision"
+                      class="text-xs border rounded px-1 py-0.5"
+                      :value="r.decision"
+                      @change="updateDecision(r, $event.target.value)"
+                      @blur="r.editingDecision = false">
+                <option value="include">Included</option>
+                <option value="exclude">Excluded</option>
+                <option value="uncertain">Uncertain</option>
+              </select>
             </td>
             <td class="px-4 py-3 text-xs text-blue-600" x-text="expanded.has(r.id) ? '收起' : '展开'"></td>
           </tr>
@@ -290,7 +301,7 @@
         const r = await fetch('/tasks/' + this.taskId + '/results?' + params.toString());
         if (r.ok) {
           const d = await r.json();
-          this.results = d.items;
+          this.results = d.items.map(item => ({...item, editingDecision: false}));
           this.total = d.total;
           this.jumpPageInput = this.page;
         }
@@ -424,7 +435,25 @@
       decisionClass(d) {
         return {include:'bg-green-100 text-green-700', exclude:'bg-red-100 text-red-700',
                 uncertain:'bg-yellow-100 text-yellow-700'}[d] || 'bg-gray-100 text-gray-500';
-      }
+      },
+      async updateDecision(r, newVal) {
+        const oldVal = r.decision;
+        r.decision = newVal;
+        r.editingDecision = false;
+        const resp = await fetch('/tasks/' + this.taskId + '/results/' + r.id, {
+          method: 'PATCH',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({decision: newVal}),
+        });
+        if (resp.ok) {
+          const data = await resp.json();
+          this.task.included_count = data.included_count;
+          this.task.excluded_count = data.excluded_count;
+          this.task.uncertain_count = data.uncertain_count;
+        } else {
+          r.decision = oldVal;
+        }
+      },
     }
   }
 
