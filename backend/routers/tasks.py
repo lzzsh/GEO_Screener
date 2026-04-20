@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import io
 from typing import Optional
@@ -15,6 +16,7 @@ from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
 from backend.worker.geo_fetcher import search_geo, fetch_gsm_samples
+from backend.worker.tasks import _run_gsm_task_async, _fetch_papers_async, _run_paper_calibration_async
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
 
@@ -360,14 +362,11 @@ async def run_gsm_annotation(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    import asyncio as _asyncio
     task = await db.get(ScreeningTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-
-    from backend.worker.tasks import _run_gsm_task_async
 
     # If called on a screening task, auto-create the GSM child task first
     if task.task_type == "screening":
@@ -416,14 +415,14 @@ async def run_gsm_annotation(
             gsm_task.candidate_count = len(parent_results)
             await db.commit()
 
-        _asyncio.create_task(_run_gsm_task_async(gsm_task.id))
+        asyncio.create_task(_run_gsm_task_async(gsm_task.id))
         return {"status": "running_inline", "gsm_task_id": gsm_task.id}
 
     # Called directly on a gsm_annotation task
     if task.task_type != "gsm_annotation":
         raise HTTPException(status_code=400, detail="Task is not a GSM annotation task")
 
-    _asyncio.create_task(_run_gsm_task_async(task_id))
+    asyncio.create_task(_run_gsm_task_async(task_id))
     return {"status": "running_inline", "gsm_task_id": task_id}
 
 
@@ -462,12 +461,10 @@ async def fetch_papers(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    import asyncio as _asyncio
     task = await db.get(ScreeningTask, task_id)
     if not task or task.owner_id != user.id:
         raise HTTPException(status_code=404)
-    from backend.worker.tasks import _fetch_papers_async
-    _asyncio.create_task(_fetch_papers_async(task_id))
+    asyncio.create_task(_fetch_papers_async(task_id))
     return {"status": "running_inline"}
 
 
@@ -477,10 +474,8 @@ async def run_paper_calibration(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    import asyncio as _asyncio
     task = await db.get(ScreeningTask, task_id)
     if not task or task.owner_id != user.id:
         raise HTTPException(status_code=404)
-    from backend.worker.tasks import _run_paper_calibration_async
-    _asyncio.create_task(_run_paper_calibration_async(task_id))
+    asyncio.create_task(_run_paper_calibration_async(task_id))
     return {"status": "running_inline"}
