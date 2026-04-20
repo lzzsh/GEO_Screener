@@ -216,6 +216,7 @@ async def get_results(
                    "gse_type": r.gse_type, "pubdate": r.pubdate,
                    "update_date": r.update_date, "has_raw_data": r.has_raw_data,
                    "n_samples": r.n_samples,
+                   "pmid": r.pmid, "pdf_status": r.pdf_status, "original_decision": r.original_decision,
                    "labels": [{"key": label.key, "value": label.value, "source": label.source} for label in r.labels],
                    "samples": [{"id": s.id, "gsm_id": s.gsm_id, "title": s.title,
                                 "organism": s.organism, "biosample_id": s.biosample_id,
@@ -453,3 +454,33 @@ async def clear_gsm_labels(
     task.status = "pending"
     await db.commit()
     return {"deleted": len(sample_ids), "status": "cleared"}
+
+
+@router.post("/{task_id}/fetch-papers")
+async def fetch_papers(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    import asyncio as _asyncio
+    task = await db.get(ScreeningTask, task_id)
+    if not task or task.owner_id != user.id:
+        raise HTTPException(status_code=404)
+    from backend.worker.tasks import _fetch_papers_async
+    _asyncio.create_task(_fetch_papers_async(task_id))
+    return {"status": "running_inline"}
+
+
+@router.post("/{task_id}/run-paper-calibration")
+async def run_paper_calibration(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    import asyncio as _asyncio
+    task = await db.get(ScreeningTask, task_id)
+    if not task or task.owner_id != user.id:
+        raise HTTPException(status_code=404)
+    from backend.worker.tasks import _run_paper_calibration_async
+    _asyncio.create_task(_run_paper_calibration_async(task_id))
+    return {"status": "running_inline"}
