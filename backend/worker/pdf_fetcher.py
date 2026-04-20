@@ -16,7 +16,7 @@ async def fetch_pdf(pmid: str, gse_id: str) -> tuple[str | None, str | None]:
 
     # PMID → PMCID + DOI via NCBI ID converter
     try:
-        async with httpx.AsyncClient(timeout=15) as client:
+        async with httpx.AsyncClient(timeout=15, follow_redirects=True) as client:
             r = await client.get(
                 "https://www.ncbi.nlm.nih.gov/pmc/utils/idconv/v1.0/",
                 params={"ids": pmid, "format": "json"},
@@ -44,6 +44,20 @@ async def fetch_pdf(pmid: str, gse_id: str) -> tuple[str | None, str | None]:
                     return out_path, doi
         except Exception as e:
             logger.warning("PMC PDF download failed for pmcid=%s: %s", pmcid, e)
+
+    # bioRxiv/medRxiv fallback (for preprints with 10.1101 or 10.1101/medrxiv DOIs)
+    if doi and doi.startswith("10.1101"):
+        try:
+            server = "medrxiv" if "medrxiv" in doi else "biorxiv"
+            pdf_url = f"https://www.{server}.org/content/{doi}.full.pdf"
+            async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+                r = await client.get(pdf_url, headers={"User-Agent": "Mozilla/5.0"})
+                if r.status_code == 200 and b"%PDF" in r.content[:8]:
+                    with open(out_path, "wb") as f:
+                        f.write(r.content)
+                    return out_path, doi
+        except Exception as e:
+            logger.warning("bioRxiv PDF download failed for doi=%s: %s", doi, e)
 
     # Sci-Hub fallback
     try:

@@ -478,6 +478,23 @@ async def _run_gsm_task_async(task_id: int):
             await db.commit()
 
 
+async def _search_pmid_by_title(title: str) -> str | None:
+    """Search PubMed for a PMID by paper title using E-utilities."""
+    import httpx
+    try:
+        async with httpx.AsyncClient(timeout=15) as client:
+            r = await client.get(
+                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
+                params={"db": "pubmed", "term": f"{title}[Title]", "retmax": 1, "retmode": "json"},
+            )
+            r.raise_for_status()
+            ids = r.json().get("esearchresult", {}).get("idlist", [])
+            return ids[0] if ids else None
+    except Exception as e:
+        logger.warning("PubMed title search failed: %s", e)
+        return None
+
+
 async def _fetch_papers_async(task_id: int):
     async with AsyncSessionLocal() as db:
         res_result = await db.execute(
@@ -490,6 +507,13 @@ async def _fetch_papers_async(task_id: int):
         pending = res_result.scalars().all()
 
         for sr in pending:
+            if not sr.pmid and sr.title:
+                try:
+                    sr.pmid = await _search_pmid_by_title(sr.title)
+                    if sr.pmid:
+                        await db.commit()
+                except Exception as e:
+                    logger.warning("pmid search failed for %s: %s", sr.dataset_id, e)
             if not sr.pmid:
                 continue
             sr.pdf_status = "fetching"
