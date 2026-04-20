@@ -9,6 +9,7 @@ from backend.database import AsyncSessionLocal
 from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel, GsmLabel, GeoSample
 from backend.worker.geo_fetcher import fetch_gse_detail, fetch_gsm_samples
 from backend.worker.llm_client import LLMClient
+from backend.worker.pdf_fetcher import fetch_pdf
 
 logger = logging.getLogger(__name__)
 MAX_PROMPT_GSM_SAMPLES = 25
@@ -474,4 +475,89 @@ async def _run_gsm_task_async(task_id: int):
         except Exception as e:
             logger.error("Error in _run_gsm_task_async for task %s: %s", task_id, e)
             task.status = "error"
+            await db.commit()
+
+
+async def _fetch_papers_async(task_id: int):
+    async with AsyncSessionLocal() as db:
+        res_result = await db.execute(
+            select(ScreeningResult).where(
+                ScreeningResult.task_id == task_id,
+                ScreeningResult.decision.in_(["include", "uncertain"]),
+                ScreeningResult.pdf_status == "none",
+            )
+        )
+        pending = res_result.scalars().all()
+
+        for sr in pending:
+            if not sr.pmid:
+                continue
+            sr.pdf_status = "fetching"
+            await db.commit()
+            try:
+                pdf_path, doi = await fetch_pdf(sr.pmid, sr.dataset_id)
+                if pdf_path:
+                    sr.pdf_path = pdf_path
+                    sr.pdf_status = "available"
+                else:
+                    sr.pdf_status = "failed"
+                if doi and not sr.doi:
+                    sr.doi = doi
+            except Exception as e:
+                logger.error("fetch_pdf error for %s: %s", sr.dataset_id, e)
+                sr.pdf_status = "failed"
+            await db.commit()
+
+
+async def _run_paper_calibration_async(task_id: int):
+    import pdfplumber
+
+    async with AsyncSessionLocal() as db:
+        task_result = await db.execute(select(ScreeningTask).where(ScreeningTask.id == task_id))
+        task = task_result.scalar_one_or_none()
+        if not task:
+            return
+
+        cfg_result = await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))
+        cfg = cfg_result.scalar_one_or_none()
+        if not cfg or not cfg.api_key:
+            return
+
+        llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
+                        base_url=cfg.base_url, model=cfg.model, temperature=cfg.temperature)
+
+        res_result = await db.execute(
+            select(ScreeningResult).where(
+                ScreeningResult.task_id == task_id,
+                ScreeningResult.pdf_status == "available",
+            )
+        )
+        results = res_result.scalars().all()
+
+        for sr in results:
+            try:
+                paper_text = ""
+                with pdfplumber.open(sr.pdf_path) as pdf:
+                    for page in pdf.pages:
+                        paper_text += page.extract_text() or ""
+                        if len(paper_text) >= 8000:
+                            break
+
+                if not sr.original_decision:
+                    sr.original_decision = sr.decision
+                    sr.original_summary = sr.summary
+
+                result = await llm.calibrate_with_paper(
+                    dataset_id=sr.dataset_id,
+                    title=sr.title or "",
+                    description=sr.description or "",
+                    paper_text=paper_text,
+                    criteria_text=task.criteria_text,
+                )
+                sr.decision = result.get("decision")
+                sr.confidence = result.get("confidence")
+                sr.summary = result.get("summary")
+                sr.rule_checks = json.dumps(result.get("rule_checks", {}), ensure_ascii=False)
+            except Exception as e:
+                logger.error("calibration error for %s: %s", sr.dataset_id, e)
             await db.commit()
