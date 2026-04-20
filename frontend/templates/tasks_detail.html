@@ -66,6 +66,12 @@
     <div class="flex items-center gap-2">
       <a :href="'/tasks/' + taskId + '/export'"
          class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
+      <button @click="fetchPapers()" :disabled="fetchingPdfs"
+              class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+              x-text="fetchingPdfs ? '下载中…' : '下载文章 PDF'"></button>
+      <button @click="runPaperCalibration()" :disabled="calibrating"
+              class="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
+              x-text="calibrating ? '校准中…' : '用文章重新校准'"></button>
       <div class="relative" x-data="{libOpen:false}">
         <button @click="libOpen=!libOpen"
                 class="border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 flex items-center gap-1">
@@ -98,6 +104,8 @@
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">论文更新日期</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">最后更新</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">原始数据</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">PDF</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">原始决策</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">决策</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">操作</th>
         </tr>
@@ -120,6 +128,17 @@
               <span x-show="r.has_raw_data" class="text-green-500">✓</span>
               <span x-show="!r.has_raw_data" class="text-gray-300">—</span>
             </td>
+            <td class="px-4 py-3 text-center text-sm">
+              <span x-show="!r.pdf_status || r.pdf_status === 'none'" class="text-gray-300">—</span>
+              <span x-show="r.pdf_status === 'fetching'" class="text-blue-400">⟳</span>
+              <a x-show="r.pdf_status === 'available'" :href="'/pdfs/' + r.dataset_id + '.pdf'" target="_blank" class="text-blue-600">📄</a>
+              <span x-show="r.pdf_status === 'failed'" class="text-red-400">✗</span>
+            </td>
+            <td class="px-4 py-3">
+              <span x-show="r.original_decision"
+                    class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"
+                    x-text="({include:'Included',exclude:'Excluded',uncertain:'Uncertain'})[r.original_decision] || r.original_decision"></span>
+            </td>
             <td class="px-4 py-3">
               <span :class="decisionClass(r.decision)"
                     class="text-xs font-semibold px-2 py-0.5 rounded-full"
@@ -128,7 +147,7 @@
             <td class="px-4 py-3 text-xs text-blue-600" x-text="expanded.has(r.id) ? '收起' : '展开'"></td>
           </tr>
           <tr x-show="expanded.has(r.id)" class="bg-slate-50">
-            <td colspan="9" class="px-4 py-4">
+            <td colspan="11" class="px-4 py-4">
               <div class="mb-4" x-data="labelEditor(r)">
                 <div class="flex items-center justify-between mb-2">
                   <p class="text-xs font-semibold text-gray-500">标注</p>
@@ -247,7 +266,9 @@
     return {
       taskId, task: {}, results: [], loading: true,
       page: 1, pageSize: 20, total: 0, jumpPageInput: 1, expanded: new Set(),
-      decisionFilter: '', annotating: false, annotationError: '', gsmAnnotating: false, pollTimer: null, libs: [],
+      decisionFilter: '', annotating: false, annotationError: '', gsmAnnotating: false,
+      fetchingPdfs: false, calibrating: false,
+      pollTimer: null, libs: [],
       expandedGsm: new Set(),
 
       async init() {
@@ -374,6 +395,26 @@
           }
         } finally {
           this.gsmAnnotating = false;
+        }
+      },
+      async fetchPapers() {
+        this.fetchingPdfs = true;
+        try {
+          await fetch('/tasks/' + this.taskId + '/fetch-papers', {method: 'POST'});
+          const pollPdf = setInterval(async () => { await this.loadResults(); }, 3000);
+          setTimeout(() => clearInterval(pollPdf), 120000);
+        } finally {
+          this.fetchingPdfs = false;
+        }
+      },
+      async runPaperCalibration() {
+        this.calibrating = true;
+        try {
+          await fetch('/tasks/' + this.taskId + '/run-paper-calibration', {method: 'POST'});
+          const pollCal = setInterval(async () => { await this.loadResults(); }, 3000);
+          setTimeout(() => clearInterval(pollCal), 300000);
+        } finally {
+          this.calibrating = false;
         }
       },
       statusClass(s) {
