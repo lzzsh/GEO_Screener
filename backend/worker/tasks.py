@@ -495,42 +495,58 @@ async def _search_pmid_by_title(title: str) -> str | None:
         return None
 
 
+async def _fetch_one_paper(result_id: int):
+    """Fetch PDF for a single ScreeningResult in its own DB session."""
+    async with AsyncSessionLocal() as db:
+        sr = await db.get(ScreeningResult, result_id)
+        if not sr:
+            return
+        if not sr.pmid and sr.title:
+            try:
+                sr.pmid = await _search_pmid_by_title(sr.title)
+                if sr.pmid:
+                    await db.commit()
+            except Exception as e:
+                logger.warning("pmid search failed for %s: %s", sr.dataset_id, e)
+        if not sr.pmid:
+            return
+        sr.pdf_status = "fetching"
+        await db.commit()
+        try:
+            pdf_path, doi = await fetch_pdf(sr.pmid, sr.dataset_id)
+            if pdf_path:
+                sr.pdf_path = pdf_path
+                sr.pdf_status = "available"
+            else:
+                sr.pdf_status = "failed"
+            if doi and not sr.doi:
+                sr.doi = doi
+        except Exception as e:
+            logger.error("fetch_pdf error for %s: %s", sr.dataset_id, e)
+            sr.pdf_status = "failed"
+        await db.commit()
+
+
 async def _fetch_papers_async(task_id: int):
     async with AsyncSessionLocal() as db:
         res_result = await db.execute(
-            select(ScreeningResult).where(
+            select(ScreeningResult.id).where(
                 ScreeningResult.task_id == task_id,
                 ScreeningResult.decision.in_(["include", "uncertain"]),
                 ScreeningResult.pdf_status == "none",
             )
         )
-        pending = res_result.scalars().all()
+        result_ids = [row[0] for row in res_result.all()]
 
-        for sr in pending:
-            if not sr.pmid and sr.title:
-                try:
-                    sr.pmid = await _search_pmid_by_title(sr.title)
-                    if sr.pmid:
-                        await db.commit()
-                except Exception as e:
-                    logger.warning("pmid search failed for %s: %s", sr.dataset_id, e)
-            if not sr.pmid:
-                continue
-            sr.pdf_status = "fetching"
-            await db.commit()
-            try:
-                pdf_path, doi = await fetch_pdf(sr.pmid, sr.dataset_id)
-                if pdf_path:
-                    sr.pdf_path = pdf_path
-                    sr.pdf_status = "available"
-                else:
-                    sr.pdf_status = "failed"
-                if doi and not sr.doi:
-                    sr.doi = doi
-            except Exception as e:
-                logger.error("fetch_pdf error for %s: %s", sr.dataset_id, e)
-                sr.pdf_status = "failed"
-            await db.commit()
+    # PubMed rate limit: 3 req/s without API key — use semaphore of 3 + small delay
+    semaphore = asyncio.Semaphore(3)
+
+    async def fetch_with_sem(rid):
+        async with semaphore:
+            await _fetch_one_paper(rid)
+            await asyncio.sleep(0.4)  # ~2.5 req/s, safely under the 3/s limit
+
+    await asyncio.gather(*[fetch_with_sem(rid) for rid in result_ids])
 
 
 async def _run_paper_calibration_async(task_id: int):
