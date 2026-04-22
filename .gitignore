@@ -39,7 +39,6 @@ htmlcov/
 
 # Project-specific exclusions
 docs/
-CLAUDE.md
 AGENTS.md
 docker-compose.yml
 pdfs/
