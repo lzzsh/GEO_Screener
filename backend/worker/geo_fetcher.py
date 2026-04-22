@@ -232,6 +232,7 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
     # BioProject ID
     bioproject_id = ""
     bioproject_link = ""
+    pmid = None
     series_relations = []
     for rel in series.findall(f"{{{NS}}}Relation"):
         rel_type = rel.get("type") or ""
@@ -246,6 +247,8 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
                 "accession": _relation_accession(target),
                 "target": target,
             })
+        elif rel_type == "PubMed":
+            pmid = target.split("/")[-1] if "/" in target else target
 
     # Abstract and Overall Design
     abstract_el = series.find(f"{{{NS}}}Summary")
@@ -320,6 +323,7 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
 
     return {
         "gse_id": gse_id,
+        "pmid": pmid,
         "bioproject_id": bioproject_id,
         "bioproject_link": bioproject_link,
         "abstract": abstract,

@@ -1,3 +1,4 @@
+import asyncio
 import csv
 import io
 from typing import Optional
@@ -9,14 +10,21 @@ from sqlalchemy import delete, select, func, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.database import get_db
+from backend.decision_sync import recompute_task_decision_counts, sync_final_conclusion_label
 from backend.label_schema import default_label_schema_json
 from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry
 from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
 from backend.worker.geo_fetcher import search_geo, fetch_gsm_samples
+from backend.worker.tasks import _run_gsm_task_async, _fetch_papers_async, _run_paper_calibration_async
+from pydantic import BaseModel
 
 router = APIRouter(prefix="/tasks", tags=["tasks"])
+
+
+class DecisionUpdate(BaseModel):
+    decision: str  # include | exclude | uncertain
 
 
 @router.post("", status_code=201)
@@ -183,6 +191,7 @@ async def get_results(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     decision: Optional[str] = Query(default=None),
+    accession: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -197,6 +206,10 @@ async def get_results(
     if decision:
         base_query = base_query.where(ScreeningResult.decision == decision)
         count_query = count_query.where(ScreeningResult.decision == decision)
+    if accession:
+        like = f"%{accession.upper()}%"
+        base_query = base_query.where(ScreeningResult.dataset_id.ilike(like))
+        count_query = count_query.where(ScreeningResult.dataset_id.ilike(like))
     count_result = await db.execute(count_query)
     total = count_result.scalar()
     rows_result = await db.execute(
@@ -216,6 +229,7 @@ async def get_results(
                    "gse_type": r.gse_type, "pubdate": r.pubdate,
                    "update_date": r.update_date, "has_raw_data": r.has_raw_data,
                    "n_samples": r.n_samples,
+                   "pmid": r.pmid, "pdf_status": r.pdf_status, "original_decision": r.original_decision,
                    "labels": [{"key": label.key, "value": label.value, "source": label.source} for label in r.labels],
                    "samples": [{"id": s.id, "gsm_id": s.gsm_id, "title": s.title,
                                 "organism": s.organism, "biosample_id": s.biosample_id,
@@ -245,11 +259,14 @@ async def export_results(task_id: int, db: AsyncSession = Depends(get_db), user:
     writer.writerow(["gse_id", "title", "n_samples", "gse_type", "pubdate", "update_date", "has_raw_data", "available", "reason"])
     for r in rows:
         label_map = {l.key: l.value for l in r.labels}
-        if "final_conclusion" in label_map:
+        if r.decision in decision_map:
+            available = decision_map[r.decision]
+            reason = label_map.get("reasoning_text") or r.summary or ""
+        elif "final_conclusion" in label_map:
             available = conclusion_map.get(label_map["final_conclusion"], "unknown")
             reason = label_map.get("reasoning_text", "")
         else:
-            available = decision_map.get(r.decision, "unknown")
+            available = "unknown"
             reason = r.summary or ""
         writer.writerow([r.dataset_id, r.title, r.n_samples, r.gse_type, r.pubdate, r.update_date, r.has_raw_data, available, reason])
     output.seek(0)
@@ -359,14 +376,11 @@ async def run_gsm_annotation(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
-    import asyncio as _asyncio
     task = await db.get(ScreeningTask, task_id)
     if not task:
         raise HTTPException(status_code=404, detail="Task not found")
     if task.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
-
-    from backend.worker.tasks import _run_gsm_task_async
 
     # If called on a screening task, auto-create the GSM child task first
     if task.task_type == "screening":
@@ -415,14 +429,14 @@ async def run_gsm_annotation(
             gsm_task.candidate_count = len(parent_results)
             await db.commit()
 
-        _asyncio.create_task(_run_gsm_task_async(gsm_task.id))
+        asyncio.create_task(_run_gsm_task_async(gsm_task.id))
         return {"status": "running_inline", "gsm_task_id": gsm_task.id}
 
     # Called directly on a gsm_annotation task
     if task.task_type != "gsm_annotation":
         raise HTTPException(status_code=400, detail="Task is not a GSM annotation task")
 
-    _asyncio.create_task(_run_gsm_task_async(task_id))
+    asyncio.create_task(_run_gsm_task_async(task_id))
     return {"status": "running_inline", "gsm_task_id": task_id}
 
 
@@ -453,3 +467,58 @@ async def clear_gsm_labels(
     task.status = "pending"
     await db.commit()
     return {"deleted": len(sample_ids), "status": "cleared"}
+
+
+@router.post("/{task_id}/fetch-papers")
+async def fetch_papers(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    task = await db.get(ScreeningTask, task_id)
+    if not task or task.owner_id != user.id:
+        raise HTTPException(status_code=404)
+    asyncio.create_task(_fetch_papers_async(task_id))
+    return {"status": "running_inline"}
+
+
+@router.post("/{task_id}/run-paper-calibration")
+async def run_paper_calibration(
+    task_id: int,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    task = await db.get(ScreeningTask, task_id)
+    if not task or task.owner_id != user.id:
+        raise HTTPException(status_code=404)
+    asyncio.create_task(_run_paper_calibration_async(task_id))
+    return {"status": "running_inline"}
+
+
+@router.patch("/{task_id}/results/{result_id}")
+async def update_result_decision(
+    task_id: int,
+    result_id: int,
+    body: DecisionUpdate,
+    db: AsyncSession = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    if body.decision not in ("include", "exclude", "uncertain"):
+        raise HTTPException(status_code=422, detail="Invalid decision value")
+    task = await db.get(ScreeningTask, task_id)
+    if not task or task.owner_id != user.id:
+        raise HTTPException(status_code=404)
+    sr = await db.get(ScreeningResult, result_id)
+    if not sr or sr.task_id != task_id:
+        raise HTTPException(status_code=404)
+    sr.decision = body.decision
+    await sync_final_conclusion_label(db, sr.id, body.decision)
+    await db.flush()
+    await recompute_task_decision_counts(db, task)
+    await db.commit()
+    return {
+        "decision": sr.decision,
+        "included_count": task.included_count,
+        "excluded_count": task.excluded_count,
+        "uncertain_count": task.uncertain_count,
+    }

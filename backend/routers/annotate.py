@@ -3,6 +3,7 @@ from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 from backend.database import get_db
+from backend.decision_sync import CONCLUSION_TO_DECISION, recompute_task_decision_counts
 from backend.label_schema import default_label_schema_json
 from backend.models import ScreeningResult, GeoLabel, ScreeningTask, User, GeoSample, GsmLabel
 from backend.task_dispatch import dispatch_or_run_inline
@@ -35,11 +36,25 @@ async def upsert_label(result_id: int, body: LabelUpsert,
     if existing:
         existing.value = body.value
         existing.source = "human"
+        if body.key == "final_conclusion" and body.value in CONCLUSION_TO_DECISION:
+            sr = await db.get(ScreeningResult, result_id)
+            if sr:
+                task = await db.get(ScreeningTask, sr.task_id)
+                sr.decision = CONCLUSION_TO_DECISION[body.value]
+                if task:
+                    await recompute_task_decision_counts(db, task)
         await db.commit()
         await db.refresh(existing)
         return {"id": existing.id, "key": existing.key, "value": existing.value, "source": existing.source}
     label = GeoLabel(result_id=result_id, key=body.key, value=body.value, source="human")
     db.add(label)
+    if body.key == "final_conclusion" and body.value in CONCLUSION_TO_DECISION:
+        sr = await db.get(ScreeningResult, result_id)
+        if sr:
+            task = await db.get(ScreeningTask, sr.task_id)
+            sr.decision = CONCLUSION_TO_DECISION[body.value]
+            if task:
+                await recompute_task_decision_counts(db, task)
     await db.commit()
     await db.refresh(label)
     return {"id": label.id, "key": label.key, "value": label.value, "source": label.source}

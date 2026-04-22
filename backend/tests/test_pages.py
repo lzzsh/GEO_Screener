@@ -61,7 +61,7 @@ async def test_search_and_task_detail_include_library_actions():
         assert "Submission date" in search_response.text
         assert "item.pubdate || '—'" in search_response.text
         assert "sortBy('pubdate')" in search_response.text
-        assert "sortedItems" in search_response.text
+        assert "sortedAllItems" in search_response.text
         assert "sortIndicator" in search_response.text
         assert "text-sm uppercase tracking-wide" in search_response.text
         assert "text-sm font-medium text-gray-900" in search_response.text

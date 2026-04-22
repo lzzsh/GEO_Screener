@@ -12,6 +12,8 @@ venv/
 
 # Database
 *.db
+*.db-shm
+*.db-wal
 *.sqlite3
 
 # Environment
@@ -34,3 +36,10 @@ htmlcov/
 
 # OS
 .DS_Store
+
+# Project-specific exclusions
+docs/
+CLAUDE.md
+AGENTS.md
+docker-compose.yml
+pdfs/

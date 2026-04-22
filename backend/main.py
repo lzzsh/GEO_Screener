@@ -40,6 +40,10 @@ app = FastAPI(title="GEO Search & Screening", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
 
+import os as _os
+_os.makedirs("pdfs", exist_ok=True)
+app.mount("/pdfs", StaticFiles(directory="pdfs"), name="pdfs")
+
 @app.get("/")
 async def root():
     return RedirectResponse(url="/search")

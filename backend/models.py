@@ -62,6 +62,12 @@ class ScreeningResult(Base):
     update_date: Mapped[str | None] = mapped_column(String(32), nullable=True)
     has_raw_data: Mapped[bool] = mapped_column(default=False)
     n_samples: Mapped[int] = mapped_column(Integer, default=0)
+    pmid: Mapped[str | None] = mapped_column(String(32), nullable=True)
+    doi: Mapped[str | None] = mapped_column(String(256), nullable=True)
+    pdf_path: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    pdf_status: Mapped[str] = mapped_column(String(16), default="none")  # none|fetching|available|failed
+    original_decision: Mapped[str | None] = mapped_column(String(16), nullable=True)
+    original_summary: Mapped[str | None] = mapped_column(Text, nullable=True)
     samples: Mapped[list["GeoSample"]] = relationship(back_populates="result", cascade="all, delete-orphan")
     labels: Mapped[list["GeoLabel"]] = relationship(back_populates="result", cascade="all, delete-orphan")
     task: Mapped["ScreeningTask"] = relationship(back_populates="results")

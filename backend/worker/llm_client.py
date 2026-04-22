@@ -221,6 +221,31 @@ Return ONLY valid JSON with this exact structure:
 }}
 """
 
+PAPER_CALIBRATION_PROMPT_TEMPLATE = """\
+You are a systematic review screener. Evaluate the following dataset against the criteria.
+When the paper full-text conflicts with GEO metadata, the paper takes priority.
+
+## Screening Criteria
+{criteria_text}
+
+## Dataset Information
+ID: {dataset_id}
+Title: {title}
+Description: {description}
+
+## 文章全文（节选）
+{paper_text}
+
+## Instructions
+Return ONLY valid JSON with this exact structure:
+{{
+  "decision": "include" | "exclude" | "uncertain",
+  "confidence": 0.0-1.0,
+  "summary": "one sentence rationale",
+  "rule_checks": {{"criterion_key": true|false}}
+}}
+"""
+
 class LLMClient:
     def __init__(self, provider: str, api_key: str, base_url: Optional[str] = None, model: Optional[str] = None, temperature: float = 0.1):
         defaults = PROVIDER_DEFAULTS.get(provider, {})
@@ -237,6 +262,23 @@ class LLMClient:
             dataset_id=dataset_id,
             title=title,
             description=description,
+        )
+        response = await self._client.chat.completions.create(
+            model=self.model,
+            temperature=self.temperature,
+            messages=[{"role": "user", "content": prompt}],
+        )
+        raw = response.choices[0].message.content.strip()
+        return self._parse_json(raw)
+
+    async def calibrate_with_paper(self, dataset_id: str, title: str, description: str,
+                                    paper_text: str, criteria_text: str) -> dict:
+        prompt = PAPER_CALIBRATION_PROMPT_TEMPLATE.format(
+            criteria_text=criteria_text,
+            dataset_id=dataset_id,
+            title=title,
+            description=description,
+            paper_text=paper_text[:8000],
         )
         response = await self._client.chat.completions.create(
             model=self.model,
