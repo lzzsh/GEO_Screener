@@ -71,6 +71,42 @@ async def test_upsert_label_human(auth_client):
 
 
 @pytest.mark.asyncio
+async def test_upsert_final_conclusion_syncs_decision_and_task_counts(auth_client):
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningTask, ScreeningResult
+    async with AsyncSessionLocal() as db:
+        task = ScreeningTask(
+            name="ann_decision_sync",
+            source="geo",
+            criteria_text="",
+            owner_id=auth_client._ann_user_id,
+            label_schema='["final_conclusion"]',
+            included_count=0,
+            excluded_count=1,
+            uncertain_count=0,
+        )
+        db.add(task)
+        await db.flush()
+        sr = ScreeningResult(task_id=task.id, dataset_id="GSE997", decision="exclude")
+        db.add(sr)
+        await db.commit()
+        task_id = task.id
+        result_id = sr.id
+
+    r = await auth_client.put(f"/annotate/results/{result_id}/labels", json={
+        "key": "final_conclusion", "value": "可用"
+    })
+    assert r.status_code == 200
+
+    task_r = await auth_client.get(f"/tasks/{task_id}")
+    assert task_r.json()["included_count"] == 1
+    assert task_r.json()["excluded_count"] == 0
+
+    results_r = await auth_client.get(f"/tasks/{task_id}/results")
+    assert results_r.json()["items"][0]["decision"] == "include"
+
+
+@pytest.mark.asyncio
 async def test_trigger_annotation_backfills_default_label_schema(auth_client):
     from backend.database import AsyncSessionLocal
     from backend.models import ScreeningTask

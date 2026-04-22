@@ -10,6 +10,7 @@ from sqlalchemy import delete, select, func, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.database import get_db
+from backend.decision_sync import recompute_task_decision_counts, sync_final_conclusion_label
 from backend.label_schema import default_label_schema_json
 from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry
 from backend.task_dispatch import dispatch_or_run_inline
@@ -190,6 +191,7 @@ async def get_results(
     page: int = Query(default=1, ge=1),
     page_size: int = Query(default=20, ge=1, le=100),
     decision: Optional[str] = Query(default=None),
+    accession: Optional[str] = Query(default=None),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
@@ -204,6 +206,10 @@ async def get_results(
     if decision:
         base_query = base_query.where(ScreeningResult.decision == decision)
         count_query = count_query.where(ScreeningResult.decision == decision)
+    if accession:
+        like = f"%{accession.upper()}%"
+        base_query = base_query.where(ScreeningResult.dataset_id.ilike(like))
+        count_query = count_query.where(ScreeningResult.dataset_id.ilike(like))
     count_result = await db.execute(count_query)
     total = count_result.scalar()
     rows_result = await db.execute(
@@ -253,11 +259,14 @@ async def export_results(task_id: int, db: AsyncSession = Depends(get_db), user:
     writer.writerow(["gse_id", "title", "n_samples", "gse_type", "pubdate", "update_date", "has_raw_data", "available", "reason"])
     for r in rows:
         label_map = {l.key: l.value for l in r.labels}
-        if "final_conclusion" in label_map:
+        if r.decision in decision_map:
+            available = decision_map[r.decision]
+            reason = label_map.get("reasoning_text") or r.summary or ""
+        elif "final_conclusion" in label_map:
             available = conclusion_map.get(label_map["final_conclusion"], "unknown")
             reason = label_map.get("reasoning_text", "")
         else:
-            available = decision_map.get(r.decision, "unknown")
+            available = "unknown"
             reason = r.summary or ""
         writer.writerow([r.dataset_id, r.title, r.n_samples, r.gse_type, r.pubdate, r.update_date, r.has_raw_data, available, reason])
     output.seek(0)
@@ -503,16 +512,9 @@ async def update_result_decision(
     if not sr or sr.task_id != task_id:
         raise HTTPException(status_code=404)
     sr.decision = body.decision
+    await sync_final_conclusion_label(db, sr.id, body.decision)
     await db.flush()
-    counts = (await db.execute(
-        select(ScreeningResult.decision, func.count().label("n"))
-        .where(ScreeningResult.task_id == task_id)
-        .group_by(ScreeningResult.decision)
-    )).all()
-    count_map = {row.decision: row.n for row in counts}
-    task.included_count = count_map.get("include", 0)
-    task.excluded_count = count_map.get("exclude", 0)
-    task.uncertain_count = count_map.get("uncertain", 0)
+    await recompute_task_decision_counts(db, task)
     await db.commit()
     return {
         "decision": sr.decision,

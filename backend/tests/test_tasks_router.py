@@ -308,3 +308,83 @@ async def test_export_available_csv(auth_client):
     assert by_gse["GSE101"]["reason"] == "mouse only"
     assert by_gse["GSE102"]["available"] == "unknown"
     assert by_gse["GSE102"]["reason"] == "unclear origin"
+
+
+@pytest.mark.asyncio
+async def test_update_decision_overrides_stale_final_conclusion_for_export(auth_client):
+    geo_candidates = [{"id": "GSE200", "title": "Manual decision", "summary": "human iPSC data"}]
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        created = await auth_client.post("/tasks", params={
+            "name": "Manual Decision Export",
+            "criteria_text": "human iPSC",
+            "source": "geo",
+            "search_query": "iPSC",
+        })
+    task_id = created.json()["id"]
+
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningResult, GeoLabel
+    import sqlalchemy
+    async with AsyncSessionLocal() as db:
+        sr = (await db.execute(
+            sqlalchemy.select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalar_one()
+        sr.decision = "exclude"
+        sr.summary = "Initial LLM exclusion"
+        db.add(GeoLabel(result_id=sr.id, key="final_conclusion", value="不可用", source="llm"))
+        db.add(GeoLabel(result_id=sr.id, key="reasoning_text", value="Initial label reason", source="llm"))
+        await db.commit()
+        result_id = sr.id
+
+    update_r = await auth_client.patch(f"/tasks/{task_id}/results/{result_id}", json={"decision": "include"})
+    assert update_r.status_code == 200
+    assert update_r.json()["included_count"] == 1
+
+    export_r = await auth_client.get(f"/tasks/{task_id}/export")
+    assert export_r.status_code == 200
+    import csv, io
+    exported = list(csv.DictReader(io.StringIO(export_r.text.lstrip('\ufeff'))))
+    assert exported[0]["available"] == "true"
+
+
+@pytest.mark.asyncio
+async def test_export_available_uses_decision_when_labels_are_stale(auth_client):
+    geo_candidates = [
+        {"id": "GSE210", "title": "Included decision", "summary": "included by decision"},
+        {"id": "GSE211", "title": "Excluded decision", "summary": "excluded by decision"},
+    ]
+    with patch("backend.routers.tasks.search_geo", new=AsyncMock(return_value=geo_candidates)), \
+         patch("backend.routers.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])), \
+         patch("backend.worker.tasks.run_screening.delay"):
+        created = await auth_client.post("/tasks", params={
+            "name": "Stale Label Export",
+            "criteria_text": "human iPSC",
+            "source": "geo",
+            "search_query": "iPSC",
+        })
+    task_id = created.json()["id"]
+
+    from backend.database import AsyncSessionLocal
+    from backend.models import ScreeningResult, GeoLabel, ScreeningTask
+    import sqlalchemy
+    async with AsyncSessionLocal() as db:
+        rows = (await db.execute(
+            sqlalchemy.select(ScreeningResult).where(ScreeningResult.task_id == task_id)
+        )).scalars().all()
+        rows[0].decision = "include"
+        rows[1].decision = "exclude"
+        task = await db.get(ScreeningTask, task_id)
+        task.included_count = 1
+        task.excluded_count = 1
+        db.add(GeoLabel(result_id=rows[1].id, key="final_conclusion", value="可用", source="llm"))
+        await db.commit()
+
+    export_r = await auth_client.get(f"/tasks/{task_id}/export")
+    assert export_r.status_code == 200
+    import csv, io
+    exported = list(csv.DictReader(io.StringIO(export_r.text.lstrip('\ufeff'))))
+    assert sum(1 for row in exported if row["available"] == "true") == 1
+    by_gse = {row["gse_id"]: row for row in exported}
+    assert by_gse["GSE211"]["available"] == "false"

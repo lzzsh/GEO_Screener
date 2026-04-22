@@ -53,15 +53,21 @@
   </div>
 
   <div class="flex justify-between items-center mb-4 gap-3">
-    <div class="flex items-center gap-2">
-      <label class="text-sm text-gray-500">筛选</label>
-      <select x-model="decisionFilter" @change="reloadResults()"
-              class="border rounded-lg px-3 py-2 text-sm bg-white">
-        <option value="">全部候选</option>
-        <option value="include">Included</option>
-        <option value="exclude">Excluded</option>
-        <option value="uncertain">Uncertain</option>
-      </select>
+    <div class="flex items-center gap-3">
+      <div class="flex items-center gap-2">
+        <label class="text-sm text-gray-500">筛选</label>
+        <select x-model="decisionFilter" @change="reloadResults()"
+                class="border rounded-lg px-3 py-2 text-sm bg-white">
+          <option value="">全部候选</option>
+          <option value="include">Included</option>
+          <option value="exclude">Excluded</option>
+          <option value="uncertain">Uncertain</option>
+        </select>
+      </div>
+      <input type="text" x-model="accessionSearch"
+             @input.debounce.300ms="reloadResults()"
+             placeholder="搜索 GSE…"
+             class="border rounded-lg px-3 py-2 text-sm bg-white w-36 focus:outline-none focus:ring-2 focus:ring-blue-300" />
     </div>
     <div class="flex items-center gap-2">
       <a :href="'/tasks/' + taskId + '/export'"
@@ -277,7 +283,7 @@
     return {
       taskId, task: {}, results: [], loading: true,
       page: 1, pageSize: 20, total: 0, jumpPageInput: 1, expanded: new Set(),
-      decisionFilter: '', annotating: false, annotationError: '', gsmAnnotating: false,
+      decisionFilter: '', accessionSearch: '', annotating: false, annotationError: '', gsmAnnotating: false,
       fetchingPdfs: false, calibrating: false,
       pollTimer: null, libs: [],
       expandedGsm: new Set(),
@@ -298,6 +304,7 @@
         this.loading = true;
         const params = new URLSearchParams({page: this.page, page_size: this.pageSize});
         if (this.decisionFilter) params.set('decision', this.decisionFilter);
+        if (this.accessionSearch) params.set('accession', this.accessionSearch);
         const r = await fetch('/tasks/' + this.taskId + '/results?' + params.toString());
         if (r.ok) {
           const d = await r.json();
