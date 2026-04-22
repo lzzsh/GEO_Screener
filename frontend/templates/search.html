@@ -3,6 +3,224 @@
 {% block content %}
 <div x-data="searchPage()" x-init="init()">
 
+  <!-- GSM Detail Modal -->
+  <div x-show="gsmModal.open" class="fixed inset-0 flex items-center justify-center p-4"
+       @click.self="gsmModal.open=false" style="z-index:60">
+    <div class="absolute inset-0 bg-black/50"></div>
+    <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-3xl max-h-[90vh] overflow-y-auto" style="z-index:61">
+      <div class="sticky top-0 bg-white border-b px-8 py-5 flex justify-between items-start" style="z-index:62">
+        <div>
+          <p class="font-mono text-sm text-blue-600 font-semibold" x-text="gsmModal.id"></p>
+          <p class="text-xl font-bold text-gray-900 mt-1 leading-snug" x-text="gsmModal.data?.title || '—'"></p>
+        </div>
+        <button @click="gsmModal.open=false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-6 mt-1">✕</button>
+      </div>
+      <div class="px-8 py-6 space-y-5">
+        <div x-show="gsmModal.loading" class="text-sm text-gray-400 py-8 text-center">加载中…</div>
+        <template x-if="!gsmModal.loading && gsmModal.data">
+          <div class="space-y-5">
+            <!-- Basic info -->
+            <table class="w-full text-sm border-collapse">
+              <tbody class="divide-y divide-gray-100">
+                <tr>
+                  <td class="py-2 pr-6 text-gray-500 w-44 align-top">Status</td>
+                  <td class="py-2 text-gray-900" x-text="'Public' + (gsmModal.data.release_date ? ' on ' + gsmModal.data.release_date : '')"></td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-6 text-gray-500 align-top">Title</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.title || '—'"></td>
+                </tr>
+                <tr x-show="gsmModal.data.sample_type">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Sample type</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.sample_type"></td>
+                </tr>
+                <tr x-show="gsmModal.data.source_name">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Source name</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.source_name"></td>
+                </tr>
+                <tr x-show="gsmModal.data.organism">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Organism</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.organism"></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Characteristics -->
+            <div x-show="gsmModal.data.characteristics && Object.keys(gsmModal.data.characteristics).length > 0">
+              <table class="w-full text-sm border-collapse">
+                <tbody class="divide-y divide-gray-100">
+                  <template x-for="[k, v] in Object.entries(gsmModal.data.characteristics || {})" :key="k">
+                    <tr>
+                      <td class="py-2 pr-6 text-gray-500 w-44 align-top">Characteristics</td>
+                      <td class="py-2 text-gray-900" x-text="k + ': ' + v"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Protocols -->
+            <table class="w-full text-sm border-collapse">
+              <tbody class="divide-y divide-gray-100">
+                <tr x-show="gsmModal.data.treatment_protocol">
+                  <td class="py-2 pr-6 text-gray-500 w-44 align-top">Treatment protocol</td>
+                  <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.treatment_protocol"></td>
+                </tr>
+                <tr x-show="gsmModal.data.growth_protocol">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Growth protocol</td>
+                  <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.growth_protocol"></td>
+                </tr>
+                <tr x-show="gsmModal.data.molecule">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Extracted molecule</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.molecule"></td>
+                </tr>
+                <tr x-show="gsmModal.data.extraction_protocol">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Extraction protocol</td>
+                  <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.extraction_protocol"></td>
+                </tr>
+                <tr x-show="gsmModal.data.library_strategy">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Library strategy</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.library_strategy"></td>
+                </tr>
+                <tr x-show="gsmModal.data.library_source">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Library source</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.library_source"></td>
+                </tr>
+                <tr x-show="gsmModal.data.library_selection">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Library selection</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.library_selection"></td>
+                </tr>
+                <tr x-show="gsmModal.data.instrument_model">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Instrument model</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.instrument_model"></td>
+                </tr>
+                <tr x-show="gsmModal.data.description">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Description</td>
+                  <td class="py-2 text-gray-700" x-text="gsmModal.data.description"></td>
+                </tr>
+                <tr x-show="gsmModal.data.data_processing">
+                  <td class="py-2 pr-6 text-gray-500 align-top">Data processing</td>
+                  <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.data_processing"></td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Dates & Contact -->
+            <table class="w-full text-sm border-collapse border-t pt-2">
+              <tbody class="divide-y divide-gray-100">
+                <tr>
+                  <td class="py-2 pr-6 text-gray-500 w-44">Submission date</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.submission_date || '—'"></td>
+                </tr>
+                <tr>
+                  <td class="py-2 pr-6 text-gray-500">Last update date</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.last_update_date || '—'"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.name">
+                  <td class="py-2 pr-6 text-gray-500">Contact name</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.name"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.email">
+                  <td class="py-2 pr-6 text-gray-500">E-mail(s)</td>
+                  <td class="py-2"><a :href="'mailto:' + gsmModal.data.contact?.email" class="text-blue-600 hover:underline" x-text="gsmModal.data.contact?.email"></a></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.organization">
+                  <td class="py-2 pr-6 text-gray-500">Organization name</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.organization"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.department">
+                  <td class="py-2 pr-6 text-gray-500">Department</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.department"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.address">
+                  <td class="py-2 pr-6 text-gray-500">Street address</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.address"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.city">
+                  <td class="py-2 pr-6 text-gray-500">City</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.city"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.state">
+                  <td class="py-2 pr-6 text-gray-500">State/province</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.state"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.zip">
+                  <td class="py-2 pr-6 text-gray-500">ZIP/Postal code</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.zip"></td>
+                </tr>
+                <tr x-show="gsmModal.data.contact?.country">
+                  <td class="py-2 pr-6 text-gray-500">Country</td>
+                  <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.country"></td>
+                </tr>
+                <tr x-show="gsmModal.data.platform_id">
+                  <td class="py-2 pr-6 text-gray-500">Platform ID</td>
+                  <td class="py-2">
+                    <a :href="'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=' + gsmModal.data.platform_id"
+                       target="_blank" class="text-blue-600 hover:underline font-mono text-sm"
+                       x-text="gsmModal.data.platform_id"></a>
+                  </td>
+                </tr>
+                <tr x-show="gsmModal.data.parent_gse">
+                  <td class="py-2 pr-6 text-gray-500">Series</td>
+                  <td class="py-2">
+                    <a :href="'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=' + gsmModal.data.parent_gse"
+                       target="_blank" class="text-blue-600 hover:underline font-mono text-sm"
+                       x-text="gsmModal.data.parent_gse + (gsmModal.data.parent_gse_title ? ' ' + gsmModal.data.parent_gse_title : '')"></a>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+
+            <!-- Relations -->
+            <div x-show="gsmModal.data.biosample_id || gsmModal.data.sra_id" class="border-t pt-4">
+              <p class="text-sm font-semibold text-gray-700 mb-2">Relations</p>
+              <table class="w-full text-sm border-collapse">
+                <tbody class="divide-y divide-gray-100">
+                  <tr x-show="gsmModal.data.biosample_id">
+                    <td class="py-2 pr-6 text-gray-500 w-44">BioSample</td>
+                    <td class="py-2">
+                      <a :href="'https://www.ncbi.nlm.nih.gov/biosample/' + gsmModal.data.biosample_id"
+                         target="_blank" class="text-blue-600 hover:underline" x-text="gsmModal.data.biosample_id"></a>
+                    </td>
+                  </tr>
+                  <tr x-show="gsmModal.data.sra_id">
+                    <td class="py-2 pr-6 text-gray-500">SRA</td>
+                    <td class="py-2">
+                      <a :href="gsmModal.data.sra_link" target="_blank" class="text-blue-600 hover:underline" x-text="gsmModal.data.sra_id"></a>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Supplementary files -->
+            <div x-show="gsmModal.data.supplementary_files?.length > 0" class="border-t pt-4">
+              <p class="text-sm font-semibold text-gray-700 mb-3">Supplementary file</p>
+              <table class="w-full text-xs border rounded-lg overflow-hidden">
+                <thead class="bg-gray-50 border-b">
+                  <tr>
+                    <th class="text-left px-3 py-2 font-medium text-gray-600">文件</th>
+                    <th class="text-left px-3 py-2 font-medium text-gray-600">类型</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y bg-white">
+                  <template x-for="f in gsmModal.data.supplementary_files" :key="f.url">
+                    <tr>
+                      <td class="px-3 py-2">
+                        <a :href="f.url" target="_blank" class="text-blue-600 hover:underline break-all" x-text="f.url.split('/').pop()"></a>
+                      </td>
+                      <td class="px-3 py-2 text-gray-500" x-text="f.type || '—'"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </template>
+      </div>
+    </div>
+  </div>
+
   <!-- Detail Modal -->
   <div x-show="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4"
        @click.self="modal.open=false">
@@ -136,7 +354,8 @@
             <tbody class="divide-y bg-white">
               <template x-for="s in modal.samples" :key="s.gsm_id">
                 <tr>
-                  <td class="px-3 py-2 font-mono text-blue-700" x-text="s.gsm_id"></td>
+                  <td class="px-3 py-2 font-mono text-blue-700 cursor-pointer hover:underline"
+                      @click.stop="openGsmModal(s.gsm_id)" x-text="s.gsm_id"></td>
                   <td class="px-3 py-2 text-gray-700" x-text="s.title || '—'"></td>
                   <td class="px-3 py-2 text-gray-500" x-text="s.organism || '—'"></td>
                   <td class="px-3 py-2 text-blue-600" x-text="s.biosample_id || '—'"></td>
@@ -331,6 +550,7 @@
       sortKey: '', sortDir: 'asc',
       libraries: [],
       modal: {open: false, id: '', title: '', detail: null, loadingDetail: false},
+      gsmModal: {open: false, id: '', loading: false, data: null},
 
       async init() {
         const libraryResponse = await fetch('/library').catch(() => null);
@@ -428,6 +648,13 @@
       sortIndicator(key) {
         if (this.sortKey !== key) return '';
         return this.sortDir === 'asc' ? '▲' : '▼';
+      },
+
+      async openGsmModal(gsm_id) {
+        this.gsmModal = {open: true, id: gsm_id, loading: true, data: null};
+        const r = await fetch(`/geo/gsm/${gsm_id}/detail`).catch(() => null);
+        if (r && r.ok) this.gsmModal.data = await r.json();
+        this.gsmModal.loading = false;
       },
 
       async openModal(item) {

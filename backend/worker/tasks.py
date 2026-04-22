@@ -464,11 +464,13 @@ async def _run_gsm_task_async(task_id: int):
                                 db.add(GsmLabel(sample_id=sample.id, key=key,
                                                 value=str(value) if value is not None else None,
                                                 source="llm"))
-                        task.processed += 1
                         await db.commit()
                     except Exception as e:
                         logger.error("Failed to annotate %s: %s", sample.gsm_id, e)
                         continue
+
+                task.processed += 1
+                await db.commit()
 
             task.status = "done"
             await db.commit()

@@ -334,6 +334,167 @@ def _parse_miniml(xml_text: str, gse_id: str) -> dict:
     }
 
 
+async def fetch_gsm_detail(gsm_id: str) -> dict:
+    """Fetch full GSM detail via GEO MINiML XML endpoint."""
+    url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
+    params = {"acc": gsm_id, "targ": "self", "form": "xml", "view": "quick"}
+    NS = "http://www.ncbi.nlm.nih.gov/geo/info/MINiML"
+
+    async with httpx.AsyncClient(timeout=30) as client:
+        for attempt in range(MAX_RETRIES):
+            try:
+                r = await client.get(url, params=params)
+                r.raise_for_status()
+                root = ET.fromstring(r.text)
+                sample = root.find(f"{{{NS}}}Sample")
+                if sample is None:
+                    return {"gsm_id": gsm_id}
+
+                title = _find_text(sample, NS, "Title")
+                sample_type = _find_text(sample, NS, "Type")
+
+                status_el = sample.find(f"{{{NS}}}Status")
+                submission_date = last_update_date = release_date = ""
+                if status_el is not None:
+                    submission_date = _find_text(status_el, NS, "Submission-Date")
+                    last_update_date = _find_text(status_el, NS, "Last-Update-Date")
+                    release_date = _find_text(status_el, NS, "Release-Date")
+
+                channel = sample.find(f"{{{NS}}}Channel")
+                organism = source_name = molecule = growth_protocol = treatment_protocol = extraction_protocol = ""
+                characteristics: dict = {}
+                if channel is not None:
+                    org_el = channel.find(f"{{{NS}}}Organism")
+                    organism = org_el.text.strip() if org_el is not None and org_el.text else ""
+                    source_el = channel.find(f"{{{NS}}}Source")
+                    source_name = source_el.text.strip() if source_el is not None and source_el.text else ""
+                    molecule_el = channel.find(f"{{{NS}}}Molecule")
+                    molecule = molecule_el.text.strip() if molecule_el is not None and molecule_el.text else ""
+                    growth_protocol = _find_text(channel, NS, "Growth-Protocol")
+                    treatment_protocol = _find_text(channel, NS, "Treatment-Protocol")
+                    extraction_protocol = _find_text(channel, NS, "Extract-Protocol")
+                    for char_el in channel.findall(f"{{{NS}}}Characteristics"):
+                        value = char_el.text.strip() if char_el.text else ""
+                        if not value:
+                            continue
+                        key = char_el.get("tag") or "characteristic"
+                        characteristics[key] = f"{characteristics[key]}; {value}" if key in characteristics else value
+
+                library_strategy = _find_text(sample, NS, "Library-Strategy")
+                library_source = _find_text(sample, NS, "Library-Source")
+                library_selection = _find_text(sample, NS, "Library-Selection")
+                instrument_model = _find_text(sample, NS, "Instrument-Model")
+                description = _find_text(sample, NS, "Description")
+                data_processing = _find_text(sample, NS, "Data-Processing")
+
+                # Supplementary files
+                suppl_files = []
+                for sd in sample.findall(f"{{{NS}}}Supplementary-Data"):
+                    url_text = sd.text.strip() if sd.text else ""
+                    if url_text:
+                        suppl_files.append({"url": url_text, "type": sd.get("type", "")})
+
+                biosample_id = sra_id = sra_link = ""
+                for rel in sample.findall(f"{{{NS}}}Relation"):
+                    rel_type = rel.get("type", "")
+                    target = rel.get("target", "")
+                    if rel_type == "BioSample" and "/biosample/" in target:
+                        biosample_id = target.split("/biosample/")[-1]
+                    elif rel_type == "SRA":
+                        sra_link = target
+                        # extract SRX id from URL like https://www.ncbi.nlm.nih.gov/sra?term=SRX...
+                        if "term=" in target:
+                            sra_id = target.split("term=")[-1]
+
+                # Platform
+                platform_id = platform_title = ""
+                platform_el = root.find(f"{{{NS}}}Platform")
+                if platform_el is not None:
+                    acc_el = platform_el.find(f"{{{NS}}}Accession")
+                    platform_id = acc_el.text.strip() if acc_el is not None and acc_el.text else ""
+                    platform_title = _find_text(platform_el, NS, "Title")
+
+                # Contact from top-level Contributor
+                contact: dict = {}
+                contrib_ref = sample.find(f"{{{NS}}}Contact-Ref")
+                contrib_iid = contrib_ref.get("iid") if contrib_ref is not None else None
+                for contrib in root.findall(f"{{{NS}}}Contributor"):
+                    if contrib_iid and contrib.get("iid") != contrib_iid:
+                        continue
+                    person = contrib.find(f"{{{NS}}}Person")
+                    first = _find_text(person, NS, "First") if person is not None else ""
+                    last = _find_text(person, NS, "Last") if person is not None else ""
+                    email = _find_text(contrib, NS, "Email")
+                    org_el = contrib.find(f"{{{NS}}}Organization")
+                    org_name = dept = line = city = state = zip_code = country = ""
+                    if org_el is not None:
+                        org_name = _find_text(org_el, NS, "Name")
+                        dept = _find_text(org_el, NS, "Department")
+                        addr_el = org_el.find(f"{{{NS}}}Address")
+                        if addr_el is not None:
+                            line = _find_text(addr_el, NS, "Line")
+                            city = _find_text(addr_el, NS, "City")
+                            state = _find_text(addr_el, NS, "State")
+                            zip_code = _find_text(addr_el, NS, "Zip-Code") or _find_text(addr_el, NS, "Postal-Code")
+                            country = _find_text(addr_el, NS, "Country")
+                    contact = {
+                        "name": f"{first} {last}".strip(),
+                        "email": email,
+                        "organization": org_name,
+                        "department": dept,
+                        "address": line,
+                        "city": city,
+                        "state": state,
+                        "zip": zip_code,
+                        "country": country,
+                    }
+                    break
+
+                # Parent series
+                parent_gse = parent_gse_title = ""
+                series = root.find(f"{{{NS}}}Series")
+                if series is not None:
+                    acc_el = series.find(f"{{{NS}}}Accession")
+                    parent_gse = acc_el.text.strip() if acc_el is not None and acc_el.text else ""
+                    parent_gse_title = _find_text(series, NS, "Title")
+
+                return {
+                    "gsm_id": gsm_id,
+                    "title": title,
+                    "sample_type": sample_type,
+                    "organism": organism,
+                    "source_name": source_name,
+                    "characteristics": characteristics,
+                    "molecule": molecule,
+                    "extraction_protocol": extraction_protocol,
+                    "growth_protocol": growth_protocol,
+                    "treatment_protocol": treatment_protocol,
+                    "library_strategy": library_strategy,
+                    "library_source": library_source,
+                    "library_selection": library_selection,
+                    "instrument_model": instrument_model,
+                    "description": description,
+                    "data_processing": data_processing,
+                    "supplementary_files": suppl_files,
+                    "biosample_id": biosample_id,
+                    "sra_id": sra_id,
+                    "sra_link": sra_link,
+                    "platform_id": platform_id,
+                    "platform_title": platform_title,
+                    "contact": contact,
+                    "parent_gse": parent_gse,
+                    "parent_gse_title": parent_gse_title,
+                    "submission_date": submission_date,
+                    "last_update_date": last_update_date,
+                    "release_date": release_date,
+                }
+            except (httpx.HTTPStatusError, httpx.TimeoutException, ET.ParseError):
+                if attempt == MAX_RETRIES - 1:
+                    raise
+                await asyncio.sleep(2 ** attempt)
+    return {"gsm_id": gsm_id}
+
+
 async def fetch_gse_detail(gse_id: str) -> dict:
     """Fetch full GSE detail via GEO MINiML XML endpoint."""
     url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
