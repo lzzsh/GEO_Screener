@@ -388,23 +388,16 @@
       async loadPrompt() {
         if (!this.selectedSchema || !this.selectedSchema.id) return;
 
-        // For default schema, load from files directly
+        // For default schema, load from API
         if (this.selectedSchema.is_default) {
           this.promptLoading = true;
           try {
-            const r = await fetch(`/annotation-schemas/default-template`);
-            if (r.ok) {
-              // We need to fetch the actual prompt files
-              // For now, show a message
-              this.promptContent = 'Loading default prompt...';
-
-              // Try to fetch from a file endpoint
-              const promptR = await fetch(`/prompts/default/${this.selectedPromptType}.txt`);
-              if (promptR.ok) {
-                this.promptContent = await promptR.text();
-              } else {
-                this.promptContent = '[Default prompt file not found]';
-              }
+            const promptR = await fetch(`/prompts/default/${this.selectedPromptType}`);
+            if (promptR.ok) {
+              const data = await promptR.json();
+              this.promptContent = data.content;
+            } else {
+              this.promptContent = '[Default prompt file not found]';
             }
           } catch (e) {
             console.error('Failed to load default prompt:', e);
