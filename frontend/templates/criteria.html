@@ -36,6 +36,12 @@
         Select a schema or create a new one.
       </div>
       <div x-show="selectedSchema">
+        <!-- Schema title -->
+        <div class="mb-4 pb-4 border-b border-gray-200">
+          <h2 class="text-lg font-semibold text-gray-900" x-text="selectedSchema.name"></h2>
+          <p class="text-sm text-gray-500 mt-1" x-text="selectedSchema.description"></p>
+        </div>
+
         <div x-show="schemaSaveMsg" class="mb-3 text-green-600 text-sm" x-text="schemaSaveMsg"></div>
         <div x-show="schemaError" class="mb-3 text-red-600 text-sm" x-text="schemaError"></div>
 
@@ -61,13 +67,13 @@
         <!-- Labels Tab -->
         <div x-show="schemaTab === 'labels'">
           <div class="mb-4">
-            <label class="block text-sm font-medium mb-1">Name</label>
+            <label class="block text-sm font-medium mb-1">Edit Name</label>
             <input x-model="schemaEditName" type="text" :disabled="selectedSchema.is_default"
                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed" />
           </div>
 
           <div class="mb-4">
-            <label class="block text-sm font-medium mb-1">Description</label>
+            <label class="block text-sm font-medium mb-1">Edit Description</label>
             <input x-model="schemaEditDesc" type="text" :disabled="selectedSchema.is_default"
                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed" />
           </div>
