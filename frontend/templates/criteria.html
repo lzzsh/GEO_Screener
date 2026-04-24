@@ -1,85 +1,16 @@
 {% extends "base.html" %}
-{% block title %}Criteria — GEO Screener{% endblock %}
+{% block title %}Annotation Schemas — GEO Screener{% endblock %}
 {% block content %}
 <div x-data="criteriaPage()" x-init="load(); init()">
-  <h1 class="text-2xl font-bold mb-6">Screening Criteria & Annotation Schemas</h1>
+  <h1 class="text-2xl font-bold mb-6">Annotation Schemas</h1>
 
-  <!-- Tab navigation -->
-  <div class="flex gap-4 mb-6 border-b border-gray-200">
-    <button @click="activeTab = 'criteria'"
-            :class="activeTab === 'criteria' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
-            class="px-4 py-2 font-medium text-sm transition">
-      Criteria Templates
-    </button>
-    <button @click="activeTab = 'schemas'"
-            :class="activeTab === 'schemas' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
-            class="px-4 py-2 font-medium text-sm transition">
-      Annotation Schemas
-    </button>
-  </div>
-
-  <!-- Criteria Tab -->
-  <div x-show="activeTab === 'criteria'" class="flex gap-6">
-    <!-- Left panel: list -->
-    <div class="w-64 flex-shrink-0">
-      <button @click="newCriteria()"
-              class="w-full mb-3 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
-        + New Criteria
-      </button>
-      <div class="space-y-1">
-        <template x-for="c in list" :key="c.id">
-          <button @click="select(c)"
-                  :class="selected && selected.id === c.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'"
-                  class="w-full text-left px-3 py-2.5 rounded-lg border text-sm hover:border-blue-300 transition">
-            <p class="font-medium truncate" x-text="c.name"></p>
-            <p class="text-xs text-gray-400 mt-0.5" x-text="new Date(c.updated_at).toLocaleDateString()"></p>
-          </button>
-        </template>
-      </div>
-    </div>
-
-    <!-- Right panel: editor -->
-    <div class="flex-1 bg-white rounded-xl border border-gray-200 p-6">
-      <div x-show="!selected" class="text-gray-400 text-sm text-center py-16">
-        Select a criteria template or create a new one.
-      </div>
-      <div x-show="selected">
-        <div x-show="saveMsg" class="mb-3 text-green-600 text-sm" x-text="saveMsg"></div>
-        <div x-show="error" class="mb-3 text-red-600 text-sm" x-text="error"></div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1">Name</label>
-          <input x-model="editName" type="text"
-                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        </div>
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1">Criteria Text</label>
-          <textarea x-model="editText" rows="12"
-                    placeholder="Describe your inclusion/exclusion criteria in natural language…"
-                    class="w-full border rounded-lg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
-        </div>
-        <div class="flex gap-3">
-          <button @click="save()" :disabled="saving"
-                  class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-            <span x-text="saving ? 'Saving…' : 'Save'"></span>
-          </button>
-          <button @click="deleteCriteria()" x-show="selected && selected.id"
-                  class="text-red-500 hover:text-red-700 px-4 py-2 text-sm">Delete</button>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Annotation Schemas Tab -->
-  <div x-show="activeTab === 'schemas'" class="flex gap-6">
+  <!-- Schema management -->
+  <div class="flex gap-6">
     <!-- Left panel: schema list -->
     <div class="w-64 flex-shrink-0">
       <button @click="newSchema()"
-              class="w-full mb-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
+              class="w-full mb-3 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
         + New Schema
-      </button>
-      <button @click="loadDefaultTemplate()"
-              class="w-full mb-3 bg-gray-100 text-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-200">
-        📋 Use Default Template
       </button>
       <div class="space-y-1">
         <template x-for="s in schemaList" :key="s.id">
@@ -87,7 +18,7 @@
                   :class="selectedSchema && selectedSchema.id === s.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'"
                   class="w-full text-left px-3 py-2.5 rounded-lg border text-sm hover:border-blue-300 transition">
             <p class="font-medium truncate" x-text="s.name"></p>
-            <p class="text-xs text-gray-400 mt-0.5" x-text="new Date(s.updated_at).toLocaleDateString()"></p>
+            <p class="text-xs text-gray-400 mt-0.5" x-text="s.id ? new Date(s.updated_at).toLocaleDateString() : 'unsaved'"></p>
           </button>
         </template>
       </div>
@@ -109,7 +40,7 @@
                   class="px-3 py-2 font-medium text-sm transition">
             Labels
           </button>
-          <button @click="schemaTab = 'prompts'" x-show="selectedSchema && selectedSchema.id"
+          <button @click="schemaTab = 'prompts'"
                   :class="schemaTab === 'prompts' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
                   class="px-3 py-2 font-medium text-sm transition">
             Prompts
@@ -191,11 +122,14 @@
           <div x-show="!promptLoading">
             <textarea x-model="promptContent" rows="16"
                       class="w-full border rounded-lg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
-            <div class="flex gap-3 mt-3">
+            <div class="flex gap-3 mt-3" x-show="selectedSchema && selectedSchema.id">
               <button @click="savePrompt()" :disabled="promptSaving"
                       class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
                 <span x-text="promptSaving ? 'Saving…' : 'Save Prompt'"></span>
               </button>
+            </div>
+            <div class="text-xs text-gray-500 mt-3" x-show="!selectedSchema || !selectedSchema.id">
+              Save schema first to save prompt changes
             </div>
           </div>
         </div>
@@ -216,9 +150,6 @@
 <script>
   function criteriaPage() {
     return {
-      activeTab: 'criteria',
-      list: [], selected: null, editName: '', editText: '',
-      saving: false, saveMsg: '', error: '',
       schemaList: [], selectedSchema: null,
       schemaEditName: '', schemaEditDesc: '', schemaEditGseLabels: [], schemaEditGsmLabels: [],
       schemaSaving: false, schemaSaveMsg: '', schemaError: '',
@@ -227,12 +158,13 @@
       promptContent: '',
       promptLoading: false,
       promptSaving: false,
+      defaultPrompts: {},
 
       async load() {
         const r = await fetch('/criteria');
         if (r.status === 401) { window.location.href = '/login'; return; }
-        this.list = await r.json();
         await this.loadSchemas();
+        await this.loadDefaultPrompts();
       },
       async loadSchemas() {
         try {
@@ -244,9 +176,19 @@
           console.error('Failed to load schemas:', e);
         }
       },
-      select(c) {
-        this.selected = c; this.editName = c.name; this.editText = c.criteria_text;
-        this.saveMsg = ''; this.error = '';
+      async loadDefaultPrompts() {
+        try {
+          const types = ['label_prompt', 'gsm_label_prompt', 'screening_prompt', 'paper_calibration_prompt'];
+          for (const type of types) {
+            const r = await fetch(`/annotation-schemas/1/prompts/${type}`);
+            if (r.ok) {
+              const data = await r.json();
+              this.defaultPrompts[type] = data.content;
+            }
+          }
+        } catch (e) {
+          console.error('Failed to load default prompts:', e);
+        }
       },
       selectSchema(s) {
         this.selectedSchema = s;
@@ -259,43 +201,16 @@
         this.selectedPromptType = 'label_prompt';
         this.promptContent = '';
       },
-      init() {
-        this.$watch('schemaTab', () => {
-          if (this.schemaTab === 'prompts' && this.selectedSchema && this.selectedSchema.id) {
-            this.loadPrompt();
-          }
-        });
-        this.$watch('selectedPromptType', () => {
-          if (this.schemaTab === 'prompts' && this.selectedSchema && this.selectedSchema.id) {
-            this.loadPrompt();
-          }
-        });
-      },
-      newCriteria() {
-        this.selected = {id: null, name: '', criteria_text: ''};
-        this.editName = ''; this.editText = ''; this.saveMsg = ''; this.error = '';
-      },
       newSchema() {
         this.selectedSchema = {id: null, name: '', description: '', gse_labels: [], gsm_labels: []};
-        this.schemaEditName = ''; this.schemaEditDesc = '';
-        this.schemaEditGseLabels = []; this.schemaEditGsmLabels = [];
+        this.schemaEditName = '';
+        this.schemaEditDesc = '';
+        this.schemaEditGseLabels = [];
+        this.schemaEditGsmLabels = [];
         this.schemaSaveMsg = ''; this.schemaError = '';
-      },
-      async loadDefaultTemplate() {
-        try {
-          const r = await fetch('/annotation-schemas/default-template');
-          if (r.ok) {
-            const template = await r.json();
-            this.selectedSchema = {id: null, name: '', description: '', gse_labels: [], gsm_labels: []};
-            this.schemaEditName = template.name;
-            this.schemaEditDesc = template.description;
-            this.schemaEditGseLabels = template.gse_labels;
-            this.schemaEditGsmLabels = template.gsm_labels;
-            this.schemaSaveMsg = ''; this.schemaError = '';
-          }
-        } catch (e) {
-          console.error('Failed to load default template:', e);
-        }
+        this.schemaTab = 'labels';
+        this.selectedPromptType = 'label_prompt';
+        this.promptContent = this.defaultPrompts['label_prompt'] || '';
       },
       addGseLabel() {
         this.schemaEditGseLabels.push({name: '', description: '', type: 'free_text', allowed_values: []});
@@ -309,28 +224,23 @@
       removeGsmLabel(idx) {
         this.schemaEditGsmLabels.splice(idx, 1);
       },
-      async save() {
-        this.saving = true; this.error = ''; this.saveMsg = '';
-        try {
-          const body = {name: this.editName, criteria_text: this.editText};
-          let r;
-          if (this.selected.id) {
-            r = await fetch('/criteria/' + this.selected.id, {
-              method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-          } else {
-            r = await fetch('/criteria', {
-              method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
+      init() {
+        this.$watch('schemaTab', () => {
+          if (this.schemaTab === 'prompts' && this.selectedSchema && this.selectedSchema.id) {
+            this.loadPrompt();
+          } else if (this.schemaTab === 'prompts' && this.selectedSchema && !this.selectedSchema.id) {
+            this.promptContent = this.defaultPrompts[this.selectedPromptType] || '';
           }
-          if (r.ok) {
-            const updated = await r.json();
-            this.selected = updated;
-            await this.load();
-            this.saveMsg = 'Saved!';
-            setTimeout(() => this.saveMsg = '', 2000);
-          } else {
-            const d = await r.json(); this.error = d.detail || 'Save failed';
+        });
+        this.$watch('selectedPromptType', () => {
+          if (this.schemaTab === 'prompts') {
+            if (this.selectedSchema && this.selectedSchema.id) {
+              this.loadPrompt();
+            } else {
+              this.promptContent = this.defaultPrompts[this.selectedPromptType] || '';
+            }
           }
-        } finally { this.saving = false; }
+        });
       },
       async saveSchema() {
         this.schemaSaving = true; this.schemaError = ''; this.schemaSaveMsg = '';
@@ -359,12 +269,6 @@
             const d = await r.json(); this.schemaError = d.detail || 'Save failed';
           }
         } finally { this.schemaSaving = false; }
-      },
-      async deleteCriteria() {
-        if (!confirm('Delete this criteria template?')) return;
-        await fetch('/criteria/' + this.selected.id, {method: 'DELETE'});
-        this.selected = null;
-        await this.load();
       },
       async deleteSchema() {
         if (!confirm('Delete this annotation schema?')) return;
