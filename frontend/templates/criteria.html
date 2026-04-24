@@ -17,8 +17,14 @@
           <button @click="selectSchema(s)"
                   :class="selectedSchema && selectedSchema.id === s.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'"
                   class="w-full text-left px-3 py-2.5 rounded-lg border text-sm hover:border-blue-300 transition">
-            <p class="font-medium truncate" x-text="s.name"></p>
-            <p class="text-xs text-gray-400 mt-0.5" x-text="s.id ? new Date(s.updated_at).toLocaleDateString() : 'unsaved'"></p>
+            <p class="font-medium truncate">
+              <span x-show="s.is_default">📋</span>
+              <span x-text="s.name"></span>
+            </p>
+            <p class="text-xs text-gray-400 mt-0.5">
+              <span x-show="s.is_default">Default Example</span>
+              <span x-show="!s.is_default" x-text="s.id ? new Date(s.updated_at).toLocaleDateString() : 'unsaved'"></span>
+            </p>
           </button>
         </template>
       </div>
@@ -32,6 +38,11 @@
       <div x-show="selectedSchema">
         <div x-show="schemaSaveMsg" class="mb-3 text-green-600 text-sm" x-text="schemaSaveMsg"></div>
         <div x-show="schemaError" class="mb-3 text-red-600 text-sm" x-text="schemaError"></div>
+
+        <!-- Default schema indicator -->
+        <div x-show="selectedSchema.is_default" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+          <p class="text-sm text-blue-700">📋 <strong>Default Schema (Example)</strong> - This is a read-only template showing the standard labels and prompts.</p>
+        </div>
 
         <!-- Schema tabs -->
         <div class="flex gap-2 mb-4 border-b border-gray-200">
@@ -51,37 +62,38 @@
         <div x-show="schemaTab === 'labels'">
           <div class="mb-4">
             <label class="block text-sm font-medium mb-1">Name</label>
-            <input x-model="schemaEditName" type="text"
-                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <input x-model="schemaEditName" type="text" :disabled="selectedSchema.is_default"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed" />
           </div>
 
           <div class="mb-4">
             <label class="block text-sm font-medium mb-1">Description</label>
-            <input x-model="schemaEditDesc" type="text"
-                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+            <input x-model="schemaEditDesc" type="text" :disabled="selectedSchema.is_default"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed" />
           </div>
 
           <!-- GSE Labels -->
           <div class="mb-6">
             <div class="flex justify-between items-center mb-3">
               <h3 class="text-sm font-semibold">GSE Labels</h3>
-              <button @click="addGseLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+              <button @click="addGseLabel()" x-show="!selectedSchema.is_default" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
             </div>
             <div class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
               <template x-for="(label, idx) in schemaEditGseLabels" :key="idx">
                 <div class="bg-white rounded border border-gray-200">
-                  <button @click="editingGseIdx = editingGseIdx === idx ? null : idx"
-                          class="w-full text-left p-3 hover:bg-gray-50 transition">
+                  <button @click="!selectedSchema.is_default && (editingGseIdx = editingGseIdx === idx ? null : idx)"
+                          :disabled="selectedSchema.is_default"
+                          class="w-full text-left p-3 hover:bg-gray-50 transition disabled:cursor-not-allowed">
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
                         <p class="font-medium" x-text="label.name || '(untitled)'"></p>
                         <p class="text-xs text-gray-600" x-text="label.description"></p>
                         <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
                       </div>
-                      <button @click.stop="removeGseLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
+                      <button @click.stop="removeGseLabel(idx)" x-show="!selectedSchema.is_default" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
                   </button>
-                  <div x-show="editingGseIdx === idx" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
+                  <div x-show="editingGseIdx === idx && !selectedSchema.is_default" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
                     <div>
                       <label class="block text-xs font-medium mb-1">Name</label>
                       <input x-model="label.name" type="text" placeholder="e.g., data_modality"
@@ -117,23 +129,24 @@
           <div class="mb-6">
             <div class="flex justify-between items-center mb-3">
               <h3 class="text-sm font-semibold">GSM Labels</h3>
-              <button @click="addGsmLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+              <button @click="addGsmLabel()" x-show="!selectedSchema.is_default" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
             </div>
             <div class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
               <template x-for="(label, idx) in schemaEditGsmLabels" :key="idx">
                 <div class="bg-white rounded border border-gray-200">
-                  <button @click="editingGsmIdx = editingGsmIdx === idx ? null : idx"
-                          class="w-full text-left p-3 hover:bg-gray-50 transition">
+                  <button @click="!selectedSchema.is_default && (editingGsmIdx = editingGsmIdx === idx ? null : idx)"
+                          :disabled="selectedSchema.is_default"
+                          class="w-full text-left p-3 hover:bg-gray-50 transition disabled:cursor-not-allowed">
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
                         <p class="font-medium" x-text="label.name || '(untitled)'"></p>
                         <p class="text-xs text-gray-600" x-text="label.description"></p>
                         <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
                       </div>
-                      <button @click.stop="removeGsmLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
+                      <button @click.stop="removeGsmLabel(idx)" x-show="!selectedSchema.is_default" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
                   </button>
-                  <div x-show="editingGsmIdx === idx" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
+                  <div x-show="editingGsmIdx === idx && !selectedSchema.is_default" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
                     <div>
                       <label class="block text-xs font-medium mb-1">Name</label>
                       <input x-model="label.name" type="text" placeholder="e.g., start_cell"
@@ -180,26 +193,27 @@
 
           <div x-show="promptLoading" class="text-gray-500 text-sm">Loading prompt...</div>
           <div x-show="!promptLoading">
-            <textarea x-model="promptContent" rows="16"
-                      class="w-full border rounded-lg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
-            <div class="flex gap-3 mt-3" x-show="selectedSchema && selectedSchema.id">
+            <textarea x-model="promptContent" rows="16" :disabled="selectedSchema.is_default"
+                      class="w-full border rounded-lg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"></textarea>
+            <div class="flex gap-3 mt-3" x-show="selectedSchema && selectedSchema.id && !selectedSchema.is_default">
               <button @click="savePrompt()" :disabled="promptSaving"
                       class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
                 <span x-text="promptSaving ? 'Saving…' : 'Save Prompt'"></span>
               </button>
             </div>
-            <div class="text-xs text-gray-500 mt-3" x-show="!selectedSchema || !selectedSchema.id">
-              Save schema first to save prompt changes
+            <div class="text-xs text-gray-500 mt-3" x-show="!selectedSchema || !selectedSchema.id || selectedSchema.is_default">
+              <span x-show="selectedSchema.is_default">This is a read-only default prompt</span>
+              <span x-show="!selectedSchema || !selectedSchema.id">Save schema first to save prompt changes</span>
             </div>
           </div>
         </div>
 
         <div class="flex gap-3 mt-6" x-show="schemaTab === 'labels'">
-          <button @click="saveSchema()" :disabled="schemaSaving"
+          <button @click="saveSchema()" :disabled="schemaSaving || selectedSchema.is_default"
                   class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
             <span x-text="schemaSaving ? 'Saving…' : 'Save'"></span>
           </button>
-          <button @click="deleteSchema()" x-show="selectedSchema && selectedSchema.id"
+          <button @click="deleteSchema()" x-show="selectedSchema && selectedSchema.id && !selectedSchema.is_default"
                   class="text-red-500 hover:text-red-700 px-4 py-2 text-sm">Delete</button>
         </div>
       </div>
@@ -230,9 +244,27 @@
       },
       async loadSchemas() {
         try {
+          // Load default template first
+          const defaultR = await fetch('/annotation-schemas/default-template');
+          if (defaultR.ok) {
+            const defaultTemplate = await defaultR.json();
+            this.schemaList = [{
+              id: 'default',
+              name: defaultTemplate.name,
+              description: defaultTemplate.description,
+              gse_labels: defaultTemplate.gse_labels,
+              gsm_labels: defaultTemplate.gsm_labels,
+              created_at: new Date().toISOString(),
+              updated_at: new Date().toISOString(),
+              is_default: true
+            }];
+          }
+
+          // Load user schemas
           const r = await fetch('/annotation-schemas');
           if (r.ok) {
-            this.schemaList = await r.json();
+            const userSchemas = await r.json();
+            this.schemaList = this.schemaList.concat(userSchemas);
           }
         } catch (e) {
           console.error('Failed to load schemas:', e);
@@ -264,6 +296,11 @@
         this.promptContent = '';
         this.editingGseIdx = null;
         this.editingGsmIdx = null;
+        // Disable editing for default schema
+        if (s.is_default) {
+          this.schemaEditName = s.name;
+          this.schemaEditDesc = s.description || '';
+        }
       },
       newSchema() {
         this.selectedSchema = {id: null, name: '', description: '', gse_labels: [], gsm_labels: []};
