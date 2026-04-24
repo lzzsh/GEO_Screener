@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -12,22 +13,24 @@ router = APIRouter(tags=["prompts"])
 class PromptContent(BaseModel):
     content: str
 
-def _get_prompts_dir() -> str:
+def _get_prompts_dir() -> Path:
     """Get the prompts directory path."""
-    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+    # Get the backend directory
+    backend_dir = Path(__file__).parent.parent
+    return backend_dir / "prompts"
 
-def _get_prompt_path(schema_name: str, prompt_type: str) -> str:
+def _get_prompt_path(schema_name: str, prompt_type: str) -> Path:
     """Get the full path to a prompt file."""
     prompts_dir = _get_prompts_dir()
-    return os.path.join(prompts_dir, schema_name, f"{prompt_type}.txt")
+    return prompts_dir / schema_name / f"{prompt_type}.txt"
 
 @router.get("/prompts/default/{prompt_type}")
 async def get_default_prompt(prompt_type: str):
     """Get default prompt file (public endpoint)."""
     prompt_path = _get_prompt_path("default", prompt_type)
 
-    if not os.path.exists(prompt_path):
-        raise HTTPException(status_code=404, detail="Prompt file not found")
+    if not prompt_path.exists():
+        raise HTTPException(status_code=404, detail=f"Prompt file not found at {prompt_path}")
 
     with open(prompt_path, 'r', encoding='utf-8') as f:
         content = f.read()
@@ -45,7 +48,7 @@ async def get_prompt(schema_id: int, prompt_type: str, db: AsyncSession = Depend
 
     prompt_path = _get_prompt_path(schema.name, prompt_type)
 
-    if not os.path.exists(prompt_path):
+    if not prompt_path.exists():
         raise HTTPException(status_code=404, detail="Prompt file not found")
 
     with open(prompt_path, 'r', encoding='utf-8') as f:
@@ -65,10 +68,11 @@ async def update_prompt(schema_id: int, prompt_type: str, req: PromptContent, db
     prompt_path = _get_prompt_path(schema.name, prompt_type)
 
     # Ensure directory exists
-    os.makedirs(os.path.dirname(prompt_path), exist_ok=True)
+    prompt_path.parent.mkdir(parents=True, exist_ok=True)
 
     with open(prompt_path, 'w', encoding='utf-8') as f:
         f.write(req.content)
 
     return {"message": "Prompt updated successfully"}
+
 

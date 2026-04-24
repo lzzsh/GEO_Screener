@@ -184,27 +184,6 @@ BioSample: {biosample_id}
 - 严禁根据 GSE 背景推断 GSM 级别细节字段（passage、matrix、medium、density、o2_lvl 必须来自 GSM 元数据本身）
 """
 
-SCREENING_PROMPT_TEMPLATE = """\
-You are a systematic review screener. Evaluate the following dataset against the criteria.
-
-## Screening Criteria
-{criteria_text}
-
-## Dataset Information
-ID: {dataset_id}
-Title: {title}
-Description: {description}
-
-## Instructions
-Return ONLY valid JSON with this exact structure:
-{{
-  "decision": "include" | "exclude" | "uncertain",
-  "confidence": 0.0-1.0,
-  "summary": "one sentence rationale",
-  "rule_checks": {{"criterion_key": true|false}}
-}}
-"""
-
 PAPER_CALIBRATION_PROMPT_TEMPLATE = """\
 You are a systematic review screener. Evaluate the following dataset against the criteria.
 When the paper full-text conflicts with GEO metadata, the paper takes priority.
@@ -229,6 +208,7 @@ Return ONLY valid JSON with this exact structure:
   "rule_checks": {{"criterion_key": true|false}}
 }}
 """
+
 
 class LLMClient:
     def __init__(self, provider: str, api_key: str, base_url: Optional[str] = None, model: Optional[str] = None, temperature: float = 0.1):
@@ -294,21 +274,6 @@ class LLMClient:
                 if exc.status_code not in retry_statuses or attempt == 2:
                     raise
                 await asyncio.sleep(0.5 * (attempt + 1))
-
-    async def screen_dataset(self, dataset_id: str, title: str, description: str, criteria_text: str) -> dict:
-        prompt = SCREENING_PROMPT_TEMPLATE.format(
-            criteria_text=criteria_text,
-            dataset_id=dataset_id,
-            title=title,
-            description=description,
-        )
-        response = await self._create_chat_completion(
-            model=self.model,
-            temperature=self.temperature,
-            messages=[{"role": "user", "content": prompt}],
-        )
-        raw = response.choices[0].message.content.strip()
-        return self._parse_json(raw)
 
     async def calibrate_with_paper(self, dataset_id: str, title: str, description: str,
                                     paper_text: str, criteria_text: str) -> dict:

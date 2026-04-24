@@ -55,7 +55,7 @@ def _create_schema_prompt_files(schema_name: str):
     os.makedirs(schema_dir, exist_ok=True)
 
     # Copy default prompt files
-    for prompt_type in ["label_prompt", "gsm_label_prompt", "screening_prompt", "paper_calibration_prompt"]:
+    for prompt_type in ["label_prompt", "gsm_label_prompt", "paper_calibration_prompt"]:
         src = os.path.join(default_dir, f"{prompt_type}.txt")
         dst = os.path.join(schema_dir, f"{prompt_type}.txt")
         if os.path.exists(src) and not os.path.exists(dst):

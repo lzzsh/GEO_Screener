@@ -186,7 +186,6 @@
             <select x-model="selectedPromptType" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
               <option value="label_prompt">GSE Label Prompt</option>
               <option value="gsm_label_prompt">GSM Label Prompt</option>
-              <option value="screening_prompt">Screening Prompt</option>
               <option value="paper_calibration_prompt">Paper Calibration Prompt</option>
             </select>
           </div>
@@ -272,7 +271,7 @@
       },
       async loadDefaultPrompts() {
         try {
-          const types = ['label_prompt', 'gsm_label_prompt', 'screening_prompt', 'paper_calibration_prompt'];
+          const types = ['label_prompt', 'gsm_label_prompt', 'paper_calibration_prompt'];
           for (const type of types) {
             const r = await fetch(`/annotation-schemas/default-template`);
             if (r.ok) {

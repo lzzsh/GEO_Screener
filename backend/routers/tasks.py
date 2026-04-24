@@ -117,13 +117,6 @@ async def create_task(
             raise HTTPException(status_code=503, detail="Database is busy. Please retry in a moment.")
         raise
 
-    if source != "geo" or criteria_text.strip():
-        from backend.worker.tasks import run_screening, _run_screening_async
-        dispatch_or_run_inline(
-            delay_call=lambda: run_screening.delay(task.id),
-            inline_coro_factory=lambda: _run_screening_async(task.id),
-        )
-
     return {
         "id": task.id,
         "name": task.name,
