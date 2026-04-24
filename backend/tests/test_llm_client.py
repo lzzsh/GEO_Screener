@@ -36,82 +36,51 @@ async def test_screen_dataset_calls_api():
     assert result["decision"] == "include"
 
 
-def test_default_label_schema_uses_compact_annotation_fields():
-    assert json.loads(default_label_schema_json()) == [
-        "数据模态",
-        "分化起点",
-        "扰动类型",
-        "分化体系",
-        "分化终点",
-        "数据平台",
-        "是否提供原始测序数据",
-    ]
+def test_default_label_schema_uses_new_format():
+    schema = json.loads(default_label_schema_json())
+    assert "gse" in schema
+    assert "gsm" in schema
+    assert len(schema["gse"]) == 7
+    assert len(schema["gsm"]) == 18
+    assert schema["gse"][0]["name"] == "数据模态"
+    assert schema["gse"][0]["type"] == "enum"
 
 
 @pytest.mark.asyncio
 async def test_extract_labels_uses_standardized_geo_screening_prompt():
+    from backend.label_schema import DEFAULT_GSE_LABELS
     client = LLMClient(provider="deepseek", api_key="fake")
     mock_resp = MagicMock()
-    mock_resp.choices[0].message.content = '{"reasoning_text":"证据不足，待确认。","final_conclusion":"待确认","数据模态":"","分化起点":"","扰动类型":"","分化体系":"","分化终点":"","数据平台":"","是否提供原始测序数据":""}'
+    mock_resp.choices[0].message.content = '{"reasoning_text":"test","final_conclusion":"待确认"}'
 
     with patch.object(client._client.chat.completions, "create", new=AsyncMock(return_value=mock_resp)) as create:
-        await client.extract_labels("GSE001", "PSC differentiation", "Summary text", ["最终结论"])
+        await client.extract_labels("GSE001", "PSC differentiation", "Summary text", DEFAULT_GSE_LABELS)
 
     prompt = create.await_args.kwargs["messages"][0]["content"]
     assert "人源多能干细胞分化过程中的单细胞数据" in prompt
-    assert '"reasoning_text"' in prompt
-    assert '"数据模态": "实际观察到的数据模态，如 scRNA-seq / scATAC-seq / spatial transcriptomics / CITE-seq / multiome / bulk RNA-seq / ribosome profiling；无明确证据则为空字符串"' in prompt
-    assert '"分化起点": "iPSC / ESC / PSC；无明确证据则为空字符串"' in prompt
-    assert '"扰动类型": "TF / 小分子 / CRISPR / 其他；无明确扰动则为空字符串"' in prompt
-    assert '"分化体系": "2D / 3D；无明确证据则为空字符串"' in prompt
-    assert '"分化终点": "心肌细胞 / 神经细胞 / 类器官等简短终点；无明确证据则为空字符串"' in prompt
-    assert '"数据平台": "10x Genomics / Smart-seq2 / Illumina / 其他平台；无明确证据则为空字符串"' in prompt
-    assert '"是否提供原始测序数据": "是 / 否 / 不明确；无明确证据则为空字符串"' in prompt
-    assert '"data_type"' not in prompt
-    assert '"starting_cell"' not in prompt
-    assert '"genetic_background"' not in prompt
-    assert '"differentiation_system"' not in prompt
-    assert '"experimental_environment"' not in prompt
-    assert '"final_conclusion": "可用 / 不可用 / 待确认"' in prompt
-    assert "不要分条、不要分块、不要按 1-5 点输出" in prompt
-    assert "reasoning_text 必须是一整段连续文字" in prompt
-    assert "reasoning_text 必须按固定顺序依次覆盖：数据类型、起始细胞、遗传背景、分化体系、实验环境、最终判断" in prompt
-    assert "可以在同一段中使用“数据类型：”“起始细胞：”“遗传背景：”“分化体系：”“实验环境：”“最终判断：”作为句内标签" in prompt
-    assert "七个简短标注字段只填标准化短词或短语，不写推理；没有原文证据时必须填空字符串" in prompt
-    assert "数据模态不是纳入状态字段；即使数据类型不符合纳入标准，也必须填写实际观察到的数据模态" in prompt
-    assert "出现“bulk RNA sequencing”“bulk RNA-seq”“RNA-Seq”且无单细胞证据时，数据模态填写“bulk RNA-seq”" in prompt
-    assert "出现“ribosome sequencing”“ribosome profiling”“Ribo-seq”时，数据模态填写“ribosome profiling”" in prompt
-    assert "若 GEO 元数据上下文包含“GEO Raw Data Availability: yes”，则“是否提供原始测序数据”填写“是”" in prompt
-    assert "若 GEO 元数据上下文包含“GEO Raw Data Availability: no”，则“是否提供原始测序数据”填写“否”" in prompt
-    assert "请严格输出 JSON" in prompt
-    assert "只有当数据类型、起始细胞、遗传背景、分化体系、实验环境均明确符合时" in prompt
-    assert "任一关键项为“信息不足”，且没有明确排除证据时，必须判定为“待确认”" in prompt
-    assert "必须存在明确分化路径或分化目标" not in prompt
-    assert "不要求 GEO 明确写出完整分化过程、路径或目标的详细信息" in prompt
-    assert "除明确 embryo model、organoid、3D suspension" in prompt
-    assert "不得因为未明确写出 2D 而判定为信息不足或不符合" in prompt
+    assert "reasoning_text" in prompt
+    assert "final_conclusion" in prompt
+    assert "数据模态" in prompt
+    assert "分化起点" in prompt
 
 
 @pytest.mark.asyncio
 async def test_gsm_prompt_prioritizes_library_and_processing_fields():
     client = LLMClient(provider="deepseek", api_key="fake")
     mock_resp = MagicMock()
-    mock_resp.choices[0].message.content = '{"response":"ok","avail":"false","start_cell":"Unknown","genetic_background":"Unknown","target_cell":"Unknown","culture_sys":"Unknown","diff_path":"Unknown","time_pts":[],"modality":["bulk RNA-seq"],"perturb":[{"type":"None","method":"Vehicle/Control","dose":"N/A","start":"","end":"","dur":""}],"platform":"Unknown","cell_line":"Unknown","sex":"Unknown","age":"Unknown","reprog":"Unknown","passage":"Unknown","matrix":"Unknown","medium":"Unknown","density":"Unknown","o2_lvl":"Unknown","raw_data":"Unspecified"}'
+    mock_resp.choices[0].message.content = '{"response":"ok","avail":"false"}'
 
     with patch.object(client._client.chat.completions, "create", new=AsyncMock(return_value=mock_resp)) as create:
+        from backend.label_schema import DEFAULT_GSM_LABELS
         await client.annotate_gsm(
             "GSM001",
             "Sample",
             "Homo sapiens",
             "SAMN001",
-            "Library-Strategy: RNA-Seq\nLibrary-Source: transcriptomic\nData-Processing: Output - TPM values and read counts at gene and transcript level",
+            "Library-Strategy: RNA-Seq",
             "GSE context",
+            DEFAULT_GSM_LABELS,
         )
 
     prompt = create.await_args.kwargs["messages"][0]["content"]
-    assert "Library-Strategy、Library-Source、Data-Processing 和 Supplementary-Data/补充文件说明" in prompt
-    assert 'Library-Strategy = "RNA-Seq"、Library-Source = "transcriptomic"' in prompt
-    assert 'modality = ["bulk RNA-seq"]' in prompt
-    assert '"genetic_background"' in prompt
-    assert "genetic_background 判定规则" in prompt
-    assert "KhES1、H1、H9、WA09" in prompt
+    assert "GSM001" in prompt

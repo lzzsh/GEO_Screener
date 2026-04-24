@@ -39,7 +39,10 @@ async def test_create_geo_task(auth_client):
     from backend.models import ScreeningTask
     async with AsyncSessionLocal() as db:
         task = await db.get(ScreeningTask, r.json()["id"])
-        assert json.loads(task.label_schema) == ["数据模态", "分化起点", "扰动类型", "分化体系", "分化终点", "数据平台", "是否提供原始测序数据"]
+        schema = json.loads(task.label_schema)
+        assert "gse" in schema
+        assert "gsm" in schema
+        assert len(schema["gse"]) == 7
 
 
 @pytest.mark.asyncio

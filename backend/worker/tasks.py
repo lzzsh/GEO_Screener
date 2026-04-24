@@ -18,6 +18,16 @@ def _run(coro):
     return asyncio.get_event_loop().run_until_complete(coro)
 
 
+def _parse_label_schema(label_schema_json: str) -> dict:
+    """Parse label schema with fallback for legacy format."""
+    data = json.loads(label_schema_json)
+    if isinstance(data, list):
+        # Legacy format: list of strings → convert to new format
+        gse_labels = [{"name": d, "type": "free_text", "description": d} for d in data]
+        return {"gse": gse_labels, "gsm": []}
+    return data  # New format: {"gse": [...], "gsm": [...]}
+
+
 def _stored_samples_to_dicts(sr: ScreeningResult) -> list[dict]:
     return [
         {
@@ -188,12 +198,12 @@ def run_annotation(self, task_id: int):
 
 
 async def _run_annotation_async(task_id: int):
-    import json as _json
     async with AsyncSessionLocal() as db:
         task = (await db.execute(select(ScreeningTask).where(ScreeningTask.id == task_id))).scalar_one_or_none()
         if not task or not task.label_schema:
             return
-        dimensions = _json.loads(task.label_schema)
+        schema = _parse_label_schema(task.label_schema)
+        gse_labels = schema.get("gse", [])
         cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True))).scalar_one_or_none()
         if not cfg or not cfg.api_key:
             return
@@ -218,7 +228,7 @@ async def _run_annotation_async(task_id: int):
                 description = await _geo_context_for_result(sr)
                 extracted = await llm.extract_labels(
                     dataset_id=sr.dataset_id, title=sr.title or "",
-                    description=description, dimensions=dimensions,
+                    description=description, gse_labels=gse_labels,
                 )
                 existing_labels = (await db.execute(
                     select(GeoLabel).where(GeoLabel.result_id == sr.id)
@@ -259,7 +269,6 @@ async def _run_annotation_async(task_id: int):
 
 async def _run_single_result_annotation_async(result_id: int):
     """Re-annotate a single GSE result, overwriting existing llm labels."""
-    import json as _json
     async with AsyncSessionLocal() as db:
         sr = (await db.execute(
             select(ScreeningResult)
@@ -278,7 +287,8 @@ async def _run_single_result_annotation_async(result_id: int):
         )).scalar_one_or_none()
         if not cfg or not cfg.api_key:
             return
-        dimensions = _json.loads(task.label_schema)
+        schema = _parse_label_schema(task.label_schema)
+        gse_labels = schema.get("gse", [])
         llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
                         base_url=cfg.base_url, model=cfg.model, temperature=0)
         conclusion_to_decision = {"可用": "include", "不可用": "exclude", "待确认": "uncertain"}
@@ -286,7 +296,7 @@ async def _run_single_result_annotation_async(result_id: int):
             description = await _geo_context_for_result(sr)
             extracted = await llm.extract_labels(
                 dataset_id=sr.dataset_id, title=sr.title or "",
-                description=description, dimensions=dimensions,
+                description=description, gse_labels=gse_labels,
             )
             existing_by_key = {l.key: l for l in sr.labels}
             for key, value in extracted.items():
@@ -380,6 +390,8 @@ async def _run_gsm_task_async(task_id: int):
             await db.commit()
             return
 
+        schema = _parse_label_schema(task.label_schema) if task.label_schema else {}
+        gsm_labels = schema.get("gsm", [])
         llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
                         base_url=cfg.base_url, model=cfg.model, temperature=0)
         task.status = "running"
@@ -477,6 +489,7 @@ async def _run_gsm_task_async(task_id: int):
                             biosample_id=sample.biosample_id or "",
                             characteristics=full_characteristics[:3000],
                             gse_summary=context[:2000],
+                            gsm_labels=gsm_labels,
                         )
                         if annotation:
                             for key, value in annotation.items():

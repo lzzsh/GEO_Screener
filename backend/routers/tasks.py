@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.decision_sync import recompute_task_decision_counts, sync_final_conclusion_label
 from backend.label_schema import default_label_schema_json
-from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry
+from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry, AnnotationSchema
 from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
@@ -36,13 +36,29 @@ async def create_task(
     search_query: Optional[str] = Query(default=None),
     geo_ids: Optional[str] = Query(default=None),
     label_schema: Optional[str] = Query(default=None),
+    annotation_schema_id: Optional[int] = Query(default=None),
     retmax: int = Query(default=20),
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
     if source == "geo" and not search_query and not geo_ids:
         raise HTTPException(status_code=400, detail="search_query is required for GEO tasks")
-    if source == "geo" and not label_schema:
+
+    if annotation_schema_id:
+        schema_result = await db.execute(
+            select(AnnotationSchema).where(
+                AnnotationSchema.id == annotation_schema_id,
+                AnnotationSchema.owner_id == user.id
+            )
+        )
+        schema = schema_result.scalar_one_or_none()
+        if schema:
+            import json
+            label_schema = json.dumps({
+                "gse": json.loads(schema.gse_labels),
+                "gsm": json.loads(schema.gsm_labels),
+            }, ensure_ascii=False)
+    elif source == "geo" and not label_schema:
         label_schema = default_label_schema_json()
 
     try:
@@ -53,6 +69,7 @@ async def create_task(
             criteria_text=criteria_text,
             owner_id=user.id,
             label_schema=label_schema,
+            annotation_schema_id=annotation_schema_id,
         )
         db.add(task)
         await db.flush()

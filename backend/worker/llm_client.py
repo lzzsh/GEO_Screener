@@ -58,14 +58,6 @@ Summary / Description / Overall Design:
 
 ---
 
-## 可选补充标注维度
-
-如果以下维度能从原文明确判断，可在 JSON 末尾增加同名字段；若不能判断，值为 null。不得影响固定筛选字段。
-
-{dimensions}
-
----
-
 ## 输出要求
 
 请严格输出 JSON，不要输出 Markdown，不要输出代码块，不要输出 JSON 之外的任何文字。
@@ -74,16 +66,10 @@ Summary / Description / Overall Design:
 JSON 必须使用以下结构：
 
 {{
-  "GSE_ID": "{dataset_id}",
-  "reasoning_text": "一整段连续中文推理文字，必须按固定顺序依次覆盖：数据类型、起始细胞、遗传背景、分化体系、实验环境、最终判断；可以在同一段中使用“数据类型：”“起始细胞：”“遗传背景：”“分化体系：”“实验环境：”“最终判断：”作为句内标签；不要分条、不要分块、不要按 1-5 点输出",
-  "final_conclusion": "可用 / 不可用 / 待确认",
-  "数据模态": "实际观察到的数据模态，如 scRNA-seq / scATAC-seq / spatial transcriptomics / CITE-seq / multiome / bulk RNA-seq / ribosome profiling；无明确证据则为空字符串",
-  "分化起点": "iPSC / ESC / PSC；无明确证据则为空字符串",
-  "扰动类型": "TF / 小分子 / CRISPR / 其他；无明确扰动则为空字符串",
-  "分化体系": "2D / 3D；无明确证据则为空字符串",
-  "分化终点": "心肌细胞 / 神经细胞 / 类器官等简短终点；无明确证据则为空字符串",
-  "数据平台": "10x Genomics / Smart-seq2 / Illumina / 其他平台；无明确证据则为空字符串",
-  "是否提供原始测序数据": "是 / 否 / 不明确；无明确证据则为空字符串"
+  “GSE_ID”: “{dataset_id}”,
+  “reasoning_text”: “一整段连续中文推理文字，必须按固定顺序依次覆盖：数据类型、起始细胞、遗传背景、分化体系、实验环境、最终判断；可以在同一段中使用”数据类型：””起始细胞：””遗传背景：””分化体系：””实验环境：””最终判断：”作为句内标签；不要分条、不要分块、不要按 1-5 点输出”,
+  “final_conclusion”: “可用 / 不可用 / 待确认”,
+{gse_label_spec}
 }}
 
 ---
@@ -154,24 +140,7 @@ BioSample: {biosample_id}
 {{
   "response": "分条推理，每条以序号开头，必须直接引用元数据原文词句（用单引号标注）。依次覆盖：1. avail/start_cell（起始细胞判断） 2. genetic_background（遗传背景/健康或疾病来源/WT或突变信息） 3. 数据类型/modality 4. 分化体系/culture_sys 5. 实验环境 6. raw_data 7. target_cell 8. diff_path/time_pts 9. platform/cell_line 10. perturb 11. 其余字段（sex/age/reprog/passage/matrix/medium/density/o2_lvl）。无原文证据时写'元数据中无明确记载'",
   "avail": "true / false / unknown",
-  "start_cell": "iPSC / ESC / PSC；无原文直接依据则填 Unknown",
-  "genetic_background": "正常供体 / 标准细胞系 / WT / 疾病来源 / 遗传缺陷 / 突变或编辑背景 / Unknown；必须直接来自 GSM 元数据，无法判断填 Unknown",
-  "target_cell": "分化终点英文名；无原文直接依据则填 Unknown",
-  "culture_sys": "2D / 3D / 2D/3D Mixed；无原文直接依据则填 Unknown",
-  "diff_path": "直接引用元数据中的分化方案描述；无原文直接依据则填 Unknown",
-  "time_pts": ["仅填元数据中明确出现的时间点"],
-  "modality": ["multiome / scRNA-seq / scATAC-seq / spatial transcriptomics / CITE-seq / bulk RNA-seq 等"],
-  "perturb": [{{"type": "None", "method": "Vehicle/Control", "dose": "N/A", "start": "", "end": "", "dur": ""}}],
-  "platform": "直接引用元数据中的测序平台；无原文直接依据则填 Unknown",
-  "cell_line": "直接引用元数据中的细胞系名称；无原文直接依据则填 Unknown",
-  "sex": "Female / Male / Unknown",
-  "age": "直接引用元数据中的年龄；无原文直接依据则填 Unknown",
-  "reprog": "直接引用元数据中的重编程方法；无原文直接依据则填 Unknown",
-  "passage": "直接引用元数据中的传代信息；无原文直接依据则填 Unknown",
-  "matrix": "直接引用元数据中的基质信息；无原文直接依据则填 Unknown",
-  "medium": "直接引用元数据中的培养基信息；无原文直接依据则填 Unknown",
-  "density": "直接引用元数据中的密度信息；无原文直接依据则填 Unknown",
-  "o2_lvl": "直接引用元数据中的氧气浓度；无原文直接依据则填 Unknown",
+{gsm_label_spec}
   "raw_data": "Yes / No / Unspecified"
 }}
 
@@ -270,6 +239,31 @@ class LLMClient:
             base_url=base_url or defaults.get("base_url"),
         )
 
+    def _build_label_spec(self, labels: list[dict]) -> str:
+        """Build JSON field definitions from label schema."""
+        if not labels:
+            return ""
+        lines = []
+        for label in labels:
+            name = label["name"]
+            desc = label.get("description", "")
+            ltype = label.get("type", "free_text")
+            allowed = label.get("allowed_values", [])
+
+            parts = [desc] if desc else []
+            if ltype == "enum" and allowed:
+                parts.append("只能填：" + " / ".join(allowed))
+            elif ltype == "array":
+                parts.append("JSON 数组格式")
+            elif ltype == "object_array":
+                parts.append("JSON 对象数组格式")
+            parts.append("无原文依据则填空字符串")
+
+            value = "；".join(parts)
+            lines.append(f'  "{name}": "{value}"')
+
+        return ",\n".join(lines)
+
     async def _create_chat_completion(self, **kwargs):
         retry_statuses = {429, 500, 502, 503, 504}
         for attempt in range(3):
@@ -313,9 +307,9 @@ class LLMClient:
         return self._parse_json(raw)
 
     async def extract_labels(self, dataset_id: str, title: str, description: str,
-                              dimensions: list[str]) -> dict:
+                              gse_labels: list[dict]) -> dict:
         prompt = LABEL_PROMPT_TEMPLATE.format(
-            dimensions="\n".join(f"- {d}" for d in dimensions),
+            gse_label_spec=self._build_label_spec(gse_labels),
             dataset_id=dataset_id, title=title, description=description,
         )
         response = await self._create_chat_completion(
@@ -327,8 +321,12 @@ class LLMClient:
 
     async def annotate_gsm(self, gsm_id: str, title: str, organism: str,
                             biosample_id: str, characteristics: str,
-                            gse_summary: str) -> dict:
+                            gse_summary: str, gsm_labels: list[dict]) -> dict:
+        gsm_spec = self._build_label_spec(gsm_labels)
+        if gsm_spec:
+            gsm_spec = gsm_spec + ","
         prompt = GSM_LABEL_PROMPT_TEMPLATE.format(
+            gsm_label_spec=gsm_spec,
             gsm_id=gsm_id, title=title, organism=organism,
             biosample_id=biosample_id, characteristics=characteristics,
             gse_summary=gse_summary,

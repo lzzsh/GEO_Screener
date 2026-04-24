@@ -70,6 +70,16 @@
         <p x-show="geoResults.length > 0" class="text-xs text-gray-400"
            x-text="geoResults.length + ' GEO candidates will be saved before criteria screening'"></p>
         <div class="mt-3">
+          <label class="block text-sm font-medium mb-1">Annotation Schema (Optional)</label>
+          <select x-model="annotationSchemaId"
+                  class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+            <option value="">— Use default schema —</option>
+            <template x-for="s in schemaList" :key="s.id">
+              <option :value="s.id" x-text="s.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="mt-3">
           <label class="block text-sm font-medium mb-1">标注维度
             <span class="text-gray-400 font-normal">（每行一个，LLM 将自动提取）</span>
           </label>
@@ -93,11 +103,21 @@
       name: '', criteriaId: '', criteriaText: '', criteriaList: [],
       source: 'csv', csvFile: null, csvRows: 0,
       geoQuery: '', geoResults: [], geoLoading: false, labelSchema: '',
+      annotationSchemaId: '', schemaList: [],
       submitting: false, error: '',
 
       async loadCriteria() {
         const r = await fetch('/criteria');
         if (r.ok) this.criteriaList = await r.json();
+        await this.loadSchemas();
+      },
+      async loadSchemas() {
+        try {
+          const r = await fetch('/annotation-schemas');
+          if (r.ok) this.schemaList = await r.json();
+        } catch (e) {
+          console.error('Failed to load schemas:', e);
+        }
       },
       onCriteriaSelect() {
         const c = this.criteriaList.find(x => x.id == this.criteriaId);
@@ -143,6 +163,9 @@
               search_query: this.geoQuery,
               label_schema: JSON.stringify(schemaArr),
             });
+            if (this.annotationSchemaId) {
+              params.append('annotation_schema_id', this.annotationSchemaId);
+            }
             r = await fetch('/tasks?' + params, {method: 'POST'});
           }
           if (r.ok) {

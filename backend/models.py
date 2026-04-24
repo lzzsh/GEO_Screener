@@ -11,6 +11,19 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(256), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     tasks: Mapped[list["ScreeningTask"]] = relationship(back_populates="owner")
+    annotation_schemas: Mapped[list["AnnotationSchema"]] = relationship(back_populates="owner")
+
+class AnnotationSchema(Base):
+    __tablename__ = "annotation_schemas"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    name: Mapped[str] = mapped_column(String(128), nullable=False)
+    description: Mapped[str | None] = mapped_column(Text, nullable=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    gse_labels: Mapped[str] = mapped_column(Text, nullable=False)
+    gsm_labels: Mapped[str] = mapped_column(Text, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    owner: Mapped["User"] = relationship(back_populates="annotation_schemas")
 
 class CriteriaTemplate(Base):
     __tablename__ = "criteria_templates"
@@ -38,6 +51,7 @@ class ScreeningTask(Base):
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     label_schema: Mapped[str | None] = mapped_column(Text, nullable=True)
+    annotation_schema_id: Mapped[int | None] = mapped_column(ForeignKey("annotation_schemas.id"), nullable=True)
     task_type: Mapped[str] = mapped_column(String(32), default="screening")
     parent_task_id: Mapped[int | None] = mapped_column(ForeignKey("screening_tasks.id"), nullable=True)
     owner: Mapped["User"] = relationship(back_populates="tasks")

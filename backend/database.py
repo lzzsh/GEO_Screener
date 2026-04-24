@@ -50,6 +50,7 @@ async def _run_sqlite_migrations(conn):
             "excluded_count": "INTEGER DEFAULT 0",
             "uncertain_count": "INTEGER DEFAULT 0",
             "label_schema": "TEXT",
+            "annotation_schema_id": "INTEGER REFERENCES annotation_schemas(id)",
         },
         "screening_results": {
             "description": "TEXT",
