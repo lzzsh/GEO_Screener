@@ -1,12 +1,15 @@
+import asyncio
 import json
 import re
 from typing import Optional
-from openai import AsyncOpenAI
+from openai import APIStatusError, AsyncOpenAI
 
 PROVIDER_DEFAULTS: dict[str, dict] = {
-    "deepseek": {"base_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"},
-    "glm":      {"base_url": "https://open.bigmodel.cn/api/paas/v4", "model": "glm-4"},
-    "minimax":  {"base_url": "https://api.minimax.chat/v1", "model": "abab6.5s-chat"},
+    "deepseek":        {"base_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"},
+    "glm":             {"base_url": "https://open.bigmodel.cn/api/paas/v4", "model": "glm-4"},
+    "minimax":         {"base_url": "https://api.minimax.chat/v1", "model": "abab6.5s-chat"},
+    "campus-minimax":  {"base_url": "http://10.28.0.22:30530/v1", "model": "minimax"},
+    "campus-glm":      {"base_url": "http://10.28.0.22:30530/v1", "model": "glm"},
 }
 
 LABEL_PROMPT_TEMPLATE = """\
@@ -66,6 +69,7 @@ Summary / Description / Overall Design:
 ## 输出要求
 
 请严格输出 JSON，不要输出 Markdown，不要输出代码块，不要输出 JSON 之外的任何文字。
+不要输出 <think>、分析过程、解释、前言或后记。
 
 JSON 必须使用以下结构：
 
@@ -148,9 +152,10 @@ BioSample: {biosample_id}
 请严格输出 JSON，不要输出 Markdown，不要输出代码块，不要输出 JSON 之外的任何文字。
 
 {{
-  "response": "分条推理，每条以序号开头，必须直接引用元数据原文词句（用单引号标注）。依次覆盖：1. avail/start_cell（起始细胞判断） 2. 数据类型/modality 3. 分化体系/culture_sys 4. 实验环境 5. raw_data 6. target_cell 7. diff_path/time_pts 8. platform/cell_line 9. perturb 10. 其余字段（sex/age/reprog/passage/matrix/medium/density/o2_lvl）。无原文证据时写'元数据中无明确记载'",
+  "response": "分条推理，每条以序号开头，必须直接引用元数据原文词句（用单引号标注）。依次覆盖：1. avail/start_cell（起始细胞判断） 2. genetic_background（遗传背景/健康或疾病来源/WT或突变信息） 3. 数据类型/modality 4. 分化体系/culture_sys 5. 实验环境 6. raw_data 7. target_cell 8. diff_path/time_pts 9. platform/cell_line 10. perturb 11. 其余字段（sex/age/reprog/passage/matrix/medium/density/o2_lvl）。无原文证据时写'元数据中无明确记载'",
   "avail": "true / false / unknown",
   "start_cell": "iPSC / ESC / PSC；无原文直接依据则填 Unknown",
+  "genetic_background": "正常供体 / 标准细胞系 / WT / 疾病来源 / 遗传缺陷 / 突变或编辑背景 / Unknown；必须直接来自 GSM 元数据，无法判断填 Unknown",
   "target_cell": "分化终点英文名；无原文直接依据则填 Unknown",
   "culture_sys": "2D / 3D / 2D/3D Mixed；无原文直接依据则填 Unknown",
   "diff_path": "直接引用元数据中的分化方案描述；无原文直接依据则填 Unknown",
@@ -186,9 +191,18 @@ BioSample: {biosample_id}
 - "ESC-derived"、"hESC" 等词，start_cell = ESC
 - 仅凭 GSE 背景中提及 iPSC 不足以确认该 GSM 的 start_cell，需 GSM 元数据本身有依据
 
+### genetic_background 判定规则（重要）
+- genetic_background 必须基于 GSM 元数据中的 cell line、donor、genotype、disease、mutation、WT、wild-type、control、healthy、normal、CRISPR、knockout、knockdown、overexpression 等直接证据
+- 出现 KhES1、H1、H9、WA09、standard/control hESC/iPSC line 等标准细胞系证据时，可填“标准细胞系”
+- 出现 WT、wild-type、control、healthy donor、normal donor 等证据时，按原文填“WT”“正常供体”或“标准细胞系”
+- 出现 disease、patient-derived、mutation、genetic defect、trisomy、knockout、CRISPR edited 等证据时，必须在 genetic_background 中写明；若属于疾病来源或先天遗传缺陷，avail 应为 "false"
+- GSM 元数据没有遗传背景直接证据时，genetic_background = "Unknown"，不要只凭 GSE 背景推断
+
 ### modality 判定规则（重要）
 - Title 或 Library-Strategy 中出现 "multiome"、"10x Multiome"、"ATAC+RNA" 等词，modality = ["multiome"]，不要拆分为 scATAC-seq 和 snRNA-seq
 - "ATAC-seq" 单独出现（无 RNA 联合）→ ["scATAC-seq"]
+- 判断 modality 时优先参考 GSM 页面中的 Library-Strategy、Library-Source、Data-Processing 和 Supplementary-Data/补充文件说明；这几项比 GSE 背景更优先
+- 若 Library-Strategy = "RNA-Seq"、Library-Source = "transcriptomic"，且 Data-Processing 或补充文件说明出现 gene-level/transcript-level TPM、read counts、expression quantification、BCL to FASTQ、DRAGEN、featureCounts、HTSeq 等常规表达矩阵处理，同时没有 single-cell、10x、cell barcode、UMI、scRNA-seq、single nucleus 等单细胞证据，则 modality = ["bulk RNA-seq"]
 - "RNA-seq" 单独出现且有单细胞证据 → ["scRNA-seq"]
 - "RNA-seq" 单独出现且无单细胞证据 → ["bulk RNA-seq"]
 - Library-Strategy = "OTHER" 时，优先参考 Title 和 GSE 背景中的数据类型描述
@@ -256,6 +270,16 @@ class LLMClient:
             base_url=base_url or defaults.get("base_url"),
         )
 
+    async def _create_chat_completion(self, **kwargs):
+        retry_statuses = {429, 500, 502, 503, 504}
+        for attempt in range(3):
+            try:
+                return await self._client.chat.completions.create(**kwargs)
+            except APIStatusError as exc:
+                if exc.status_code not in retry_statuses or attempt == 2:
+                    raise
+                await asyncio.sleep(0.5 * (attempt + 1))
+
     async def screen_dataset(self, dataset_id: str, title: str, description: str, criteria_text: str) -> dict:
         prompt = SCREENING_PROMPT_TEMPLATE.format(
             criteria_text=criteria_text,
@@ -263,7 +287,7 @@ class LLMClient:
             title=title,
             description=description,
         )
-        response = await self._client.chat.completions.create(
+        response = await self._create_chat_completion(
             model=self.model,
             temperature=self.temperature,
             messages=[{"role": "user", "content": prompt}],
@@ -280,7 +304,7 @@ class LLMClient:
             description=description,
             paper_text=paper_text[:8000],
         )
-        response = await self._client.chat.completions.create(
+        response = await self._create_chat_completion(
             model=self.model,
             temperature=self.temperature,
             messages=[{"role": "user", "content": prompt}],
@@ -294,7 +318,7 @@ class LLMClient:
             dimensions="\n".join(f"- {d}" for d in dimensions),
             dataset_id=dataset_id, title=title, description=description,
         )
-        response = await self._client.chat.completions.create(
+        response = await self._create_chat_completion(
             model=self.model, temperature=0,
             messages=[{"role": "user", "content": prompt}],
         )
@@ -309,24 +333,39 @@ class LLMClient:
             biosample_id=biosample_id, characteristics=characteristics,
             gse_summary=gse_summary,
         )
-        response = await self._client.chat.completions.create(
+        response = await self._create_chat_completion(
             model=self.model, temperature=0,
             messages=[{"role": "user", "content": prompt}],
         )
-        raw = response.choices[0].message.content.strip()
+        raw = (response.choices[0].message.content or "").strip()
+        if not raw:
+            finish = response.choices[0].finish_reason
+            raise ValueError(f"Empty response from model (finish_reason={finish})")
         return self._parse_json(raw)
 
     def _parse_json(self, raw: str) -> dict:
         # Strip markdown code fences if present
         match = re.search(r"```(?:json)?\s*([\s\S]+?)\s*```", raw)
         text = match.group(1) if match else raw
-        return json.loads(text)
+        try:
+            return json.loads(text)
+        except json.JSONDecodeError as e:
+            decoder = json.JSONDecoder()
+            for idx, char in enumerate(text):
+                if char != "{":
+                    continue
+                try:
+                    parsed, _ = decoder.raw_decode(text[idx:])
+                except json.JSONDecodeError:
+                    continue
+                if isinstance(parsed, dict):
+                    return parsed
+            raise ValueError(f"Invalid JSON from model: {e}\nRaw: {raw[:200]}")
 
     async def test_connection(self) -> bool:
-        response = await self._client.chat.completions.create(
+        response = await self._create_chat_completion(
             model=self.model,
             temperature=0,
             messages=[{"role": "user", "content": "Reply with the single word: ok"}],
-            max_tokens=5,
         )
         return bool(response.choices[0].message.content)

@@ -1,8 +1,6 @@
 function appState() {
   return {
     async init() {
-      const r = await fetch('/auth/login', {method: 'HEAD'}).catch(() => null);
-      // Redirect to login if cookie auth fails on protected pages
     },
     async logout() {
       await fetch('/auth/logout', {method: 'POST'});

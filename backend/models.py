@@ -1,5 +1,5 @@
 from datetime import datetime
-from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey
+from sqlalchemy import String, Integer, Float, Text, DateTime, ForeignKey, Boolean, UniqueConstraint
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from backend.database import Base
 
@@ -75,12 +75,14 @@ class ScreeningResult(Base):
 class LLMConfig(Base):
     __tablename__ = "llm_configs"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
-    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), unique=True, nullable=False)
-    provider: Mapped[str] = mapped_column(String(32), default="deepseek")
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
+    provider: Mapped[str] = mapped_column(String(32), nullable=False)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=False)
+    api_key: Mapped[str] = mapped_column(String(512), nullable=True)
     base_url: Mapped[str] = mapped_column(String(256), nullable=True)
-    api_key: Mapped[str] = mapped_column(String(256), nullable=True)
-    model: Mapped[str] = mapped_column(String(128), default="deepseek-chat")
+    model: Mapped[str] = mapped_column(String(128), nullable=True)
     temperature: Mapped[float] = mapped_column(Float, default=0.1)
+    __table_args__ = (UniqueConstraint("owner_id", "provider"),)
 
 class GeoSample(Base):
     __tablename__ = "geo_samples"

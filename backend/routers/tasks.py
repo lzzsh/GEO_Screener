@@ -299,14 +299,17 @@ async def fetch_and_store_samples(
         gsm_list = await fetch_gsm_samples(sr.dataset_id)
     except httpx.HTTPError:
         gsm_list = []
+    existing_ids: set[str] = set()
     for gsm in gsm_list:
-        db.add(GeoSample(
-            result_id=sr.id,
-            gsm_id=gsm["gsm_id"],
-            title=gsm.get("title", ""),
-            organism=gsm.get("organism", ""),
-            biosample_id=gsm.get("biosample_id", ""),
-        ))
+        if gsm["gsm_id"] not in existing_ids:
+            existing_ids.add(gsm["gsm_id"])
+            db.add(GeoSample(
+                result_id=sr.id,
+                gsm_id=gsm["gsm_id"],
+                title=gsm.get("title", ""),
+                organism=gsm.get("organism", ""),
+                biosample_id=gsm.get("biosample_id", ""),
+            ))
     await db.commit()
     return [{"gsm_id": g["gsm_id"], "title": g.get("title", ""), "organism": g.get("organism", ""),
              "biosample_id": g.get("biosample_id", ""), "cell_count": None} for g in gsm_list]
@@ -367,7 +370,24 @@ async def get_task_status(task_id: int, db: AsyncSession = Depends(get_db), user
     task = await db.get(ScreeningTask, task_id)
     if not task or task.owner_id != user.id:
         raise HTTPException(status_code=404)
-    return {"status": task.status, "processed": task.processed, "total": task.total}
+    payload = {"status": task.status, "processed": task.processed, "total": task.total}
+    if task.task_type == "gsm_annotation":
+        sample_total = (await db.execute(
+            select(func.count(GeoSample.id))
+            .join(ScreeningResult, GeoSample.result_id == ScreeningResult.id)
+            .where(ScreeningResult.task_id == task_id)
+        )).scalar_one()
+        sample_annotated = (await db.execute(
+            select(func.count(func.distinct(GeoSample.id)))
+            .join(ScreeningResult, GeoSample.result_id == ScreeningResult.id)
+            .join(GsmLabel, GsmLabel.sample_id == GeoSample.id)
+            .where(ScreeningResult.task_id == task_id, GsmLabel.key == "avail")
+        )).scalar_one()
+        payload.update({
+            "sample_total": sample_total,
+            "sample_annotated": sample_annotated,
+        })
+    return payload
 
 
 @router.post("/{task_id}/run-gsm-annotation")
@@ -436,6 +456,8 @@ async def run_gsm_annotation(
     if task.task_type != "gsm_annotation":
         raise HTTPException(status_code=400, detail="Task is not a GSM annotation task")
 
+    task.status = "running"
+    await db.commit()
     asyncio.create_task(_run_gsm_task_async(task_id))
     return {"status": "running_inline", "gsm_task_id": task_id}
 

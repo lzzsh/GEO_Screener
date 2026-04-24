@@ -116,7 +116,7 @@ async def _run_screening_async(task_id: int):
         task.status = "running"
         await db.commit()
 
-        cfg_result = await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))
+        cfg_result = await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True))
         cfg = cfg_result.scalar_one_or_none()
         if not cfg or not cfg.api_key:
             task.status = "error"
@@ -194,7 +194,7 @@ async def _run_annotation_async(task_id: int):
         if not task or not task.label_schema:
             return
         dimensions = _json.loads(task.label_schema)
-        cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))).scalar_one_or_none()
+        cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True))).scalar_one_or_none()
         if not cfg or not cfg.api_key:
             return
         llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
@@ -274,7 +274,7 @@ async def _run_single_result_annotation_async(result_id: int):
         if not task or not task.label_schema:
             return
         cfg = (await db.execute(
-            select(LLMConfig).where(LLMConfig.owner_id == task.owner_id)
+            select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True)
         )).scalar_one_or_none()
         if not cfg or not cfg.api_key:
             return
@@ -323,7 +323,7 @@ async def _run_gsm_annotation_async(result_id: int):
         if not task:
             return
         cfg = (await db.execute(
-            select(LLMConfig).where(LLMConfig.owner_id == task.owner_id)
+            select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True)
         )).scalar_one_or_none()
         if not cfg or not cfg.api_key:
             return
@@ -373,7 +373,7 @@ async def _run_gsm_task_async(task_id: int):
             logger.error("GSM task %s not found", task_id)
             return
 
-        cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))).scalar_one_or_none()
+        cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True))).scalar_one_or_none()
         if not cfg or not cfg.api_key:
             logger.error("No LLM config for user %s", task.owner_id)
             task.status = "error"
@@ -389,18 +389,26 @@ async def _run_gsm_task_async(task_id: int):
             for result in task.results:
                 # Fetch samples — keep full metadata in memory for LLM
                 fetched_meta: dict[str, dict] = {}
-                if not result.samples:
+                # Query DB directly to avoid stale in-memory relationship state
+                db_gsm_ids: set[str] = {r[0] for r in (await db.execute(
+                    select(GeoSample.gsm_id).where(GeoSample.result_id == result.id)
+                )).fetchall()}
+
+                if not db_gsm_ids:
                     try:
                         fetched = await fetch_gsm_samples(result.dataset_id)
+                        seen: set[str] = set()
                         for s in fetched:
                             fetched_meta[s["gsm_id"]] = s
-                            db.add(GeoSample(
-                                result_id=result.id,
-                                gsm_id=s.get("gsm_id", ""),
-                                title=s.get("title"),
-                                organism=s.get("organism"),
-                                biosample_id=s.get("biosample_id"),
-                            ))
+                            if s["gsm_id"] not in seen:
+                                seen.add(s["gsm_id"])
+                                db.add(GeoSample(
+                                    result_id=result.id,
+                                    gsm_id=s.get("gsm_id", ""),
+                                    title=s.get("title"),
+                                    organism=s.get("organism"),
+                                    biosample_id=s.get("biosample_id"),
+                                ))
                         await db.commit()
                         await db.refresh(result, ["samples"])
                     except Exception as e:
@@ -429,8 +437,11 @@ async def _run_gsm_task_async(task_id: int):
 
                 for sample in result.samples:
                     # Skip if already annotated (resume support)
-                    existing_keys = {lbl.key for lbl in sample.labels}
-                    if "avail" in existing_keys:
+                    existing_labels = (await db.execute(
+                        select(GsmLabel).where(GsmLabel.sample_id == sample.id)
+                    )).scalars().all()
+                    existing_by_key = {lbl.key: lbl for lbl in existing_labels}
+                    if "avail" in existing_by_key:
                         continue
 
                     meta = fetched_meta.get(sample.gsm_id, {})
@@ -442,12 +453,20 @@ async def _run_gsm_task_async(task_id: int):
                         ("source_name", "Source"),
                         ("molecule", "Molecule"),
                         ("library_strategy", "Library-Strategy"),
+                        ("library_source", "Library-Source"),
+                        ("data_processing", "Data-Processing"),
                         ("growth_protocol", "Growth-Protocol"),
                         ("treatment_protocol", "Treatment-Protocol"),
                     ):
                         val = meta.get(field, "")
                         if val:
                             lines.append(f"{label}: {val}")
+                    supplementary_files = meta.get("supplementary_files") or []
+                    for file_meta in supplementary_files[:10]:
+                        url = file_meta.get("url", "")
+                        file_type = file_meta.get("type", "")
+                        if url:
+                            lines.append(f"Supplementary-Data ({file_type}): {url}")
                     full_characteristics = "\n".join(lines)
 
                     try:
@@ -456,14 +475,22 @@ async def _run_gsm_task_async(task_id: int):
                             title=sample.title or "",
                             organism=sample.organism or "",
                             biosample_id=sample.biosample_id or "",
-                            characteristics=full_characteristics,
-                            gse_summary=context,
+                            characteristics=full_characteristics[:3000],
+                            gse_summary=context[:2000],
                         )
                         if annotation:
                             for key, value in annotation.items():
-                                db.add(GsmLabel(sample_id=sample.id, key=key,
-                                                value=str(value) if value is not None else None,
-                                                source="llm"))
+                                label_value = str(value) if value is not None else None
+                                existing = existing_by_key.get(key)
+                                if existing and existing.source == "human":
+                                    continue
+                                if existing:
+                                    existing.value = label_value
+                                    existing.source = "llm"
+                                else:
+                                    db.add(GsmLabel(sample_id=sample.id, key=key,
+                                                    value=label_value,
+                                                    source="llm"))
                         await db.commit()
                     except Exception as e:
                         logger.error("Failed to annotate %s: %s", sample.gsm_id, e)
@@ -560,7 +587,7 @@ async def _run_paper_calibration_async(task_id: int):
         if not task:
             return
 
-        cfg_result = await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id))
+        cfg_result = await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True))
         cfg = cfg_result.scalar_one_or_none()
         if not cfg or not cfg.api_key:
             return

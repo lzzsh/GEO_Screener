@@ -17,6 +17,15 @@ async def test_parse_fenced_json():
     result = client._parse_json(raw)
     assert result["decision"] == "exclude"
 
+
+@pytest.mark.asyncio
+async def test_parse_json_after_thinking_text():
+    client = LLMClient(provider="deepseek", api_key="fake")
+    raw = '<think>先分析样本，但这些内容不是 JSON。</think>\n{"avail":"unknown","modality":[]}'
+    result = client._parse_json(raw)
+    assert result["avail"] == "unknown"
+    assert result["modality"] == []
+
 @pytest.mark.asyncio
 async def test_screen_dataset_calls_api():
     client = LLMClient(provider="deepseek", api_key="fake")
@@ -81,3 +90,28 @@ async def test_extract_labels_uses_standardized_geo_screening_prompt():
     assert "不要求 GEO 明确写出完整分化过程、路径或目标的详细信息" in prompt
     assert "除明确 embryo model、organoid、3D suspension" in prompt
     assert "不得因为未明确写出 2D 而判定为信息不足或不符合" in prompt
+
+
+@pytest.mark.asyncio
+async def test_gsm_prompt_prioritizes_library_and_processing_fields():
+    client = LLMClient(provider="deepseek", api_key="fake")
+    mock_resp = MagicMock()
+    mock_resp.choices[0].message.content = '{"response":"ok","avail":"false","start_cell":"Unknown","genetic_background":"Unknown","target_cell":"Unknown","culture_sys":"Unknown","diff_path":"Unknown","time_pts":[],"modality":["bulk RNA-seq"],"perturb":[{"type":"None","method":"Vehicle/Control","dose":"N/A","start":"","end":"","dur":""}],"platform":"Unknown","cell_line":"Unknown","sex":"Unknown","age":"Unknown","reprog":"Unknown","passage":"Unknown","matrix":"Unknown","medium":"Unknown","density":"Unknown","o2_lvl":"Unknown","raw_data":"Unspecified"}'
+
+    with patch.object(client._client.chat.completions, "create", new=AsyncMock(return_value=mock_resp)) as create:
+        await client.annotate_gsm(
+            "GSM001",
+            "Sample",
+            "Homo sapiens",
+            "SAMN001",
+            "Library-Strategy: RNA-Seq\nLibrary-Source: transcriptomic\nData-Processing: Output - TPM values and read counts at gene and transcript level",
+            "GSE context",
+        )
+
+    prompt = create.await_args.kwargs["messages"][0]["content"]
+    assert "Library-Strategy、Library-Source、Data-Processing 和 Supplementary-Data/补充文件说明" in prompt
+    assert 'Library-Strategy = "RNA-Seq"、Library-Source = "transcriptomic"' in prompt
+    assert 'modality = ["bulk RNA-seq"]' in prompt
+    assert '"genetic_background"' in prompt
+    assert "genetic_background 判定规则" in prompt
+    assert "KhES1、H1、H9、WA09" in prompt

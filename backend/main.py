@@ -90,16 +90,20 @@ async def task_detail_page(
 
         total_samples = sum(len(r.samples) for r in results_rows)
         annotated_samples = sum(
-            1 for r in results_rows for s in r.samples if s.labels
+            1 for r in results_rows for s in r.samples
+            if any(l.key == "avail" for l in s.labels)
         )
         available_count = sum(
             1 for r in results_rows for s in r.samples
-            if any(l.key == "avail" and l.value == "True" for l in s.labels)
+            if any(l.key == "avail" and str(l.value).lower() == "true" for l in s.labels)
         )
 
         results_data = []
         for r in results_rows:
-            annotated_count = sum(1 for s in r.samples if s.labels)
+            annotated_count = sum(
+                1 for s in r.samples
+                if any(l.key == "avail" for l in s.labels)
+            )
             samples_data = [
                 {
                     "id": s.id,

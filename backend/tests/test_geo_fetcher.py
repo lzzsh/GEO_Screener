@@ -198,6 +198,9 @@ async def test_fetch_gsm_samples_extracts_sample_characteristics():
       <Molecule>polyA RNA</Molecule>
     </Channel>
     <Library-Strategy>RNA-Seq</Library-Strategy>
+    <Library-Source>transcriptomic</Library-Source>
+    <Data-Processing>BCL to FASTQ conversion using bcl2fastq2 v2.20. Output - TPM values and read counts at gene and transcript level.</Data-Processing>
+    <Supplementary-Data type="CSV">ftp://example.org/TV0615_gene_expression.csv</Supplementary-Data>
     <Growth-Protocol>in vitro directed differentiation</Growth-Protocol>
     <Relation type="BioSample" target="https://www.ncbi.nlm.nih.gov/biosample/SAMN001"/>
   </Sample>
@@ -226,6 +229,9 @@ async def test_fetch_gsm_samples_extracts_sample_characteristics():
         "characteristics": {"cell type": "iPSC-derived cardiomyocyte", "time point": "day 10"},
         "molecule": "polyA RNA",
         "library_strategy": "RNA-Seq",
+        "library_source": "transcriptomic",
+        "data_processing": "BCL to FASTQ conversion using bcl2fastq2 v2.20. Output - TPM values and read counts at gene and transcript level.",
+        "supplementary_files": [{"url": "ftp://example.org/TV0615_gene_expression.csv", "type": "CSV"}],
         "growth_protocol": "in vitro directed differentiation",
         "treatment_protocol": "",
     }]

@@ -83,8 +83,15 @@ async def fetch_gsm_samples(gse_accession: str, retmax: int = 1000) -> list[dict
                     molecule_el = sample.find(f".//{{{NS}}}Molecule")
                     molecule = molecule_el.text.strip() if molecule_el is not None and molecule_el.text else ""
                     library_strategy = _find_text(sample, NS, "Library-Strategy")
+                    library_source = _find_text(sample, NS, "Library-Source")
+                    data_processing = _find_text(sample, NS, "Data-Processing")
                     growth_protocol = _find_text(sample, NS, "Growth-Protocol")
                     treatment_protocol = _find_text(sample, NS, "Treatment-Protocol")
+                    suppl_files = []
+                    for sd in sample.findall(f"{{{NS}}}Supplementary-Data"):
+                        url_text = sd.text.strip() if sd.text else ""
+                        if url_text:
+                            suppl_files.append({"url": url_text, "type": sd.get("type", "")})
                     characteristics = {}
                     for char_el in sample.findall(f".//{{{NS}}}Characteristics"):
                         value = char_el.text.strip() if char_el.text else ""
@@ -110,6 +117,9 @@ async def fetch_gsm_samples(gse_accession: str, retmax: int = 1000) -> list[dict
                         "characteristics": characteristics,
                         "molecule": molecule,
                         "library_strategy": library_strategy,
+                        "library_source": library_source,
+                        "data_processing": data_processing,
+                        "supplementary_files": suppl_files,
                         "growth_protocol": growth_protocol,
                         "treatment_protocol": treatment_protocol,
                     })

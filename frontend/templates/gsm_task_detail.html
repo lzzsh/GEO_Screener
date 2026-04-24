@@ -39,6 +39,7 @@
 
   <div class="flex items-center gap-2 mb-4 text-sm text-gray-500">
     状态：<span id="task-status" class="font-medium text-gray-700">{{ task.status }}</span>
+    <span id="task-progress" class="text-gray-400"></span>
     <button onclick="clearLabels()" class="ml-4 text-xs text-red-500 hover:text-red-700 border border-red-200 hover:border-red-400 px-3 py-1 rounded-lg">清除所有注释</button>
   </div>
 
@@ -79,9 +80,9 @@
               <tr>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">GSM ID</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">标题</th>
-                <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">生物体</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">avail</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">start_cell</th>
+                <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">genetic_background</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">target_cell</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">culture_sys</th>
                 <th class="text-left px-3 py-2 text-xs font-medium text-gray-600">modality</th>
@@ -95,7 +96,6 @@
             <tr class="hover:bg-gray-50">
               <td class="px-3 py-2 font-mono text-xs text-blue-700 whitespace-nowrap">{{ sample.gsm_id }}</td>
               <td class="px-3 py-2 text-xs text-gray-800">{{ sample.title or '—' }}</td>
-              <td class="px-3 py-2 text-xs text-gray-500 whitespace-nowrap">{{ sample.organism or '—' }}</td>
               <td class="px-3 py-2 text-xs">
                 {% set av = sample.labels.get('avail','') %}
                 {% if av == 'true' or av == 'True' %}
@@ -109,6 +109,7 @@
                 {% endif %}
               </td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('start_cell','') }}</td>
+              <td class="px-3 py-2 text-xs">{{ sample.labels.get('genetic_background','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('target_cell','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('culture_sys','') }}</td>
               <td class="px-3 py-2 text-xs">{{ sample.labels.get('modality','') }}</td>
@@ -120,6 +121,7 @@
               <td colspan="11" class="px-4 py-3 bg-gray-50 text-xs text-gray-700">
                 <div class="grid grid-cols-2 gap-x-8 gap-y-1 mb-2">
                   <div><span class="font-semibold text-gray-500">diff_path:</span> {{ sample.labels.get('diff_path','—') }}</div>
+                  <div><span class="font-semibold text-gray-500">genetic_background:</span> {{ sample.labels.get('genetic_background','—') }}</div>
                   <div><span class="font-semibold text-gray-500">cell_line:</span> {{ sample.labels.get('cell_line','—') }}</div>
                   <div><span class="font-semibold text-gray-500">sex:</span> {{ sample.labels.get('sex','—') }}</div>
                   <div><span class="font-semibold text-gray-500">age:</span> {{ sample.labels.get('age','—') }}</div>
@@ -175,7 +177,15 @@ async function runAnnotation() {
   const btn = document.getElementById('run-btn');
   btn.disabled = true;
   btn.textContent = '运行中...';
-  await fetch(`/tasks/{{ task.id }}/run-gsm-annotation`, {method: 'POST'});
+  const resp = await fetch(`/tasks/{{ task.id }}/run-gsm-annotation`, {method: 'POST'});
+  if (!resp.ok) {
+    const payload = await resp.json().catch(() => ({}));
+    alert(payload.detail || '启动 GSM annotation 失败');
+    btn.disabled = false;
+    btn.textContent = 'Run GSM Annotation';
+    return;
+  }
+  document.getElementById('task-status').textContent = 'running';
   pollStatus();
 }
 
@@ -185,6 +195,10 @@ function pollStatus() {
     const data = await resp.json();
     document.getElementById('task-status').textContent = data.status;
     document.getElementById('task-status-badge').textContent = data.status;
+    if (data.sample_total !== undefined) {
+      document.getElementById('task-progress').textContent =
+        `GSM annotated: ${data.sample_annotated || 0}/${data.sample_total || 0}; GSE processed: ${data.processed || 0}/${data.total || 0}`;
+    }
     if (data.status === 'done' || data.status === 'error') {
       clearInterval(interval);
       location.reload();

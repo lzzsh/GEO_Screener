@@ -43,6 +43,55 @@ async def test_library_pages_return_html():
 
 
 @pytest.mark.asyncio
+async def test_gsm_detail_counts_only_avail_labels(monkeypatch):
+    import backend.main as main_module
+    from backend.database import AsyncSessionLocal
+    from backend.main import app
+    from backend.models import ScreeningTask, ScreeningResult, GeoSample, GsmLabel, User
+
+    async with AsyncSessionLocal() as db:
+        user = User(username="gsm_page_user", email="gsm_page@test.com", hashed_password="h")
+        db.add(user)
+        await db.flush()
+
+        task = ScreeningTask(
+            name="gsm page task",
+            source="geo",
+            criteria_text="",
+            owner_id=user.id,
+            task_type="gsm_annotation",
+            total=1,
+        )
+        db.add(task)
+        await db.flush()
+
+        result = ScreeningResult(task_id=task.id, dataset_id="GSEPAGE", title="Page test", n_samples=2)
+        db.add(result)
+        await db.flush()
+
+        sample_with_avail = GeoSample(result_id=result.id, gsm_id="GSMAVAIL", title="Done")
+        sample_partial = GeoSample(result_id=result.id, gsm_id="GSMPARTIAL", title="Partial")
+        db.add_all([sample_with_avail, sample_partial])
+        await db.flush()
+
+        db.add(GsmLabel(sample_id=sample_with_avail.id, key="avail", value="true", source="llm"))
+        db.add(GsmLabel(sample_id=sample_partial.id, key="response", value="partial only", source="llm"))
+        await db.commit()
+        task_id = task.id
+
+    async def fake_resolve_current_user(**_kwargs):
+        return user
+
+    monkeypatch.setattr(main_module, "resolve_current_user", fake_resolve_current_user)
+    async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as client:
+        response = await client.get(f"/tasks/{task_id}/detail")
+
+    assert response.status_code == 200
+    assert '<p class="text-2xl font-semibold text-green-700">1</p>' in response.text
+    assert '<td class="px-4 py-3 text-xs text-center">1</td>' in response.text
+
+
+@pytest.mark.asyncio
 async def test_search_and_task_detail_include_library_actions():
     from backend.main import app
 
