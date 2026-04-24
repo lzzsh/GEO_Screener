@@ -215,6 +215,10 @@
 
   <div class="grid gap-3 md:grid-cols-6 mb-6">
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
+      <p class="text-xs text-gray-400">Annotation Schema</p>
+      <p class="text-sm font-semibold" x-text="task.annotation_schema_name || 'Default'"></p>
+    </div>
+    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
       <p class="text-xs text-gray-400">GEO Candidates</p>
       <p class="text-2xl font-semibold" x-text="task.candidate_count || 0"></p>
     </div>

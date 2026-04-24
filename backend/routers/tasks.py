@@ -159,12 +159,23 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_db), user: User 
     task = result.scalar_one_or_none()
     if not task:
         raise HTTPException(status_code=404, detail="Not found")
+
+    # Get annotation schema name if available
+    annotation_schema_name = None
+    if task.annotation_schema_id:
+        schema_result = await db.execute(
+            select(AnnotationSchema).where(AnnotationSchema.id == task.annotation_schema_id)
+        )
+        schema = schema_result.scalar_one_or_none()
+        if schema:
+            annotation_schema_name = schema.name
+
     return {"id": task.id, "name": task.name, "status": task.status,
             "total": task.total, "candidate_count": task.candidate_count,
             "processed": task.processed, "included_count": task.included_count,
             "excluded_count": task.excluded_count, "uncertain_count": task.uncertain_count,
             "search_query": task.search_query, "created_at": task.created_at,
-            "task_type": task.task_type}
+            "task_type": task.task_type, "annotation_schema_name": annotation_schema_name}
 
 
 @router.delete("/{task_id}")
