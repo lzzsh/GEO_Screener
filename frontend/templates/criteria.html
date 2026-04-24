@@ -1,7 +1,7 @@
 {% extends "base.html" %}
 {% block title %}Criteria — GEO Screener{% endblock %}
 {% block content %}
-<div x-data="criteriaPage()" x-init="load()">
+<div x-data="criteriaPage()" x-init="load(); init()">
   <h1 class="text-2xl font-bold mb-6">Screening Criteria & Annotation Schemas</h1>
 
   <!-- Tab navigation -->
@@ -102,63 +102,105 @@
         <div x-show="schemaSaveMsg" class="mb-3 text-green-600 text-sm" x-text="schemaSaveMsg"></div>
         <div x-show="schemaError" class="mb-3 text-red-600 text-sm" x-text="schemaError"></div>
 
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1">Name</label>
-          <input x-model="schemaEditName" type="text"
-                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+        <!-- Schema tabs -->
+        <div class="flex gap-2 mb-4 border-b border-gray-200">
+          <button @click="schemaTab = 'labels'"
+                  :class="schemaTab === 'labels' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
+                  class="px-3 py-2 font-medium text-sm transition">
+            Labels
+          </button>
+          <button @click="schemaTab = 'prompts'" x-show="selectedSchema && selectedSchema.id"
+                  :class="schemaTab === 'prompts' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
+                  class="px-3 py-2 font-medium text-sm transition">
+            Prompts
+          </button>
         </div>
 
-        <div class="mb-4">
-          <label class="block text-sm font-medium mb-1">Description</label>
-          <input x-model="schemaEditDesc" type="text"
-                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        </div>
-
-        <!-- GSE Labels -->
-        <div class="mb-6">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-sm font-semibold">GSE Labels</h3>
-            <button @click="addGseLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+        <!-- Labels Tab -->
+        <div x-show="schemaTab === 'labels'">
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Name</label>
+            <input x-model="schemaEditName" type="text"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           </div>
-          <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
-            <template x-for="(label, idx) in schemaEditGseLabels" :key="idx">
-              <div class="bg-white p-3 rounded border border-gray-200 text-sm">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex-1">
-                    <p class="font-medium" x-text="label.name"></p>
-                    <p class="text-xs text-gray-600" x-text="label.description"></p>
-                    <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-1">Description</label>
+            <input x-model="schemaEditDesc" type="text"
+                   class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
+          </div>
+
+          <!-- GSE Labels -->
+          <div class="mb-6">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-sm font-semibold">GSE Labels</h3>
+              <button @click="addGseLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+            </div>
+            <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+              <template x-for="(label, idx) in schemaEditGseLabels" :key="idx">
+                <div class="bg-white p-3 rounded border border-gray-200 text-sm">
+                  <div class="flex justify-between items-start mb-2">
+                    <div class="flex-1">
+                      <p class="font-medium" x-text="label.name"></p>
+                      <p class="text-xs text-gray-600" x-text="label.description"></p>
+                      <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                    </div>
+                    <button @click="removeGseLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                   </div>
-                  <button @click="removeGseLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                 </div>
-              </div>
-            </template>
+              </template>
+            </div>
           </div>
-        </div>
 
-        <!-- GSM Labels -->
-        <div class="mb-6">
-          <div class="flex justify-between items-center mb-3">
-            <h3 class="text-sm font-semibold">GSM Labels</h3>
-            <button @click="addGsmLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
-          </div>
-          <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
-            <template x-for="(label, idx) in schemaEditGsmLabels" :key="idx">
-              <div class="bg-white p-3 rounded border border-gray-200 text-sm">
-                <div class="flex justify-between items-start mb-2">
-                  <div class="flex-1">
-                    <p class="font-medium" x-text="label.name"></p>
-                    <p class="text-xs text-gray-600" x-text="label.description"></p>
-                    <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+          <!-- GSM Labels -->
+          <div class="mb-6">
+            <div class="flex justify-between items-center mb-3">
+              <h3 class="text-sm font-semibold">GSM Labels</h3>
+              <button @click="addGsmLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+            </div>
+            <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+              <template x-for="(label, idx) in schemaEditGsmLabels" :key="idx">
+                <div class="bg-white p-3 rounded border border-gray-200 text-sm">
+                  <div class="flex justify-between items-start mb-2">
+                    <div class="flex-1">
+                      <p class="font-medium" x-text="label.name"></p>
+                      <p class="text-xs text-gray-600" x-text="label.description"></p>
+                      <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                    </div>
+                    <button @click="removeGsmLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                   </div>
-                  <button @click="removeGsmLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                 </div>
-              </div>
-            </template>
+              </template>
+            </div>
           </div>
         </div>
 
-        <div class="flex gap-3">
+        <!-- Prompts Tab -->
+        <div x-show="schemaTab === 'prompts'">
+          <div class="mb-4">
+            <label class="block text-sm font-medium mb-2">Select Prompt Type</label>
+            <select x-model="selectedPromptType" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
+              <option value="label_prompt">GSE Label Prompt</option>
+              <option value="gsm_label_prompt">GSM Label Prompt</option>
+              <option value="screening_prompt">Screening Prompt</option>
+              <option value="paper_calibration_prompt">Paper Calibration Prompt</option>
+            </select>
+          </div>
+
+          <div x-show="promptLoading" class="text-gray-500 text-sm">Loading prompt...</div>
+          <div x-show="!promptLoading">
+            <textarea x-model="promptContent" rows="16"
+                      class="w-full border rounded-lg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+            <div class="flex gap-3 mt-3">
+              <button @click="savePrompt()" :disabled="promptSaving"
+                      class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
+                <span x-text="promptSaving ? 'Saving…' : 'Save Prompt'"></span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="flex gap-3 mt-6" x-show="schemaTab === 'labels'">
           <button @click="saveSchema()" :disabled="schemaSaving"
                   class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
             <span x-text="schemaSaving ? 'Saving…' : 'Save'"></span>
@@ -180,6 +222,11 @@
       schemaList: [], selectedSchema: null,
       schemaEditName: '', schemaEditDesc: '', schemaEditGseLabels: [], schemaEditGsmLabels: [],
       schemaSaving: false, schemaSaveMsg: '', schemaError: '',
+      schemaTab: 'labels',
+      selectedPromptType: 'label_prompt',
+      promptContent: '',
+      promptLoading: false,
+      promptSaving: false,
 
       async load() {
         const r = await fetch('/criteria');
@@ -208,6 +255,21 @@
         this.schemaEditGseLabels = s.gse_labels || [];
         this.schemaEditGsmLabels = s.gsm_labels || [];
         this.schemaSaveMsg = ''; this.schemaError = '';
+        this.schemaTab = 'labels';
+        this.selectedPromptType = 'label_prompt';
+        this.promptContent = '';
+      },
+      init() {
+        this.$watch('schemaTab', () => {
+          if (this.schemaTab === 'prompts' && this.selectedSchema && this.selectedSchema.id) {
+            this.loadPrompt();
+          }
+        });
+        this.$watch('selectedPromptType', () => {
+          if (this.schemaTab === 'prompts' && this.selectedSchema && this.selectedSchema.id) {
+            this.loadPrompt();
+          }
+        });
       },
       newCriteria() {
         this.selected = {id: null, name: '', criteria_text: ''};
@@ -309,6 +371,40 @@
         await fetch('/annotation-schemas/' + this.selectedSchema.id, {method: 'DELETE'});
         this.selectedSchema = null;
         await this.loadSchemas();
+      },
+      async loadPrompt() {
+        if (!this.selectedSchema || !this.selectedSchema.id) return;
+        this.promptLoading = true;
+        try {
+          const r = await fetch(`/annotation-schemas/${this.selectedSchema.id}/prompts/${this.selectedPromptType}`);
+          if (r.ok) {
+            const data = await r.json();
+            this.promptContent = data.content;
+          }
+        } catch (e) {
+          console.error('Failed to load prompt:', e);
+        } finally {
+          this.promptLoading = false;
+        }
+      },
+      async savePrompt() {
+        if (!this.selectedSchema || !this.selectedSchema.id) return;
+        this.promptSaving = true;
+        try {
+          const r = await fetch(`/annotation-schemas/${this.selectedSchema.id}/prompts/${this.selectedPromptType}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({content: this.promptContent})
+          });
+          if (r.ok) {
+            this.schemaSaveMsg = 'Prompt saved!';
+            setTimeout(() => this.schemaSaveMsg = '', 2000);
+          } else {
+            this.schemaError = 'Failed to save prompt';
+          }
+        } finally {
+          this.promptSaving = false;
+        }
       }
     }
   }

@@ -1,5 +1,6 @@
 import asyncio
 import json
+import os
 import re
 from typing import Optional
 from openai import APIStatusError, AsyncOpenAI
@@ -239,6 +240,26 @@ class LLMClient:
             base_url=base_url or defaults.get("base_url"),
         )
 
+    def _load_prompt(self, schema_name: str, prompt_type: str) -> str:
+        """Load prompt from file, with fallback to defaults and constants."""
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+        # Try schema-specific prompt
+        schema_prompt_path = os.path.join(base_dir, "prompts", schema_name, f"{prompt_type}.txt")
+        if os.path.exists(schema_prompt_path):
+            with open(schema_prompt_path, 'r', encoding='utf-8') as f:
+                return f.read()
+
+        # Try default prompt
+        default_prompt_path = os.path.join(base_dir, "prompts", "default", f"{prompt_type}.txt")
+        if os.path.exists(default_prompt_path):
+            with open(default_prompt_path, 'r', encoding='utf-8') as f:
+                return f.read()
+
+        # Fallback to constants
+        constant_name = f"{prompt_type.upper()}_TEMPLATE"
+        return globals().get(constant_name, "")
+
     def _build_label_spec(self, labels: list[dict]) -> str:
         """Build JSON field definitions from label schema."""
         if not labels:
@@ -307,8 +328,9 @@ class LLMClient:
         return self._parse_json(raw)
 
     async def extract_labels(self, dataset_id: str, title: str, description: str,
-                              gse_labels: list[dict]) -> dict:
-        prompt = LABEL_PROMPT_TEMPLATE.format(
+                              gse_labels: list[dict], schema_name: str = "default") -> dict:
+        prompt_template = self._load_prompt(schema_name, "label_prompt")
+        prompt = prompt_template.format(
             gse_label_spec=self._build_label_spec(gse_labels),
             dataset_id=dataset_id, title=title, description=description,
         )
@@ -321,11 +343,13 @@ class LLMClient:
 
     async def annotate_gsm(self, gsm_id: str, title: str, organism: str,
                             biosample_id: str, characteristics: str,
-                            gse_summary: str, gsm_labels: list[dict]) -> dict:
+                            gse_summary: str, gsm_labels: list[dict],
+                            schema_name: str = "default") -> dict:
+        prompt_template = self._load_prompt(schema_name, "gsm_label_prompt")
         gsm_spec = self._build_label_spec(gsm_labels)
         if gsm_spec:
             gsm_spec = gsm_spec + ","
-        prompt = GSM_LABEL_PROMPT_TEMPLATE.format(
+        prompt = prompt_template.format(
             gsm_label_spec=gsm_spec,
             gsm_id=gsm_id, title=title, organism=organism,
             biosample_id=biosample_id, characteristics=characteristics,

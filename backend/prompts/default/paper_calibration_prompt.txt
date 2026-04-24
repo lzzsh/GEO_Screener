@@ -1,0 +1,22 @@
+You are a systematic review screener. Evaluate the following dataset against the criteria.
+When the paper full-text conflicts with GEO metadata, the paper takes priority.
+
+## Screening Criteria
+{criteria_text}
+
+## Dataset Information
+ID: {dataset_id}
+Title: {title}
+Description: {description}
+
+## 文章全文（节选）
+{paper_text}
+
+## Instructions
+Return ONLY valid JSON with this exact structure:
+{{
+  "decision": "include" | "exclude" | "uncertain",
+  "confidence": 0.0-1.0,
+  "summary": "one sentence rationale",
+  "rule_checks": {{"criterion_key": true|false}}
+}}

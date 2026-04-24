@@ -6,7 +6,7 @@ from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.worker.celery_app import celery_app
 from backend.database import AsyncSessionLocal
-from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel, GsmLabel, GeoSample
+from backend.models import ScreeningTask, ScreeningResult, LLMConfig, GeoLabel, GsmLabel, GeoSample, AnnotationSchema
 from backend.worker.geo_fetcher import fetch_gse_detail, fetch_gsm_samples
 from backend.worker.llm_client import LLMClient
 from backend.worker.pdf_fetcher import fetch_pdf
@@ -204,6 +204,16 @@ async def _run_annotation_async(task_id: int):
             return
         schema = _parse_label_schema(task.label_schema)
         gse_labels = schema.get("gse", [])
+
+        # Get schema name for prompt loading
+        schema_name = "default"
+        if task.annotation_schema_id:
+            annotation_schema = (await db.execute(
+                select(AnnotationSchema).where(AnnotationSchema.id == task.annotation_schema_id)
+            )).scalar_one_or_none()
+            if annotation_schema:
+                schema_name = annotation_schema.name
+
         cfg = (await db.execute(select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True))).scalar_one_or_none()
         if not cfg or not cfg.api_key:
             return
@@ -229,6 +239,7 @@ async def _run_annotation_async(task_id: int):
                 extracted = await llm.extract_labels(
                     dataset_id=sr.dataset_id, title=sr.title or "",
                     description=description, gse_labels=gse_labels,
+                    schema_name=schema_name,
                 )
                 existing_labels = (await db.execute(
                     select(GeoLabel).where(GeoLabel.result_id == sr.id)
@@ -282,6 +293,16 @@ async def _run_single_result_annotation_async(result_id: int):
         )).scalar_one_or_none()
         if not task or not task.label_schema:
             return
+
+        # Get schema name for prompt loading
+        schema_name = "default"
+        if task.annotation_schema_id:
+            annotation_schema = (await db.execute(
+                select(AnnotationSchema).where(AnnotationSchema.id == task.annotation_schema_id)
+            )).scalar_one_or_none()
+            if annotation_schema:
+                schema_name = annotation_schema.name
+
         cfg = (await db.execute(
             select(LLMConfig).where(LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True)
         )).scalar_one_or_none()
@@ -297,6 +318,7 @@ async def _run_single_result_annotation_async(result_id: int):
             extracted = await llm.extract_labels(
                 dataset_id=sr.dataset_id, title=sr.title or "",
                 description=description, gse_labels=gse_labels,
+                schema_name=schema_name,
             )
             existing_by_key = {l.key: l for l in sr.labels}
             for key, value in extracted.items():
@@ -392,6 +414,16 @@ async def _run_gsm_task_async(task_id: int):
 
         schema = _parse_label_schema(task.label_schema) if task.label_schema else {}
         gsm_labels = schema.get("gsm", [])
+
+        # Get schema name for prompt loading
+        schema_name = "default"
+        if task.annotation_schema_id:
+            annotation_schema = (await db.execute(
+                select(AnnotationSchema).where(AnnotationSchema.id == task.annotation_schema_id)
+            )).scalar_one_or_none()
+            if annotation_schema:
+                schema_name = annotation_schema.name
+
         llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
                         base_url=cfg.base_url, model=cfg.model, temperature=0)
         task.status = "running"
@@ -490,6 +522,7 @@ async def _run_gsm_task_async(task_id: int):
                             characteristics=full_characteristics[:3000],
                             gse_summary=context[:2000],
                             gsm_labels=gsm_labels,
+                            schema_name=schema_name,
                         )
                         if annotation:
                             for key, value in annotation.items():

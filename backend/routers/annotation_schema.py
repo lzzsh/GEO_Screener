@@ -1,4 +1,6 @@
 from typing import Optional
+import os
+import shutil
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -40,6 +42,32 @@ def _serialize(schema: AnnotationSchema) -> dict:
         "updated_at": schema.updated_at,
     }
 
+def _get_prompts_dir() -> str:
+    """Get the prompts directory path."""
+    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+
+def _create_schema_prompt_files(schema_name: str):
+    """Create prompt files for a new schema by copying from default."""
+    prompts_dir = _get_prompts_dir()
+    schema_dir = os.path.join(prompts_dir, schema_name)
+    default_dir = os.path.join(prompts_dir, "default")
+
+    os.makedirs(schema_dir, exist_ok=True)
+
+    # Copy default prompt files
+    for prompt_type in ["label_prompt", "gsm_label_prompt", "screening_prompt", "paper_calibration_prompt"]:
+        src = os.path.join(default_dir, f"{prompt_type}.txt")
+        dst = os.path.join(schema_dir, f"{prompt_type}.txt")
+        if os.path.exists(src) and not os.path.exists(dst):
+            shutil.copy(src, dst)
+
+def _delete_schema_prompt_files(schema_name: str):
+    """Delete prompt files for a schema."""
+    prompts_dir = _get_prompts_dir()
+    schema_dir = os.path.join(prompts_dir, schema_name)
+    if os.path.exists(schema_dir) and schema_name != "default":
+        shutil.rmtree(schema_dir)
+
 @router.get("/default-template")
 async def get_default_template():
     return {
@@ -66,6 +94,10 @@ async def create_schema(req: AnnotationSchemaCreate, db: AsyncSession = Depends(
     db.add(schema)
     await db.commit()
     await db.refresh(schema)
+
+    # Create prompt files for this schema
+    _create_schema_prompt_files(schema.name)
+
     return _serialize(schema)
 
 @router.get("/{schema_id}")
@@ -103,6 +135,10 @@ async def delete_schema(schema_id: int, db: AsyncSession = Depends(get_db), user
     schema = result.scalar_one_or_none()
     if not schema:
         raise HTTPException(status_code=404, detail="Not found")
+
+    # Delete prompt files for this schema
+    _delete_schema_prompt_files(schema.name)
+
     await db.delete(schema)
     await db.commit()
 
