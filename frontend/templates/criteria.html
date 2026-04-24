@@ -67,16 +67,46 @@
               <h3 class="text-sm font-semibold">GSE Labels</h3>
               <button @click="addGseLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
             </div>
-            <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+            <div class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
               <template x-for="(label, idx) in schemaEditGseLabels" :key="idx">
-                <div class="bg-white p-3 rounded border border-gray-200 text-sm">
-                  <div class="flex justify-between items-start mb-2">
-                    <div class="flex-1">
-                      <p class="font-medium" x-text="label.name"></p>
-                      <p class="text-xs text-gray-600" x-text="label.description"></p>
-                      <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                <div class="bg-white rounded border border-gray-200">
+                  <button @click="editingGseIdx = editingGseIdx === idx ? null : idx"
+                          class="w-full text-left p-3 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-start">
+                      <div class="flex-1">
+                        <p class="font-medium" x-text="label.name || '(untitled)'"></p>
+                        <p class="text-xs text-gray-600" x-text="label.description"></p>
+                        <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                      </div>
+                      <button @click.stop="removeGseLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
-                    <button @click="removeGseLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
+                  </button>
+                  <div x-show="editingGseIdx === idx" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
+                    <div>
+                      <label class="block text-xs font-medium mb-1">Name</label>
+                      <input x-model="label.name" type="text" placeholder="e.g., data_modality"
+                             class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1">Description</label>
+                      <input x-model="label.description" type="text" placeholder="e.g., Type of data (scRNA-seq, scATAC-seq, etc.)"
+                             class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1">Type</label>
+                      <select x-model="label.type" class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="free_text">Free Text</option>
+                        <option value="enum">Enum (predefined options)</option>
+                        <option value="array">Array</option>
+                        <option value="object_array">Object Array</option>
+                      </select>
+                    </div>
+                    <div x-show="label.type === 'enum'">
+                      <label class="block text-xs font-medium mb-1">Allowed Values (comma-separated)</label>
+                      <input x-model="label.allowed_values_str" type="text" placeholder="e.g., scRNA-seq, scATAC-seq, spatial"
+                             @change="label.allowed_values = label.allowed_values_str.split(',').map(v => v.trim()).filter(v => v)"
+                             class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
                   </div>
                 </div>
               </template>
@@ -89,16 +119,46 @@
               <h3 class="text-sm font-semibold">GSM Labels</h3>
               <button @click="addGsmLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
             </div>
-            <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+            <div class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
               <template x-for="(label, idx) in schemaEditGsmLabels" :key="idx">
-                <div class="bg-white p-3 rounded border border-gray-200 text-sm">
-                  <div class="flex justify-between items-start mb-2">
-                    <div class="flex-1">
-                      <p class="font-medium" x-text="label.name"></p>
-                      <p class="text-xs text-gray-600" x-text="label.description"></p>
-                      <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                <div class="bg-white rounded border border-gray-200">
+                  <button @click="editingGsmIdx = editingGsmIdx === idx ? null : idx"
+                          class="w-full text-left p-3 hover:bg-gray-50 transition">
+                    <div class="flex justify-between items-start">
+                      <div class="flex-1">
+                        <p class="font-medium" x-text="label.name || '(untitled)'"></p>
+                        <p class="text-xs text-gray-600" x-text="label.description"></p>
+                        <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                      </div>
+                      <button @click.stop="removeGsmLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
-                    <button @click="removeGsmLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
+                  </button>
+                  <div x-show="editingGsmIdx === idx" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
+                    <div>
+                      <label class="block text-xs font-medium mb-1">Name</label>
+                      <input x-model="label.name" type="text" placeholder="e.g., start_cell"
+                             class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1">Description</label>
+                      <input x-model="label.description" type="text" placeholder="e.g., Starting cell type (iPSC, ESC, PSC)"
+                             class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
+                    <div>
+                      <label class="block text-xs font-medium mb-1">Type</label>
+                      <select x-model="label.type" class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
+                        <option value="free_text">Free Text</option>
+                        <option value="enum">Enum (predefined options)</option>
+                        <option value="array">Array</option>
+                        <option value="object_array">Object Array</option>
+                      </select>
+                    </div>
+                    <div x-show="label.type === 'enum'">
+                      <label class="block text-xs font-medium mb-1">Allowed Values (comma-separated)</label>
+                      <input x-model="label.allowed_values_str" type="text" placeholder="e.g., iPSC, ESC, PSC"
+                             @change="label.allowed_values = label.allowed_values_str.split(',').map(v => v.trim()).filter(v => v)"
+                             class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+                    </div>
                   </div>
                 </div>
               </template>
@@ -159,6 +219,8 @@
       promptLoading: false,
       promptSaving: false,
       defaultPrompts: {},
+      editingGseIdx: null,
+      editingGsmIdx: null,
 
       async load() {
         const r = await fetch('/criteria');
@@ -194,12 +256,14 @@
         this.selectedSchema = s;
         this.schemaEditName = s.name;
         this.schemaEditDesc = s.description || '';
-        this.schemaEditGseLabels = s.gse_labels || [];
-        this.schemaEditGsmLabels = s.gsm_labels || [];
+        this.schemaEditGseLabels = (s.gse_labels || []).map(l => ({...l, allowed_values_str: (l.allowed_values || []).join(', ')}));
+        this.schemaEditGsmLabels = (s.gsm_labels || []).map(l => ({...l, allowed_values_str: (l.allowed_values || []).join(', ')}));
         this.schemaSaveMsg = ''; this.schemaError = '';
         this.schemaTab = 'labels';
         this.selectedPromptType = 'label_prompt';
         this.promptContent = '';
+        this.editingGseIdx = null;
+        this.editingGsmIdx = null;
       },
       newSchema() {
         this.selectedSchema = {id: null, name: '', description: '', gse_labels: [], gsm_labels: []};
@@ -211,18 +275,24 @@
         this.schemaTab = 'labels';
         this.selectedPromptType = 'label_prompt';
         this.promptContent = this.defaultPrompts['label_prompt'] || '';
+        this.editingGseIdx = null;
+        this.editingGsmIdx = null;
       },
       addGseLabel() {
-        this.schemaEditGseLabels.push({name: '', description: '', type: 'free_text', allowed_values: []});
+        this.schemaEditGseLabels.push({name: '', description: '', type: 'free_text', allowed_values: [], allowed_values_str: ''});
+        this.editingGseIdx = this.schemaEditGseLabels.length - 1;
       },
       removeGseLabel(idx) {
         this.schemaEditGseLabels.splice(idx, 1);
+        if (this.editingGseIdx === idx) this.editingGseIdx = null;
       },
       addGsmLabel() {
-        this.schemaEditGsmLabels.push({name: '', description: '', type: 'free_text', allowed_values: []});
+        this.schemaEditGsmLabels.push({name: '', description: '', type: 'free_text', allowed_values: [], allowed_values_str: ''});
+        this.editingGsmIdx = this.schemaEditGsmLabels.length - 1;
       },
       removeGsmLabel(idx) {
         this.schemaEditGsmLabels.splice(idx, 1);
+        if (this.editingGsmIdx === idx) this.editingGsmIdx = null;
       },
       init() {
         this.$watch('schemaTab', () => {
