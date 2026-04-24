@@ -71,7 +71,7 @@ def _delete_schema_prompt_files(schema_name: str):
 @router.get("/default-template")
 async def get_default_template():
     return {
-        "name": "Default PSC Differentiation Schema",
+        "name": "Default",
         "description": "Default annotation schema for PSC differentiation studies",
         "gse_labels": DEFAULT_GSE_LABELS,
         "gsm_labels": DEFAULT_GSM_LABELS,
