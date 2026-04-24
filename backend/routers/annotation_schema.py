@@ -7,6 +7,7 @@ import json
 from backend.database import get_db
 from backend.models import AnnotationSchema, User
 from backend.auth import get_current_user
+from backend.label_schema import DEFAULT_GSE_LABELS, DEFAULT_GSM_LABELS
 
 router = APIRouter(prefix="/annotation-schemas", tags=["annotation-schemas"])
 
@@ -37,6 +38,15 @@ def _serialize(schema: AnnotationSchema) -> dict:
         "gsm_labels": json.loads(schema.gsm_labels),
         "created_at": schema.created_at,
         "updated_at": schema.updated_at,
+    }
+
+@router.get("/default-template")
+async def get_default_template():
+    return {
+        "name": "Default PSC Differentiation Schema",
+        "description": "Default annotation schema for PSC differentiation studies",
+        "gse_labels": DEFAULT_GSE_LABELS,
+        "gsm_labels": DEFAULT_GSM_LABELS,
     }
 
 @router.get("")
@@ -95,3 +105,4 @@ async def delete_schema(schema_id: int, db: AsyncSession = Depends(get_db), user
         raise HTTPException(status_code=404, detail="Not found")
     await db.delete(schema)
     await db.commit()
+

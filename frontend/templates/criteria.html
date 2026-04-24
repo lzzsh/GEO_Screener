@@ -74,8 +74,12 @@
     <!-- Left panel: schema list -->
     <div class="w-64 flex-shrink-0">
       <button @click="newSchema()"
-              class="w-full mb-3 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
+              class="w-full mb-2 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
         + New Schema
+      </button>
+      <button @click="loadDefaultTemplate()"
+              class="w-full mb-3 bg-gray-100 text-gray-700 rounded-lg py-2 text-sm font-medium hover:bg-gray-200">
+        📋 Use Default Template
       </button>
       <div class="space-y-1">
         <template x-for="s in schemaList" :key="s.id">
@@ -112,12 +116,21 @@
 
         <!-- GSE Labels -->
         <div class="mb-6">
-          <h3 class="text-sm font-semibold mb-3">GSE Labels</h3>
-          <div class="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm font-semibold">GSE Labels</h3>
+            <button @click="addGseLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+          </div>
+          <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
             <template x-for="(label, idx) in schemaEditGseLabels" :key="idx">
-              <div class="bg-white p-2 rounded border border-gray-200 text-xs">
-                <p class="font-medium" x-text="label.name"></p>
-                <p class="text-gray-600" x-text="label.description"></p>
+              <div class="bg-white p-3 rounded border border-gray-200 text-sm">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex-1">
+                    <p class="font-medium" x-text="label.name"></p>
+                    <p class="text-xs text-gray-600" x-text="label.description"></p>
+                    <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                  </div>
+                  <button @click="removeGseLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
+                </div>
               </div>
             </template>
           </div>
@@ -125,12 +138,21 @@
 
         <!-- GSM Labels -->
         <div class="mb-6">
-          <h3 class="text-sm font-semibold mb-3">GSM Labels</h3>
-          <div class="space-y-2 max-h-48 overflow-y-auto border rounded-lg p-3 bg-gray-50">
+          <div class="flex justify-between items-center mb-3">
+            <h3 class="text-sm font-semibold">GSM Labels</h3>
+            <button @click="addGsmLabel()" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+          </div>
+          <div class="space-y-2 max-h-64 overflow-y-auto border rounded-lg p-3 bg-gray-50">
             <template x-for="(label, idx) in schemaEditGsmLabels" :key="idx">
-              <div class="bg-white p-2 rounded border border-gray-200 text-xs">
-                <p class="font-medium" x-text="label.name"></p>
-                <p class="text-gray-600" x-text="label.description"></p>
+              <div class="bg-white p-3 rounded border border-gray-200 text-sm">
+                <div class="flex justify-between items-start mb-2">
+                  <div class="flex-1">
+                    <p class="font-medium" x-text="label.name"></p>
+                    <p class="text-xs text-gray-600" x-text="label.description"></p>
+                    <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                  </div>
+                  <button @click="removeGsmLabel(idx)" class="text-red-500 hover:text-red-700 text-xs">✕</button>
+                </div>
               </div>
             </template>
           </div>
@@ -196,6 +218,34 @@
         this.schemaEditName = ''; this.schemaEditDesc = '';
         this.schemaEditGseLabels = []; this.schemaEditGsmLabels = [];
         this.schemaSaveMsg = ''; this.schemaError = '';
+      },
+      async loadDefaultTemplate() {
+        try {
+          const r = await fetch('/annotation-schemas/default-template');
+          if (r.ok) {
+            const template = await r.json();
+            this.selectedSchema = {id: null, name: '', description: '', gse_labels: [], gsm_labels: []};
+            this.schemaEditName = template.name;
+            this.schemaEditDesc = template.description;
+            this.schemaEditGseLabels = template.gse_labels;
+            this.schemaEditGsmLabels = template.gsm_labels;
+            this.schemaSaveMsg = ''; this.schemaError = '';
+          }
+        } catch (e) {
+          console.error('Failed to load default template:', e);
+        }
+      },
+      addGseLabel() {
+        this.schemaEditGseLabels.push({name: '', description: '', type: 'free_text', allowed_values: []});
+      },
+      removeGseLabel(idx) {
+        this.schemaEditGseLabels.splice(idx, 1);
+      },
+      addGsmLabel() {
+        this.schemaEditGsmLabels.push({name: '', description: '', type: 'free_text', allowed_values: []});
+      },
+      removeGsmLabel(idx) {
+        this.schemaEditGsmLabels.splice(idx, 1);
       },
       async save() {
         this.saving = true; this.error = ''; this.saveMsg = '';
