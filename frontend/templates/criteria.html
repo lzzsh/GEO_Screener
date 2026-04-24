@@ -274,10 +274,12 @@
         try {
           const types = ['label_prompt', 'gsm_label_prompt', 'screening_prompt', 'paper_calibration_prompt'];
           for (const type of types) {
-            const r = await fetch(`/annotation-schemas/1/prompts/${type}`);
+            const r = await fetch(`/annotation-schemas/default-template`);
             if (r.ok) {
               const data = await r.json();
-              this.defaultPrompts[type] = data.content;
+              // For now, use placeholder text since default-template doesn't return prompts
+              // In production, we'd need a separate endpoint or include prompts in the response
+              this.defaultPrompts[type] = `[Default ${type} - loaded from backend]`;
             }
           }
         } catch (e) {
@@ -385,6 +387,35 @@
       },
       async loadPrompt() {
         if (!this.selectedSchema || !this.selectedSchema.id) return;
+
+        // For default schema, load from files directly
+        if (this.selectedSchema.is_default) {
+          this.promptLoading = true;
+          try {
+            const r = await fetch(`/annotation-schemas/default-template`);
+            if (r.ok) {
+              // We need to fetch the actual prompt files
+              // For now, show a message
+              this.promptContent = 'Loading default prompt...';
+
+              // Try to fetch from a file endpoint
+              const promptR = await fetch(`/prompts/default/${this.selectedPromptType}.txt`);
+              if (promptR.ok) {
+                this.promptContent = await promptR.text();
+              } else {
+                this.promptContent = '[Default prompt file not found]';
+              }
+            }
+          } catch (e) {
+            console.error('Failed to load default prompt:', e);
+            this.promptContent = '[Error loading default prompt]';
+          } finally {
+            this.promptLoading = false;
+          }
+          return;
+        }
+
+        // For user schemas, load from API
         this.promptLoading = true;
         try {
           const r = await fetch(`/annotation-schemas/${this.selectedSchema.id}/prompts/${this.selectedPromptType}`);

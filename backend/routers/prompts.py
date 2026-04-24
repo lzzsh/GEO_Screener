@@ -7,7 +7,7 @@ from backend.database import get_db
 from backend.models import AnnotationSchema, User
 from backend.auth import get_current_user
 
-router = APIRouter(prefix="/annotation-schemas", tags=["prompts"])
+router = APIRouter(tags=["prompts"])
 
 class PromptContent(BaseModel):
     content: str
@@ -21,7 +21,20 @@ def _get_prompt_path(schema_name: str, prompt_type: str) -> str:
     prompts_dir = _get_prompts_dir()
     return os.path.join(prompts_dir, schema_name, f"{prompt_type}.txt")
 
-@router.get("/{schema_id}/prompts/{prompt_type}")
+@router.get("/prompts/default/{prompt_type}")
+async def get_default_prompt(prompt_type: str):
+    """Get default prompt file (public endpoint)."""
+    prompt_path = _get_prompt_path("default", prompt_type)
+
+    if not os.path.exists(prompt_path):
+        raise HTTPException(status_code=404, detail="Prompt file not found")
+
+    with open(prompt_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+
+    return {"content": content}
+
+@router.get("/annotation-schemas/{schema_id}/prompts/{prompt_type}")
 async def get_prompt(schema_id: int, prompt_type: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     """Get prompt content for a schema."""
     result = await db.execute(select(AnnotationSchema).where(
@@ -40,7 +53,7 @@ async def get_prompt(schema_id: int, prompt_type: str, db: AsyncSession = Depend
 
     return {"content": content}
 
-@router.put("/{schema_id}/prompts/{prompt_type}")
+@router.put("/annotation-schemas/{schema_id}/prompts/{prompt_type}")
 async def update_prompt(schema_id: int, prompt_type: str, req: PromptContent, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     """Update prompt content for a schema."""
     result = await db.execute(select(AnnotationSchema).where(
@@ -58,3 +71,4 @@ async def update_prompt(schema_id: int, prompt_type: str, req: PromptContent, db
         f.write(req.content)
 
     return {"message": "Prompt updated successfully"}
+
