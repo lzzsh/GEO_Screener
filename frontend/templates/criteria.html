@@ -17,10 +17,19 @@
           <button @click="selectSchema(s)"
                   :class="selectedSchema && selectedSchema.id === s.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'"
                   class="w-full text-left px-3 py-2.5 rounded-lg border text-sm hover:border-blue-300 transition">
-            <p class="font-medium truncate">
-              <span x-show="s.is_default">📋</span>
-              <span x-text="s.name"></span>
-            </p>
+            <div class="flex items-center justify-between gap-1">
+              <p class="font-medium truncate">
+                <span x-show="s.is_default">📋</span>
+                <span x-text="s.name"></span>
+              </p>
+              <span x-show="s.id && activeSchemaId === s.id"
+                    class="flex-shrink-0 text-xs text-green-600 font-semibold">✓ 活跃</span>
+              <button x-show="s.id && activeSchemaId !== s.id"
+                      @click.stop="setActive(s)"
+                      class="flex-shrink-0 text-xs text-blue-500 hover:text-blue-700 underline">
+                设为活跃
+              </button>
+            </div>
             <p class="text-xs text-gray-400 mt-0.5">
               <span x-show="s.is_default">Default Example</span>
               <span x-show="!s.is_default" x-text="s.id ? new Date(s.updated_at).toLocaleDateString() : 'unsaved'"></span>
@@ -230,6 +239,7 @@
   function criteriaPage() {
     return {
       schemaList: [], selectedSchema: null,
+      activeSchemaId: null,
       schemaEditName: '', schemaEditDesc: '', schemaEditGseLabels: [], schemaEditGsmLabels: [],
       schemaSaving: false, schemaSaveMsg: '', schemaError: '',
       schemaTab: 'labels',
@@ -269,7 +279,9 @@
           const r = await fetch('/annotation-schemas');
           if (r.ok) {
             const userSchemas = await r.json();
-            this.schemaList = this.schemaList.concat(userSchemas);
+            this.schemaList = this.schemaList.concat(userSchemas.map(s => ({...s, is_default: false})));
+            const active = this.schemaList.find(s => s.is_active);
+            this.activeSchemaId = active ? active.id : null;
           }
         } catch (e) {
           console.error('Failed to load schemas:', e);
@@ -309,6 +321,12 @@
           this.schemaEditDesc = s.description || '';
         }
       },
+      async setActive(s) {
+        const r = await fetch(`/annotation-schemas/${s.id}/set-active`, { method: 'POST' });
+        if (r.ok) {
+          this.activeSchemaId = s.id;
+        }
+      },
       newSchema() {
         this.selectedSchema = {id: null, name: '', description: '', gse_labels: [], gsm_labels: [], is_default: false};
         this.schemaEditName = '';
@@ -318,7 +336,7 @@
         this.schemaSaveMsg = ''; this.schemaError = '';
         this.schemaTab = 'labels';
         this.selectedPromptType = 'label_prompt';
-        this.promptContent = this.defaultPrompts['label_prompt'] || '';
+        this.promptContent = '';
         this.editingGseIdx = null;
         this.editingGsmIdx = null;
       },
@@ -343,7 +361,7 @@
           if (this.schemaTab === 'prompts' && this.selectedSchema && this.selectedSchema.id) {
             this.loadPrompt();
           } else if (this.schemaTab === 'prompts' && this.selectedSchema && !this.selectedSchema.id) {
-            this.promptContent = this.defaultPrompts[this.selectedPromptType] || '';
+            this.promptContent = '';
           }
         });
         this.$watch('selectedPromptType', () => {
@@ -351,7 +369,7 @@
             if (this.selectedSchema && this.selectedSchema.id) {
               this.loadPrompt();
             } else {
-              this.promptContent = this.defaultPrompts[this.selectedPromptType] || '';
+              this.promptContent = '';
             }
           }
         });
@@ -375,7 +393,7 @@
           }
           if (r.ok) {
             const updated = await r.json();
-            this.selectedSchema = updated;
+            this.selectedSchema = {...updated, is_default: false};
             await this.loadSchemas();
             this.schemaSaveMsg = 'Saved!';
             setTimeout(() => this.schemaSaveMsg = '', 2000);
@@ -420,9 +438,13 @@
           if (r.ok) {
             const data = await r.json();
             this.promptContent = data.content;
+          } else if (r.status === 404) {
+            // Prompt file doesn't exist yet, show empty textarea
+            this.promptContent = '';
           }
         } catch (e) {
           console.error('Failed to load prompt:', e);
+          this.promptContent = '';
         } finally {
           this.promptLoading = false;
         }
