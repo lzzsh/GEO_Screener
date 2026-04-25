@@ -1,92 +1,88 @@
 # GEO Screener
 
-A web application for searching, screening, and managing GEO (Gene Expression Omnibus) datasets. Designed to accelerate systematic literature review by combining automated GEO data retrieval with LLM-based inclusion/exclusion screening.
+A web application for searching, screening, and annotating GEO (Gene Expression Omnibus) datasets. It combines automated GEO metadata retrieval with LLM-based screening and sample-level annotation, designed to accelerate systematic dataset curation.
 
-## Features
+## Quick Start (Docker)
 
-- **GEO Search** — query NCBI GEO by keyword, GSE/GSM accession, or BioSample ID with pagination and column sorting
-- **Screening Tasks** — create batch screening tasks; a Celery worker fetches dataset metadata and runs LLM-based inclusion/exclusion decisions against configurable criteria
-- **GSM Annotation** — drill into individual samples within a dataset, annotate availability and metadata fields
-- **Paper Calibration** — sync LLM decisions against manually reviewed papers to measure and improve screening accuracy
-- **Library** — save datasets to named literature libraries for downstream analysis
-- **Export** — download screened results as CSV, using manual decision overrides when available
-- **Criteria Management** — define and edit inclusion/exclusion criteria used by the LLM screener
-
-## Tech Stack
-
-| Layer | Technology |
-|---|---|
-| Backend | FastAPI, SQLAlchemy (async), SQLite |
-| Task Queue | Celery + Redis |
-| LLM | OpenAI-compatible API (configurable) |
-| Frontend | Jinja2 templates, Alpine.js, Tailwind CSS |
-| PDF | pdfplumber |
-| Auth | JWT (python-jose + passlib) |
-
-## Getting Started
-
-### Prerequisites
-
-- Python 3.11+
-- Redis (for Celery)
-
-### Installation
+**Prerequisites:** Docker and Docker Compose.
 
 ```bash
-git clone https://github.com/lzzsh/GEO_search.git
-cd GEO_search
-python -m venv .venv && source .venv/bin/activate
-pip install -r backend/requirements.txt
+git clone https://github.com/lzzsh/GEO_Screener.git
+cd GEO_Screener
+
+cp docker/.env.example docker/.env
+# Edit docker/.env — set SECRET_KEY and your LLM API key
+
+mkdir -p data pdfs
+docker compose -f docker/docker-compose.yml up -d
 ```
 
-### Configuration
+Open [http://localhost:8000](http://localhost:8000), register an account, and configure your LLM provider under **Settings**.
 
-Create a `.env` file in the project root:
+### Environment variables
 
-```env
-SECRET_KEY=your-secret-key
-OPENAI_API_KEY=your-api-key
-OPENAI_BASE_URL=https://api.openai.com/v1   # or any compatible endpoint
-OPENAI_MODEL=gpt-4o-mini
+| Variable | Required | Description |
+|---|---|---|
+| `SECRET_KEY` | Yes | Random string for JWT signing |
+| `DATABASE_URL` | No | Defaults to `sqlite:////data/geo_search.db` |
+| `REDIS_URL` | No | Defaults to `redis://redis:6379/0` |
+
+LLM credentials are configured through the UI (Settings page), not via environment variables. They are stored in the local database and never committed to git.
+
+---
+
+## Annotation Schemas
+
+An annotation schema defines what fields the LLM extracts from each GSE dataset and each GSM sample. You can create multiple schemas for different research questions and switch between them at any time.
+
+### Creating a schema
+
+1. Go to **Criteria** (top navigation).
+2. In the left panel under **Annotation Schemas**, click **+ New Schema**.
+3. Give it a name and optionally a description.
+4. Define **GSE labels** — fields extracted at the dataset level (e.g. sequencing modality, cell type, differentiation endpoint).
+5. Define **GSM labels** — fields extracted at the individual sample level (e.g. passage number, treatment condition).
+6. Each label has a name, type (`enum` or `free_text`), and optional allowed values for enum fields.
+7. Click **Save**.
+
+> **Note:** If you want to run GSM-level annotation, the schema must have at least one GSM label defined. Tasks will fail with a clear error if GSM labels are missing.
+
+### Setting the active schema
+
+The active schema is automatically applied to all new screening and annotation tasks you create.
+
+1. In the **Annotation Schemas** panel, find the schema you want to use.
+2. Click **Set active** next to it.
+3. A **✓ Active** badge appears on the selected schema.
+
+To revert to the built-in default schema, click **Set active** on the **Default** entry at the top of the list.
+
+### Customizing prompts
+
+Each schema can have its own LLM prompt templates. Prompts are loaded from:
+
+```
+backend/prompts/<schema-name>/label_prompt.txt        # GSE annotation
+backend/prompts/<schema-name>/gsm_label_prompt.txt    # GSM annotation
 ```
 
-### Running
+If a schema-specific prompt file is missing, the system falls back to `backend/prompts/default/`. You can copy and edit the default prompts as a starting point.
 
-Start the FastAPI server:
+The `{gse_label_spec}` / `{gsm_label_spec}` placeholders in the prompt templates are automatically filled with the label definitions from your schema.
 
-```bash
-uvicorn backend.main:app --reload
-```
+---
 
-Start the Celery worker (in a separate terminal):
+## Workflow
 
-```bash
-celery -A backend.worker.celery_app worker --loglevel=info
-```
+1. **Search** — query GEO by keyword or accession on the Search page.
+2. **Screen** — create a screening task with inclusion/exclusion criteria. The LLM evaluates each dataset and returns include / exclude / uncertain decisions.
+3. **Annotate GSE** — run LLM annotation on included datasets to extract structured metadata fields defined by your active schema.
+4. **Annotate GSM** — create a GSM annotation task to annotate individual samples within each dataset.
+5. **Review** — manually override decisions and labels inline. Changes to `final_conclusion` labels sync task statistics immediately.
+6. **Export** — download results as CSV from the task detail page.
 
-Open [http://localhost:8000](http://localhost:8000).
+---
 
-## Project Structure
+## Settings
 
-```
-backend/
-  routers/        # FastAPI route handlers (geo, tasks, annotate, library, llm, criteria, auth)
-  worker/         # Celery tasks, GEO fetcher, LLM client, PDF fetcher
-  models.py       # SQLAlchemy ORM models
-  database.py     # Async DB session setup
-  decision_sync.py # Paper calibration sync logic
-  label_schema.py # GSM annotation field definitions
-frontend/
-  templates/      # Jinja2 HTML templates
-  static/         # JS / CSS assets
-```
-
-## Running Tests
-
-```bash
-pytest backend/tests/
-```
-
-## Contributing
-
-See [CLAUDE.md](CLAUDE.md) for coding guidelines used in this project.
+Go to **Settings** to configure your LLM provider. Supported providers include OpenAI, DeepSeek, and any OpenAI-compatible endpoint. Your API key is stored only in the local database (`data/geo_search.db`) and is never exposed in the source code or git history.
