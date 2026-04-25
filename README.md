@@ -1,10 +1,10 @@
 <div align="center">
 
-# GEO Screener
+# 🧬 GEO Screener
 
 **LLM-powered dataset curation for GEO**
 
-Search · Screen · Annotate · Export
+🔍 Search · 🤖 Screen · 🏷️ Annotate · 📤 Export
 
 *Configurable schemas · OpenAI-compatible · Docker-ready · Self-hosted*
 
@@ -14,25 +14,25 @@ Search · Screen · Annotate · Export
 
 GEO Screener turns the tedious process of systematic GEO dataset curation into a structured, LLM-assisted workflow. Define your inclusion criteria once, run batch screening across hundreds of datasets, drill into sample-level annotation, and export clean results — all from a web UI.
 
-## Features
+## ✨ Features
 
 | | |
 |---|---|
-| **GEO Search** | Query by keyword, GSE/GSM accession, or BioSample ID |
-| **Batch Screening** | LLM evaluates each dataset against your criteria: include / exclude / uncertain |
-| **GSE Annotation** | Extract structured metadata fields defined by your schema |
-| **GSM Annotation** | Sample-level annotation with custom label definitions |
-| **Annotation Schemas** | Create and switch schemas per research question; set one as globally active |
-| **Manual Override** | Edit any LLM decision or label inline; changes sync task statistics immediately |
-| **Paper Calibration** | Measure LLM accuracy against manually reviewed papers |
-| **Library** | Save datasets to named collections for downstream use |
-| **Export** | Download results as CSV with manual overrides applied |
+| 🔍 **GEO Search** | Query by keyword, GSE/GSM accession, or BioSample ID |
+| 🤖 **Batch Screening** | LLM evaluates each dataset against your criteria: include / exclude / uncertain |
+| 🏷️ **GSE Annotation** | Extract structured metadata fields defined by your schema |
+| 🔬 **GSM Annotation** | Sample-level annotation with custom label definitions |
+| 📐 **Annotation Schemas** | Create and switch schemas per research question; set one as globally active |
+| ✏️ **Manual Override** | Edit any LLM decision or label inline; changes sync task statistics immediately |
+| 📊 **Paper Calibration** | Measure LLM accuracy against manually reviewed papers |
+| 📚 **Library** | Save datasets to named collections for downstream use |
+| 📤 **Export** | Download results as CSV with manual overrides applied |
 
 ---
 
-## Screenshots
+## 📸 Screenshots
 
-**Search**
+**🔍 Search**
 
 <img src="docs/images/search.png" width="800"/>
 
@@ -40,7 +40,7 @@ Query NCBI GEO by keyword or accession. Results show dataset type, sample count,
 
 ---
 
-**GSE Annotation**
+**🏷️ GSE Annotation**
 
 <img src="docs/images/annotation.jpg" width="800"/>
 
@@ -48,7 +48,7 @@ LLM extracts structured fields from each dataset according to your active schema
 
 ---
 
-**Annotation Schema Configuration**
+**📐 Annotation Schema Configuration**
 
 <img src="docs/images/schema.png" width="800"/>
 
@@ -56,7 +56,7 @@ Define GSE and GSM label fields (enum or free-text), set one schema as active, a
 
 ---
 
-**LLM Configuration**
+**⚙️ LLM Configuration**
 
 <img src="docs/images/llm_config.png" width="800"/>
 
@@ -64,7 +64,7 @@ Connect any OpenAI-compatible provider — OpenAI, DeepSeek, Qwen, local Ollama,
 
 ---
 
-## Quick Start (Docker)
+## 🚀 Quick Start (Docker)
 
 **Prerequisites:** Docker and Docker Compose.
 
@@ -81,11 +81,11 @@ docker compose -f docker/docker-compose.yml up -d
 
 Open [http://localhost:8000](http://localhost:8000), register an account, then go to **Settings** to configure your LLM provider.
 
-### Environment variables
+### 🔑 Environment variables
 
 | Variable | Required | Description |
 |---|---|---|
-| `SECRET_KEY` | Yes | Random string for JWT signing — change before deploying |
+| `SECRET_KEY` | ✅ Yes | Random string for JWT signing — change before deploying |
 | `DATABASE_URL` | No | Defaults to `sqlite:////data/geo_search.db` |
 | `REDIS_URL` | No | Defaults to `redis://redis:6379/0` |
 
@@ -93,7 +93,7 @@ LLM credentials (provider, API key, model, base URL) are configured through the 
 
 ---
 
-## Annotation Schemas
+## 📐 Annotation Schemas
 
 A schema defines what fields the LLM extracts from each GSE dataset and each GSM sample. You can maintain multiple schemas for different research questions and switch between them at any time.
 
@@ -112,7 +112,7 @@ Click **Set active** next to any schema. A **✓ Active** badge appears, and all
 
 To revert to the built-in default, click **Set active** on the **Default** entry.
 
-> If you run GSM annotation with a schema that has no GSM labels defined, the task will fail immediately with a clear error message rather than silently using defaults.
+> ⚠️ If you run GSM annotation with a schema that has no GSM labels defined, the task will fail immediately with a clear error message rather than silently using defaults.
 
 ### Custom prompt templates
 
@@ -127,26 +127,26 @@ If a schema-specific file is missing, the system falls back to `backend/prompts/
 
 ---
 
-## Workflow
+## 🔄 Workflow
 
 ```
-Search GEO  →  Create screening task  →  Review decisions
-                                              ↓
-                                     Annotate GSE (LLM extracts labels)
-                                              ↓
-                                     Create GSM annotation task
-                                              ↓
-                                     Review & override  →  Export CSV
+🔍 Search GEO  →  📋 Create screening task  →  👀 Review decisions
+                                                       ↓
+                                          🏷️ Annotate GSE (LLM extracts labels)
+                                                       ↓
+                                          🔬 Create GSM annotation task
+                                                       ↓
+                                          ✏️ Review & override  →  📤 Export CSV
 ```
 
 ---
 
-## Tech Stack
+## 🛠️ Tech Stack
 
 | Layer | Technology |
 |---|---|
-| Backend | FastAPI, SQLAlchemy (async), SQLite |
-| Task Queue | Celery + Redis |
-| LLM | OpenAI-compatible API (any provider) |
-| Frontend | Jinja2, Alpine.js, Tailwind CSS |
-| Auth | JWT (python-jose + passlib) |
+| 🖥️ Backend | FastAPI, SQLAlchemy (async), SQLite |
+| ⚙️ Task Queue | Celery + Redis |
+| 🤖 LLM | OpenAI-compatible API (any provider) |
+| 🎨 Frontend | Jinja2, Alpine.js, Tailwind CSS |
+| 🔐 Auth | JWT (python-jose + passlib) |
