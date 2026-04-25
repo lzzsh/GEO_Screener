@@ -1,5 +1,7 @@
 <div align="center">
 
+<img src="docs/images/logo.png" width="200"/>
+
 # 🧬 GEO Screener
 
 **LLM-powered dataset curation for GEO**
