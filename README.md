@@ -176,7 +176,7 @@ If you use GEO Screener in your research, please cite:
 ```bibtex
 @software{geoscreener2026,
   title  = {GEO Screener: LLM-powered Dataset Curation for GEO},
-  author = {lzzsh},
+  author = {Liao, Zizhuo},
   year   = {2026},
   url    = {https://github.com/lzzsh/GEO_Screener}
 }
