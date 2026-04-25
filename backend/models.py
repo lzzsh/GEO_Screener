@@ -11,7 +11,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column(String(256), nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     tasks: Mapped[list["ScreeningTask"]] = relationship(back_populates="owner")
-    annotation_schemas: Mapped[list["AnnotationSchema"]] = relationship(back_populates="owner")
+    annotation_schemas: Mapped[list["AnnotationSchema"]] = relationship(back_populates="owner", foreign_keys="AnnotationSchema.owner_id")
     active_annotation_schema_id: Mapped[int | None] = mapped_column(
         ForeignKey("annotation_schemas.id"), nullable=True
     )
@@ -26,7 +26,7 @@ class AnnotationSchema(Base):
     gsm_labels: Mapped[str] = mapped_column(Text, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
-    owner: Mapped["User"] = relationship(back_populates="annotation_schemas")
+    owner: Mapped["User"] = relationship(back_populates="annotation_schemas", foreign_keys=[owner_id])
 
 class CriteriaTemplate(Base):
     __tablename__ = "criteria_templates"

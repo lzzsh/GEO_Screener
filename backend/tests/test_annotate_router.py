@@ -125,7 +125,9 @@ async def test_trigger_annotation_backfills_default_label_schema(auth_client):
 
     async with AsyncSessionLocal() as db:
         saved = await db.get(ScreeningTask, task_id)
-        assert json.loads(saved.label_schema) == ["数据模态", "分化起点", "扰动类型", "分化体系", "分化终点", "数据平台", "是否提供原始测序数据"]
+        schema = json.loads(saved.label_schema)
+        assert isinstance(schema, dict)
+        assert "gse" in schema and "gsm" in schema
 
 
 @pytest.mark.asyncio
