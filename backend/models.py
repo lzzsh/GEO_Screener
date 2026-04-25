@@ -12,6 +12,9 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     tasks: Mapped[list["ScreeningTask"]] = relationship(back_populates="owner")
     annotation_schemas: Mapped[list["AnnotationSchema"]] = relationship(back_populates="owner")
+    active_annotation_schema_id: Mapped[int | None] = mapped_column(
+        ForeignKey("annotation_schemas.id"), nullable=True
+    )
 
 class AnnotationSchema(Base):
     __tablename__ = "annotation_schemas"

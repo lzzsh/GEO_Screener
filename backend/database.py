@@ -43,6 +43,9 @@ async def _run_sqlite_migrations(conn):
         return
 
     required_columns = {
+        "users": {
+            "active_annotation_schema_id": "INTEGER REFERENCES annotation_schemas(id)",
+        },
         "screening_tasks": {
             "search_query": "TEXT",
             "candidate_count": "INTEGER DEFAULT 0",
