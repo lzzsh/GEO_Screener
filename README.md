@@ -152,3 +152,32 @@ If a schema-specific file is missing, the system falls back to `backend/prompts/
 | 🤖 LLM | OpenAI-compatible API (any provider) |
 | 🎨 Frontend | Jinja2, Alpine.js, Tailwind CSS |
 | 🔐 Auth | JWT (python-jose + passlib) |
+
+---
+
+## ⚠️ Safety & Disclaimer
+
+- **Research use only** — GEO Screener is a literature curation aid, not a validated clinical or diagnostic tool
+- **Verify LLM outputs** — Always review automated screening decisions before drawing scientific conclusions
+- **Local-first** — All data stays on your machine; no dataset content is sent to external services beyond your configured LLM provider
+
+---
+
+## 📜 License
+
+MIT License — see [LICENSE](LICENSE) for details.
+
+---
+
+## 📝 Citation
+
+If you use GEO Screener in your research, please cite:
+
+```bibtex
+@software{geoscreener2026,
+  title  = {GEO Screener: LLM-powered Dataset Curation for GEO},
+  author = {lzzsh},
+  year   = {2026},
+  url    = {https://github.com/lzzsh/GEO_Screener}
+}
+```
