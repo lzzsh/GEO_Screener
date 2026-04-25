@@ -139,6 +139,10 @@ async def delete_schema(schema_id: int, db: AsyncSession = Depends(get_db), user
     if not schema:
         raise HTTPException(status_code=404, detail="Not found")
 
+    if user.active_annotation_schema_id == schema_id:
+        user.active_annotation_schema_id = None
+        await db.flush()
+
     # Delete prompt files for this schema
     _delete_schema_prompt_files(schema.name)
 

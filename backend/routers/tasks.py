@@ -382,6 +382,7 @@ async def create_gsm_task(
         criteria_text=parent_task.criteria_text,
         owner_id=user.id,
         label_schema=parent_task.label_schema,
+        annotation_schema_id=parent_task.annotation_schema_id,
     )
     db.add(gsm_task)
     await db.flush()
@@ -470,6 +471,7 @@ async def run_gsm_annotation(
                 criteria_text=task.criteria_text,
                 owner_id=user.id,
                 label_schema=task.label_schema,
+                annotation_schema_id=task.annotation_schema_id,
             )
             db.add(gsm_task)
             await db.flush()
