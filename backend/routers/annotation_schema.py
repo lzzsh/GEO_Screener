@@ -31,7 +31,7 @@ class AnnotationSchemaUpdate(BaseModel):
     gse_labels: Optional[list[LabelDefCreate]] = None
     gsm_labels: Optional[list[LabelDefCreate]] = None
 
-def _serialize(schema: AnnotationSchema) -> dict:
+def _serialize(schema: AnnotationSchema, active_id: int | None = None) -> dict:
     return {
         "id": schema.id,
         "name": schema.name,
@@ -40,6 +40,7 @@ def _serialize(schema: AnnotationSchema) -> dict:
         "gsm_labels": json.loads(schema.gsm_labels),
         "created_at": schema.created_at,
         "updated_at": schema.updated_at,
+        "is_active": schema.id == active_id,
     }
 
 def _get_prompts_dir() -> str:
@@ -47,19 +48,10 @@ def _get_prompts_dir() -> str:
     return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
 
 def _create_schema_prompt_files(schema_name: str):
-    """Create prompt files for a new schema by copying from default."""
+    """Create prompt directory for a new schema (without copying defaults)."""
     prompts_dir = _get_prompts_dir()
     schema_dir = os.path.join(prompts_dir, schema_name)
-    default_dir = os.path.join(prompts_dir, "default")
-
     os.makedirs(schema_dir, exist_ok=True)
-
-    # Copy default prompt files
-    for prompt_type in ["label_prompt", "gsm_label_prompt", "paper_calibration_prompt"]:
-        src = os.path.join(default_dir, f"{prompt_type}.txt")
-        dst = os.path.join(schema_dir, f"{prompt_type}.txt")
-        if os.path.exists(src) and not os.path.exists(dst):
-            shutil.copy(src, dst)
 
 def _delete_schema_prompt_files(schema_name: str):
     """Delete prompt files for a schema."""
@@ -80,7 +72,18 @@ async def get_default_template():
 @router.get("")
 async def list_schemas(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     result = await db.execute(select(AnnotationSchema).where(AnnotationSchema.owner_id == user.id))
-    return [_serialize(s) for s in result.scalars().all()]
+    return [_serialize(s, user.active_annotation_schema_id) for s in result.scalars().all()]
+
+@router.post("/{schema_id}/set-active")
+async def set_active_schema(schema_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    schema = (await db.execute(select(AnnotationSchema).where(
+        AnnotationSchema.id == schema_id, AnnotationSchema.owner_id == user.id
+    ))).scalar_one_or_none()
+    if not schema:
+        raise HTTPException(status_code=404, detail="Not found")
+    user.active_annotation_schema_id = schema_id
+    await db.commit()
+    return {"active_schema_id": schema_id}
 
 @router.post("", status_code=201)
 async def create_schema(req: AnnotationSchemaCreate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
