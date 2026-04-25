@@ -15,6 +15,7 @@ venv/
 *.db-shm
 *.db-wal
 *.sqlite3
+data/
 
 # Environment
 .env
@@ -42,6 +43,7 @@ htmlcov/
 docs/
 AGENTS.md
 docker-compose.yml
+!docker/docker-compose.yml
 pdfs/
 
 # Personal prompt schemas (only default/ is public)

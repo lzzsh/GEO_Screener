@@ -1,0 +1,35 @@
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    ports:
+      - "8000:8000"
+    volumes:
+      - ../data:/data
+      - ../backend/prompts:/app/backend/prompts
+      - ../pdfs:/app/pdfs
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: celery -A backend.worker.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - ../data:/data
+      - ../backend/prompts:/app/backend/prompts
+      - ../pdfs:/app/pdfs
+    env_file:
+      - .env
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
