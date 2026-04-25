@@ -40,7 +40,8 @@ htmlcov/
 .DS_Store
 
 # Project-specific exclusions
-docs/
+docs/*.md
+docs/superpowers/
 AGENTS.md
 docker-compose.yml
 !docker/docker-compose.yml
