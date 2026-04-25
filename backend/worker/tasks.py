@@ -344,6 +344,16 @@ async def _run_gsm_task_async(task_id: int):
             if annotation_schema:
                 schema_name = annotation_schema.name
 
+        # Fail early if the schema has no GSM labels defined
+        if not gsm_labels:
+            task_err = f"Schema '{schema_name}' has no GSM labels defined. Please configure GSM labels in the schema before running GSM annotation."
+            logger.error(task_err)
+            task.status = "error"
+            for result in task.results:
+                result.error_msg = task_err
+            await db.commit()
+            return
+
         llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
                         base_url=cfg.base_url, model=cfg.model, temperature=0)
         task.status = "running"

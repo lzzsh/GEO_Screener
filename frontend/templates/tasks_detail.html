@@ -206,6 +206,7 @@
   </div>
 
   <div x-show="annotationError" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="annotationError"></div>
+  <div x-show="gsmAnnotationError" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="gsmAnnotationError"></div>
   <div class="flex items-center justify-between gap-3 mb-6">
     <div class="flex items-center gap-3">
       <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
@@ -493,7 +494,7 @@
     return {
       taskId, task: {}, results: [], loading: true,
       page: 1, pageSize: 20, total: 0, jumpPageInput: 1, expanded: new Set(),
-      decisionFilter: '', accessionSearch: '', annotating: false, annotationError: '', gsmAnnotating: false,
+      decisionFilter: '', accessionSearch: '', annotating: false, annotationError: '', gsmAnnotating: false, gsmAnnotationError: '',
       fetchingPdfs: false, calibrating: false,
       pollTimer: null, libs: [],
       expandedGsm: new Set(),
@@ -513,6 +514,7 @@
         if (this.task.status === 'running' || this.task.status === 'pending') {
           this.pollTimer = setInterval(() => this.poll(), 3000);
         }
+        window.addEventListener('final-conclusion-saved', () => this.loadTask());
       },
       async loadTask() {
         const r = await fetch('/tasks/' + this.taskId);
@@ -624,6 +626,7 @@
       },
       async runAllGsmAnnotation() {
         this.gsmAnnotating = true;
+        this.gsmAnnotationError = '';
         try {
           const r = await fetch('/tasks/' + this.taskId + '/run-gsm-annotation', {method: 'POST'});
           if (r.ok) {
@@ -631,6 +634,9 @@
             if (data.gsm_task_id) {
               window.location.href = '/tasks/' + data.gsm_task_id + '/detail';
             }
+          } else {
+            const payload = await r.json().catch(() => ({}));
+            this.gsmAnnotationError = payload.detail || 'Failed to run GSM annotation';
           }
         } finally {
           this.gsmAnnotating = false;
@@ -701,6 +707,9 @@
           lbl.value = updated.value;
           lbl.source = updated.source;
           lbl.editing = false;
+          if (lbl.key === 'final_conclusion') {
+            window.dispatchEvent(new CustomEvent('final-conclusion-saved'));
+          }
         }
       }
     }

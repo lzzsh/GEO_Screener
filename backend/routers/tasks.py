@@ -450,6 +450,23 @@ async def run_gsm_annotation(
     if task.owner_id != user.id:
         raise HTTPException(status_code=403, detail="Not authorized")
 
+    # Validate that the schema has GSM labels before proceeding
+    if task.label_schema:
+        import json as _json
+        _schema = _json.loads(task.label_schema) if isinstance(task.label_schema, str) else task.label_schema
+        if isinstance(_schema, dict) and not _schema.get("gsm"):
+            schema_name = "default"
+            if task.annotation_schema_id:
+                _ann = (await db.execute(
+                    select(AnnotationSchema).where(AnnotationSchema.id == task.annotation_schema_id)
+                )).scalar_one_or_none()
+                if _ann:
+                    schema_name = _ann.name
+            raise HTTPException(
+                status_code=400,
+                detail=f"Schema '{schema_name}' has no GSM labels defined. Please configure GSM labels in the schema before running GSM annotation."
+            )
+
     # If called on a screening task, auto-create the GSM child task first
     if task.task_type == "screening":
         # Check if a GSM task already exists for this parent

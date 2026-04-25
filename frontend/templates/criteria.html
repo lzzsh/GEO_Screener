@@ -22,12 +22,12 @@
                 <span x-show="s.is_default">📋</span>
                 <span x-text="s.name"></span>
               </p>
-              <span x-show="s.id && activeSchemaId === s.id"
-                    class="flex-shrink-0 text-xs text-green-600 font-semibold">✓ 活跃</span>
-              <button x-show="s.id && activeSchemaId !== s.id"
+              <span x-show="activeSchemaId === s.id || (s.is_default && !activeSchemaId)"
+                    class="flex-shrink-0 text-xs text-green-600 font-semibold">✓ Active</span>
+              <button x-show="!(activeSchemaId === s.id || (s.is_default && !activeSchemaId))"
                       @click.stop="setActive(s)"
-                      class="flex-shrink-0 text-xs text-blue-500 hover:text-blue-700 underline">
-                设为活跃
+                      class="flex-shrink-0 text-xs text-blue-500 hover:text-blue-700">
+                Set active
               </button>
             </div>
             <p class="text-xs text-gray-400 mt-0.5">
@@ -322,9 +322,12 @@
         }
       },
       async setActive(s) {
-        const r = await fetch(`/annotation-schemas/${s.id}/set-active`, { method: 'POST' });
-        if (r.ok) {
-          this.activeSchemaId = s.id;
+        if (s.is_default) {
+          const r = await fetch('/annotation-schemas/clear-active', { method: 'POST' });
+          if (r.ok) this.activeSchemaId = null;
+        } else {
+          const r = await fetch(`/annotation-schemas/${s.id}/set-active`, { method: 'POST' });
+          if (r.ok) this.activeSchemaId = s.id;
         }
       },
       newSchema() {

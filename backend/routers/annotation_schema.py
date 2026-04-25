@@ -74,6 +74,12 @@ async def list_schemas(db: AsyncSession = Depends(get_db), user: User = Depends(
     result = await db.execute(select(AnnotationSchema).where(AnnotationSchema.owner_id == user.id))
     return [_serialize(s, user.active_annotation_schema_id) for s in result.scalars().all()]
 
+@router.post("/clear-active")
+async def clear_active_schema(db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    user.active_annotation_schema_id = None
+    await db.commit()
+    return {"active_schema_id": None}
+
 @router.post("/{schema_id}/set-active")
 async def set_active_schema(schema_id: int, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
     schema = (await db.execute(select(AnnotationSchema).where(
