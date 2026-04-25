@@ -19,6 +19,7 @@ venv/
 # Environment
 .env
 .env.*
+!docker/.env.example
 
 # Logs
 *.log
@@ -42,3 +43,8 @@ docs/
 AGENTS.md
 docker-compose.yml
 pdfs/
+
+# Personal prompt schemas (only default/ is public)
+backend/prompts/*/
+!backend/prompts/default/
+!backend/prompts/default/**
