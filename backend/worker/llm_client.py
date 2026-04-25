@@ -292,10 +292,18 @@ class LLMClient:
         raw = response.choices[0].message.content.strip()
         return self._parse_json(raw)
 
+    def _format_prompt(self, template: str, **kwargs) -> str:
+        """Replace {key} placeholders, leaving unknown or complex {…} untouched."""
+        def replacer(m):
+            key = m.group(1)
+            return str(kwargs[key]) if key in kwargs else m.group(0)
+        return re.sub(r'\{([a-zA-Z_][a-zA-Z0-9_]*)\}', replacer, template)
+
     async def extract_labels(self, dataset_id: str, title: str, description: str,
                               gse_labels: list[dict], schema_name: str = "default") -> dict:
         prompt_template = self._load_prompt(schema_name, "label_prompt")
-        prompt = prompt_template.format(
+        prompt = self._format_prompt(
+            prompt_template,
             gse_label_spec=self._build_label_spec(gse_labels),
             dataset_id=dataset_id, title=title, description=description,
         )
@@ -314,7 +322,8 @@ class LLMClient:
         gsm_spec = self._build_label_spec(gsm_labels)
         if gsm_spec:
             gsm_spec = gsm_spec + ","
-        prompt = prompt_template.format(
+        prompt = self._format_prompt(
+            prompt_template,
             gsm_label_spec=gsm_spec,
             gsm_id=gsm_id, title=title, organism=organism,
             biosample_id=biosample_id, characteristics=characteristics,
