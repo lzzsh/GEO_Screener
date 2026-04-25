@@ -206,18 +206,20 @@
   </div>
 
   <div x-show="annotationError" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="annotationError"></div>
-  <div class="flex items-center gap-3 mb-6">
-    <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
-    <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
-    <span :class="statusClass(task.status)"
-          class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>
+  <div class="flex items-center justify-between gap-3 mb-6">
+    <div class="flex items-center gap-3">
+      <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
+      <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
+      <span :class="statusClass(task.status)"
+            class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>
+    </div>
+    <div class="px-4 py-3 border border-gray-200 rounded-lg">
+      <p class="text-xs text-gray-400 mb-1">Annotation Schema</p>
+      <p class="text-sm font-semibold" x-text="task.annotation_schema_name || 'Default'"></p>
+    </div>
   </div>
 
   <div class="grid gap-3 md:grid-cols-6 mb-6">
-    <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-      <p class="text-xs text-gray-400">Annotation Schema</p>
-      <p class="text-sm font-semibold" x-text="task.annotation_schema_name || 'Default'"></p>
-    </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
       <p class="text-xs text-gray-400">GEO Candidates</p>
       <p class="text-2xl font-semibold" x-text="task.candidate_count || 0"></p>
@@ -514,7 +516,9 @@
       },
       async loadTask() {
         const r = await fetch('/tasks/' + this.taskId);
-        if (r.ok) this.task = await r.json();
+        if (r.ok) {
+          this.task = await r.json();
+        }
       },
       async loadResults() {
         this.loading = true;
@@ -547,6 +551,7 @@
           }
           let polls = 0;
           const annotationPoll = setInterval(async () => {
+            await this.loadTask();
             await this.loadResults();
             polls++;
             if (polls >= 20) clearInterval(annotationPoll);
