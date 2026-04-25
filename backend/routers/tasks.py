@@ -26,6 +26,9 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 class DecisionUpdate(BaseModel):
     decision: str  # include | exclude | uncertain
 
+class TaskUpdate(BaseModel):
+    annotation_schema_id: Optional[int] = None
+
 
 @router.post("", status_code=201)
 async def create_task(
@@ -43,6 +46,9 @@ async def create_task(
 ):
     if source == "geo" and not search_query and not geo_ids:
         raise HTTPException(status_code=400, detail="search_query is required for GEO tasks")
+
+    if not annotation_schema_id and user.active_annotation_schema_id:
+        annotation_schema_id = user.active_annotation_schema_id
 
     if annotation_schema_id:
         schema_result = await db.execute(
@@ -175,7 +181,8 @@ async def get_task(task_id: int, db: AsyncSession = Depends(get_db), user: User 
             "processed": task.processed, "included_count": task.included_count,
             "excluded_count": task.excluded_count, "uncertain_count": task.uncertain_count,
             "search_query": task.search_query, "created_at": task.created_at,
-            "task_type": task.task_type, "annotation_schema_name": annotation_schema_name}
+            "task_type": task.task_type, "annotation_schema_name": annotation_schema_name,
+            "annotation_schema_id": task.annotation_schema_id}
 
 
 @router.delete("/{task_id}")
@@ -204,6 +211,25 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db), user: Us
             raise HTTPException(status_code=503, detail="Database is busy. Please retry in a moment.")
         raise
     return {"status": "deleted"}
+
+
+@router.patch("/{task_id}")
+async def update_task(task_id: int, req: TaskUpdate, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    result = await db.execute(
+        select(ScreeningTask).where(ScreeningTask.id == task_id, ScreeningTask.owner_id == user.id)
+    )
+    task = result.scalar_one_or_none()
+    if not task:
+        raise HTTPException(status_code=404, detail="Not found")
+    if req.annotation_schema_id is not None:
+        schema_result = await db.execute(
+            select(AnnotationSchema).where(AnnotationSchema.id == req.annotation_schema_id, AnnotationSchema.owner_id == user.id)
+        )
+        if not schema_result.scalar_one_or_none():
+            raise HTTPException(status_code=404, detail="Schema not found")
+        task.annotation_schema_id = req.annotation_schema_id
+    await db.commit()
+    return {"status": "updated"}
 
 
 @router.get("/{task_id}/results")
