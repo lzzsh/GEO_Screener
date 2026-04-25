@@ -14,9 +14,9 @@
       </button>
       <div class="space-y-1">
         <template x-for="s in schemaList" :key="s.id">
-          <button @click="selectSchema(s)"
-                  :class="selectedSchema && selectedSchema.id === s.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'"
-                  class="w-full text-left px-3 py-2.5 rounded-lg border text-sm hover:border-blue-300 transition">
+          <div @click="selectSchema(s)"
+               :class="selectedSchema && selectedSchema.id === s.id ? 'bg-blue-50 border-blue-300' : 'bg-white border-gray-200'"
+               class="w-full text-left px-3 py-2.5 rounded-lg border text-sm hover:border-blue-300 transition cursor-pointer">
             <div class="flex items-center justify-between gap-1">
               <p class="font-medium truncate">
                 <span x-show="s.is_default">📋</span>
@@ -34,7 +34,7 @@
               <span x-show="s.is_default">Default Example</span>
               <span x-show="!s.is_default" x-text="s.id ? new Date(s.updated_at).toLocaleDateString() : 'unsaved'"></span>
             </p>
-          </button>
+          </div>
         </template>
       </div>
     </div>
@@ -44,7 +44,7 @@
       <div x-show="!selectedSchema" class="text-gray-400 text-sm text-center py-16">
         Select a schema or create a new one.
       </div>
-      <div x-show="selectedSchema">
+      <template x-if="selectedSchema"><div>
         <!-- Schema title -->
         <div class="mb-4 pb-4 border-b border-gray-200">
           <h2 class="text-lg font-semibold text-gray-900" x-text="selectedSchema.name"></h2>
@@ -230,7 +230,7 @@
           <button @click="deleteSchema()" x-show="selectedSchema && selectedSchema.id && !selectedSchema.is_default"
                   class="text-red-500 hover:text-red-700 px-4 py-2 text-sm">Delete</button>
         </div>
-      </div>
+      </div></template>
     </div>
   </div>
 </div>
