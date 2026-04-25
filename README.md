@@ -81,7 +81,15 @@ mkdir -p data pdfs
 docker compose -f docker/docker-compose.yml up -d
 ```
 
-Open [http://localhost:8000](http://localhost:8000), register an account, then go to **Settings** to configure your LLM provider.
+Open [http://localhost:8000](http://localhost:8000) — the UI will prompt you to log in, but there are no accounts yet. Register your first account via the API:
+
+```bash
+curl -s -X POST http://localhost:8000/api/auth/register \
+    -H "Content-Type: application/json" \
+    -d '{"username":"admin","password":"admin123"}'
+```
+
+Then log in with those credentials and go to **Settings** to configure your LLM provider.
 
 ### 🔑 Environment variables
 
