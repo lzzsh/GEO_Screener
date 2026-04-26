@@ -19,3 +19,16 @@ __pycache__/
 
 # macOS
 .DS_Store
+
+# Playwright MCP artifacts
+.playwright-mcp/
+
+# Merge backup
+.merge-backup/
+
+# Superpowers plans/specs
+docs/superpowers/
+
+# Custom prompt schemas (local only)
+backend/prompts/cancer/
+backend/prompts/xlz_test/
