@@ -1,53 +1,21 @@
-# Git worktrees
-.worktrees/
+# Database
+*.db
+*.db-shm
+*.db-wal
+
+# Data directories
+data/
+pdfs/
+
+# Environment
+docker/.env
+.env
 
 # Python
 __pycache__/
 *.pyc
 *.pyo
-*.pyd
-.venv/
-venv/
-*.egg-info/
-
-# Database
-*.db
-*.db-shm
-*.db-wal
-*.sqlite3
-data/
-
-# Environment
-.env
-.env.*
-!docker/.env.example
-
-# Logs
-*.log
-logs/
-.playwright-mcp/
-
-# Debug / merge artifacts
-.merge-backup/
-*.debug
-
-# Test cache
 .pytest_cache/
-.coverage
-htmlcov/
 
-# OS
+# macOS
 .DS_Store
-
-# Project-specific exclusions
-docs/*.md
-docs/superpowers/
-AGENTS.md
-docker-compose.yml
-!docker/docker-compose.yml
-pdfs/
-
-# Personal prompt schemas (only default/ is public)
-backend/prompts/*/
-!backend/prompts/default/
-!backend/prompts/default/**
