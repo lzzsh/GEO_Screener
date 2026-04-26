@@ -171,6 +171,14 @@ If a schema-specific file is missing, the system falls back to `backend/prompts/
 
 ---
 
+## 📬 Contact
+
+如有问题或建议，欢迎通过微信联系：
+
+<img src="docs/images/wechat_qr.jpg" width="200"/>
+
+---
+
 ## 📜 License
 
 MIT License — see [LICENSE](LICENSE) for details.
