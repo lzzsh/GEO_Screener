@@ -681,9 +681,7 @@
         });
         if (resp.ok) {
           const data = await resp.json();
-          this.task.included_count = data.included_count;
-          this.task.excluded_count = data.excluded_count;
-          this.task.uncertain_count = data.uncertain_count;
+          this.task = {...this.task, included_count: data.included_count, excluded_count: data.excluded_count, uncertain_count: data.uncertain_count};
         } else {
           r.decision = oldVal;
         }
