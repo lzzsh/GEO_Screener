@@ -7,9 +7,15 @@
       <h1 class="text-2xl font-bold">Screening Tasks</h1>
       <p class="text-sm text-gray-500 mt-1">Tasks are now created from the Search workspace after you inspect GEO candidates.</p>
     </div>
-    <a href="/search" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
-      Go to Search
-    </a>
+    <div class="flex gap-2">
+      <button @click="openImportModal()"
+              class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium">
+        批量导入 GSE
+      </button>
+      <a href="/search" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
+        Go to Search
+      </a>
+    </div>
   </div>
 
   <div x-show="loading" class="text-gray-400 text-sm">Loading…</div>
@@ -56,12 +62,67 @@
       </div>
     </template>
   </div>
+
+  <!-- Batch GSE Import Modal -->
+<div x-show="importModal" x-cloak
+     class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+     @keydown.escape.window="importModal = false">
+  <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 space-y-4"
+       @click.stop>
+    <div class="flex items-center justify-between">
+      <h2 class="text-lg font-semibold">批量导入 GSE</h2>
+      <button @click="importModal = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">任务名称</label>
+      <input x-model="importName" type="text"
+             class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
+    </div>
+
+    <div>
+      <label class="block text-sm font-medium mb-1">GSE ID 列表
+        <span class="text-gray-400 font-normal">（支持 JSON 数组或纯文本，换行/逗号/空格分隔）</span>
+      </label>
+      <textarea x-model="importInput" @input="parseGseInput()" rows="6"
+                placeholder='["GSE288587", "GSE129096", ...] 或每行一个 GSE ID'
+                class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
+    </div>
+
+    <div x-show="importParsed.length > 0" class="space-y-2">
+      <p class="text-sm text-gray-500" x-text="`已识别 ${importParsed.length} 个 GSE ID：`"></p>
+      <div class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
+        <template x-for="id in importParsed" :key="id">
+          <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full" x-text="id"></span>
+        </template>
+      </div>
+    </div>
+
+    <div x-show="importError" class="text-red-600 text-sm bg-red-50 rounded-lg px-3 py-2" x-text="importError"></div>
+
+    <div class="flex justify-end gap-2 pt-2">
+      <button @click="importModal = false"
+              class="px-4 py-2 text-sm rounded-lg border hover:bg-gray-50">取消</button>
+      <button @click="submitImport()"
+              :disabled="importParsed.length === 0 || importSubmitting"
+              class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
+        <span x-text="importSubmitting ? '创建中…' : '创建任务'"></span>
+      </button>
+    </div>
+  </div>
+</div>
 </div>
 
 <script>
   function tasksPage() {
     return {
       tasks: [], loading: true, deletingId: null,
+      importModal: false,
+      importName: '',
+      importInput: '',
+      importParsed: [],
+      importError: '',
+      importSubmitting: false,
       async readError(response, fallback) {
         const text = await response.text();
         try {
@@ -103,7 +164,59 @@
           done:     'bg-green-100 text-green-700',
           error:    'bg-red-100 text-red-700',
         }[s] || 'bg-gray-100 text-gray-600';
-      }
+      },
+      openImportModal() {
+        const today = new Date().toISOString().slice(0, 10);
+        this.importName = `Batch Import ${today}`;
+        this.importInput = '';
+        this.importParsed = [];
+        this.importError = '';
+        this.importSubmitting = false;
+        this.importModal = true;
+      },
+      parseGseInput() {
+        this.importError = '';
+        const raw = this.importInput.trim();
+        if (!raw) { this.importParsed = []; return; }
+        let tokens = [];
+        try {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed)) tokens = parsed.map(String);
+          else { this.importError = 'JSON 格式无效，请输入数组'; return; }
+        } catch {
+          tokens = raw.split(/[\n,\s]+/);
+        }
+        this.importParsed = tokens
+          .map(t => t.trim().toUpperCase())
+          .filter(t => /^GSE\d+$/.test(t));
+        if (this.importParsed.length === 0)
+          this.importError = '未识别到有效的 GSE ID（格式：GSExxxxxx）';
+      },
+      async submitImport() {
+        this.parseGseInput();
+        if (this.importParsed.length === 0) return;
+        if (!this.importName.trim()) { this.importError = '请填写任务名称'; return; }
+        this.importSubmitting = true;
+        this.importError = '';
+        try {
+          const params = new URLSearchParams({
+            name: this.importName.trim(),
+            source: 'geo',
+            geo_ids: this.importParsed.join(','),
+            criteria_text: '',
+          });
+          const r = await fetch('/tasks?' + params, { method: 'POST' });
+          if (r.ok) {
+            const d = await r.json();
+            window.location.href = '/tasks/' + d.id + '/detail';
+          } else {
+            const d = await r.json().catch(() => ({}));
+            this.importError = d.detail || '创建任务失败';
+          }
+        } finally {
+          this.importSubmitting = false;
+        }
+      },
     }
   }
 </script>
