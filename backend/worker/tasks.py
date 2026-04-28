@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.worker.celery_app import celery_app
@@ -179,6 +179,19 @@ async def _run_annotation_async(task_id: int):
                 if final and final in conclusion_to_decision:
                     sr.decision = conclusion_to_decision[final]
                     sr.status = "done"
+                task.processed = (task.processed or 0) + 1
+                task.included_count = (await db.execute(
+                    select(func.count()).select_from(ScreeningResult)
+                    .where(ScreeningResult.task_id == task_id, ScreeningResult.decision == "include")
+                )).scalar_one()
+                task.excluded_count = (await db.execute(
+                    select(func.count()).select_from(ScreeningResult)
+                    .where(ScreeningResult.task_id == task_id, ScreeningResult.decision == "exclude")
+                )).scalar_one()
+                task.uncertain_count = (await db.execute(
+                    select(func.count()).select_from(ScreeningResult)
+                    .where(ScreeningResult.task_id == task_id, ScreeningResult.decision == "uncertain")
+                )).scalar_one()
                 await db.commit()
             except OperationalError as exc:
                 await db.rollback()
