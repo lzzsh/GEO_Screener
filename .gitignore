@@ -8,7 +8,6 @@ data/
 pdfs/
 
 # Environment
-docker/.env
 .env
 
 # Python
