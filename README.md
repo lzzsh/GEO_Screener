@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🧬 GEO Screener
+# GEO Screener
 
 <img src="docs/images/logo.png" width="700"/>
 
