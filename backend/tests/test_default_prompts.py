@@ -35,3 +35,12 @@ async def test_private_custom_prompt_has_priority_and_missing_schema_uses_defaul
         assert client._load_prompt('new-study','label_prompt') == 'Local default'
         assert (await get_default_prompt('label_prompt'))['content'] == 'Local default'
     finally: await client._client.close()
+
+
+def test_container_initialization_does_not_create_shared_default_accounts(tmp_path):
+    import os, subprocess, sys, sqlite3
+    path=tmp_path/'fresh.db'
+    env=dict(os.environ, DATABASE_URL=f'sqlite+aiosqlite:///{path}')
+    subprocess.run([sys.executable,'-m','backend.init_users'],env=env,check=True,capture_output=True)
+    with sqlite3.connect(path) as db:
+        assert db.execute('select count(*) from users').fetchone()[0] == 0
