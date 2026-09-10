@@ -1,25 +1,29 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="{{ ui_lang }}">
 <head>
   <meta charset="UTF-8" />
-  <title>Login — GEO Screener</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link rel="stylesheet" href="/static/workspace.css" />
+  {% include "_i18n.html" %}
+  <title>{{ t('Login — GEO Screener') }}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
 </head>
 <body class="bg-gray-50 flex items-center justify-center min-h-screen">
   <div x-data="loginForm()" class="bg-white rounded-xl shadow p-8 w-full max-w-sm">
+    {% include "_language.html" %}
     <h1 class="text-2xl font-bold mb-6 text-center">GEO Screener</h1>
-    <div x-show="error" class="mb-4 text-red-600 text-sm" x-text="error"></div>
+    <div x-show="error" class="mb-4 text-red-600 text-sm" x-text="tr(error)"></div>
     <form @submit.prevent="submit()">
-      <label class="block text-sm font-medium mb-1">Username</label>
+      <label class="block text-sm font-medium mb-1">{{ t('Username') }}</label>
       <input x-model="username" type="text" required
              class="w-full border rounded-lg px-3 py-2 mb-4 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-      <label class="block text-sm font-medium mb-1">Password</label>
+      <label class="block text-sm font-medium mb-1">{{ t('Password') }}</label>
       <input x-model="password" type="password" required
              class="w-full border rounded-lg px-3 py-2 mb-6 focus:outline-none focus:ring-2 focus:ring-blue-400" />
       <button type="submit" :disabled="loading"
               class="w-full bg-blue-600 text-white rounded-lg py-2 font-medium hover:bg-blue-700 disabled:opacity-50">
-        <span x-text="loading ? 'Signing in…' : 'Sign in'"></span>
+        <span x-text="loading ? (tr(&quot;Signing in…&quot;)) : (tr(&quot;Sign in&quot;))"></span>
       </button>
     </form>
   </div>
@@ -35,7 +39,7 @@
           });
           this.loading = false;
           if (r.ok) { window.location.href = '/tasks-list'; }
-          else { const d = await r.json(); this.error = d.detail || 'Login failed'; }
+          else { const d = await r.json(); this.error = d.detail || (tr("Login failed")); }
         }
       }
     }

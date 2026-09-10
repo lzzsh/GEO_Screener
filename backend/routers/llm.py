@@ -88,11 +88,8 @@ async def update_credentials(req: LLMCredentialsUpdate, db: AsyncSession = Depen
         cfg = LLMConfig(owner_id=user.id, provider=provider, is_active=False)
         db.add(cfg)
 
-    if provider in {"custom", "orcarouter"}:
-        if req.base_url is not None:
-            cfg.base_url = req.base_url.strip() or None
-    else:
-        cfg.base_url = None
+    if req.base_url is not None:
+        cfg.base_url = req.base_url.strip() or None
 
     if req.model is not None:
         cfg.model = req.model.strip()
@@ -119,12 +116,9 @@ async def update_config(req: LLMConfigUpdate, db: AsyncSession = Depends(get_db)
     else:
         cfg.is_active = True
 
-    # OrcaRouter can provide a dedicated endpoint; preserve it when switching models.
-    if provider in {"custom", "orcarouter"}:
-        if req.base_url is not None:
-            cfg.base_url = req.base_url.strip() or None
-    else:
-        cfg.base_url = None  # always use PROVIDER_DEFAULTS for known providers
+    # Preserve existing dedicated endpoints when changing the active model.
+    if req.base_url is not None:
+        cfg.base_url = req.base_url.strip() or None
 
     if req.model is not None:
         cfg.model = req.model.strip()

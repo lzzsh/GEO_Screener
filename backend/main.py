@@ -32,6 +32,8 @@ if not FRONTEND_DIR.is_absolute():
     FRONTEND_DIR = (BASE_DIR / FRONTEND_DIR).resolve()
 
 templates = Jinja2Templates(directory=str(FRONTEND_DIR / "templates"))
+from backend.ui_i18n import ui_context
+templates.context_processors.append(ui_context)
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/auth/login", auto_error=False)
 
 @asynccontextmanager

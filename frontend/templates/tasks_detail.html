@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}Task Detail — GEO Screener{% endblock %}
+{% block title %}{{ t('Task Detail — GEO Screener') }}{% endblock %}
 {% block content %}
 <div x-data="taskDetailPage({{ task_id }})" x-init="init()">
   <!-- GSM Detail Modal -->
@@ -15,29 +15,29 @@
         <button @click="gsmModal.open=false" class="text-gray-400 hover:text-gray-600 text-2xl leading-none ml-6 mt-1">✕</button>
       </div>
       <div class="px-8 py-6 space-y-5">
-        <div x-show="gsmModal.loading" class="text-sm text-gray-400 py-8 text-center">加载中…</div>
+        <div x-show="gsmModal.loading" class="text-sm text-gray-400 py-8 text-center">{{ t('加载中…') }}</div>
         <template x-if="!gsmModal.loading && gsmModal.data">
           <div class="space-y-5">
             <table class="w-full text-sm border-collapse">
               <tbody class="divide-y divide-gray-100">
                 <tr>
-                  <td class="py-2 pr-6 text-gray-500 w-44 align-top">Status</td>
-                  <td class="py-2 text-gray-900" x-text="'Public' + (gsmModal.data.release_date ? ' on ' + gsmModal.data.release_date : '')"></td>
+                  <td class="py-2 pr-6 text-gray-500 w-44 align-top">{{ t('Status') }}</td>
+                  <td class="py-2 text-gray-900" x-text="(tr(&quot;Public&quot;)) + (gsmModal.data.release_date ? (&quot; &quot;+tr(&quot;on&quot;)+&quot; &quot;) + gsmModal.data.release_date : '')"></td>
                 </tr>
                 <tr>
-                  <td class="py-2 pr-6 text-gray-500 align-top">Title</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Title') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.title || '—'"></td>
                 </tr>
                 <tr x-show="gsmModal.data.sample_type">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Sample type</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Sample type') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.sample_type"></td>
                 </tr>
                 <tr x-show="gsmModal.data.source_name">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Source name</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Source name') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.source_name"></td>
                 </tr>
                 <tr x-show="gsmModal.data.organism">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Organism</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Organism') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.organism"></td>
                 </tr>
               </tbody>
@@ -47,7 +47,7 @@
                 <tbody class="divide-y divide-gray-100">
                   <template x-for="[k, v] in Object.entries(gsmModal.data.characteristics || {})" :key="k">
                     <tr>
-                      <td class="py-2 pr-6 text-gray-500 w-44 align-top">Characteristics</td>
+                      <td class="py-2 pr-6 text-gray-500 w-44 align-top">{{ t('Characteristics') }}</td>
                       <td class="py-2 text-gray-900" x-text="k + ': ' + v"></td>
                     </tr>
                   </template>
@@ -57,91 +57,91 @@
             <table class="w-full text-sm border-collapse">
               <tbody class="divide-y divide-gray-100">
                 <tr x-show="gsmModal.data.treatment_protocol">
-                  <td class="py-2 pr-6 text-gray-500 w-44 align-top">Treatment protocol</td>
+                  <td class="py-2 pr-6 text-gray-500 w-44 align-top">{{ t('Treatment protocol') }}</td>
                   <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.treatment_protocol"></td>
                 </tr>
                 <tr x-show="gsmModal.data.growth_protocol">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Growth protocol</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Growth protocol') }}</td>
                   <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.growth_protocol"></td>
                 </tr>
                 <tr x-show="gsmModal.data.molecule">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Extracted molecule</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Extracted molecule') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.molecule"></td>
                 </tr>
                 <tr x-show="gsmModal.data.extraction_protocol">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Extraction protocol</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Extraction protocol') }}</td>
                   <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.extraction_protocol"></td>
                 </tr>
                 <tr x-show="gsmModal.data.library_strategy">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Library strategy</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Library strategy') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.library_strategy"></td>
                 </tr>
                 <tr x-show="gsmModal.data.library_source">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Library source</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Library source') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.library_source"></td>
                 </tr>
                 <tr x-show="gsmModal.data.library_selection">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Library selection</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Library selection') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.library_selection"></td>
                 </tr>
                 <tr x-show="gsmModal.data.instrument_model">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Instrument model</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Instrument model') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.instrument_model"></td>
                 </tr>
                 <tr x-show="gsmModal.data.description">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Description</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Description') }}</td>
                   <td class="py-2 text-gray-700" x-text="gsmModal.data.description"></td>
                 </tr>
                 <tr x-show="gsmModal.data.data_processing">
-                  <td class="py-2 pr-6 text-gray-500 align-top">Data processing</td>
+                  <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Data processing') }}</td>
                   <td class="py-2 text-gray-700 leading-relaxed" x-text="gsmModal.data.data_processing"></td>
                 </tr>
                 <tr>
-                  <td class="py-2 pr-6 text-gray-500">Submission date</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Submission date') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.submission_date || '—'"></td>
                 </tr>
                 <tr>
-                  <td class="py-2 pr-6 text-gray-500">Last update date</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Last update date') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.last_update_date || '—'"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.name">
-                  <td class="py-2 pr-6 text-gray-500">Contact name</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Contact name') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.name"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.email">
-                  <td class="py-2 pr-6 text-gray-500">E-mail(s)</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('E-mail(s)') }}</td>
                   <td class="py-2"><a :href="'mailto:' + gsmModal.data.contact?.email" class="text-blue-600 hover:underline" x-text="gsmModal.data.contact?.email"></a></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.organization">
-                  <td class="py-2 pr-6 text-gray-500">Organization name</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Organization name') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.organization"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.department">
-                  <td class="py-2 pr-6 text-gray-500">Department</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Department') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.department"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.address">
-                  <td class="py-2 pr-6 text-gray-500">Street address</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Street address') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.address"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.city">
-                  <td class="py-2 pr-6 text-gray-500">City</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('City') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.city"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.state">
-                  <td class="py-2 pr-6 text-gray-500">State/province</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('State/province') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.state"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.zip">
-                  <td class="py-2 pr-6 text-gray-500">ZIP/Postal code</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('ZIP/Postal code') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.zip"></td>
                 </tr>
                 <tr x-show="gsmModal.data.contact?.country">
-                  <td class="py-2 pr-6 text-gray-500">Country</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Country') }}</td>
                   <td class="py-2 text-gray-900" x-text="gsmModal.data.contact?.country"></td>
                 </tr>
                 <tr x-show="gsmModal.data.platform_id">
-                  <td class="py-2 pr-6 text-gray-500">Platform ID</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Platform ID') }}</td>
                   <td class="py-2">
                     <a :href="'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=' + gsmModal.data.platform_id"
                        target="_blank" class="text-blue-600 hover:underline font-mono text-sm"
@@ -149,7 +149,7 @@
                   </td>
                 </tr>
                 <tr x-show="gsmModal.data.parent_gse">
-                  <td class="py-2 pr-6 text-gray-500">Series</td>
+                  <td class="py-2 pr-6 text-gray-500">{{ t('Series') }}</td>
                   <td class="py-2">
                     <a :href="'https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=' + gsmModal.data.parent_gse"
                        target="_blank" class="text-blue-600 hover:underline font-mono text-sm"
@@ -159,7 +159,7 @@
               </tbody>
             </table>
             <div x-show="gsmModal.data.biosample_id || gsmModal.data.sra_id" class="border-t pt-4">
-              <p class="text-sm font-semibold text-gray-700 mb-2">Relations</p>
+              <p class="text-sm font-semibold text-gray-700 mb-2">{{ t('Relations') }}</p>
               <table class="w-full text-sm border-collapse">
                 <tbody class="divide-y divide-gray-100">
                   <tr x-show="gsmModal.data.biosample_id">
@@ -179,12 +179,12 @@
               </table>
             </div>
             <div x-show="gsmModal.data.supplementary_files?.length > 0" class="border-t pt-4">
-              <p class="text-sm font-semibold text-gray-700 mb-3">Supplementary file</p>
+              <p class="text-sm font-semibold text-gray-700 mb-3">{{ t('Supplementary file') }}</p>
               <table class="w-full text-xs border rounded-lg overflow-hidden">
                 <thead class="bg-gray-50 border-b">
                   <tr>
-                    <th class="text-left px-3 py-2 font-medium text-gray-600">文件</th>
-                    <th class="text-left px-3 py-2 font-medium text-gray-600">类型</th>
+                    <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('文件') }}</th>
+                    <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('类型') }}</th>
                   </tr>
                 </thead>
                 <tbody class="divide-y bg-white">
@@ -205,55 +205,55 @@
     </div>
   </div>
 
-  <div x-show="annotationError" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="annotationError"></div>
+  <div x-show="annotationError" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="tr(annotationError)"></div>
   <div x-show="gsmAnnotationError" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="gsmAnnotationError"></div>
   <div class="flex items-center justify-between gap-3 mb-6">
     <div class="flex items-center gap-3">
-      <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">← Tasks</a>
-      <h1 class="text-2xl font-bold" x-text="task.name || 'Loading…'"></h1>
+      <a href="/tasks-list" class="text-gray-400 hover:text-gray-600 text-sm">{{ t('← Tasks') }}</a>
+      <h1 class="text-2xl font-bold" x-text="task.name || (tr(&quot;Loading…&quot;))"></h1>
       <span :class="statusClass(task.status)"
-            class="text-xs font-semibold px-2 py-1 rounded-full" x-text="task.status"></span>
+            class="text-xs font-semibold px-2 py-1 rounded-full" x-text="tr(task.status)"></span>
     </div>
     <div class="px-4 py-3 border border-gray-200 rounded-lg">
-      <p class="text-xs text-gray-400 mb-1">Annotation Schema</p>
-      <p class="text-sm font-semibold" x-text="task.annotation_schema_name || 'Default'"></p>
+      <p class="text-xs text-gray-400 mb-1">{{ t('Annotation Schema') }}</p>
+      <p class="text-sm font-semibold" x-text="task.annotation_schema_name || (tr(&quot;Default&quot;))"></p>
     </div>
   </div>
 
   <div class="grid gap-3 md:grid-cols-6 mb-6">
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-      <p class="text-xs text-gray-400">GEO Candidates</p>
+      <p class="text-xs text-gray-400">{{ t('GEO Candidates') }}</p>
       <p class="text-2xl font-semibold" x-text="task.candidate_count || 0"></p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-      <p class="text-xs text-gray-400">Included</p>
+      <p class="text-xs text-gray-400">{{ t('Included') }}</p>
       <p class="text-2xl font-semibold text-green-700" x-text="task.included_count || 0"></p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-      <p class="text-xs text-gray-400">Excluded</p>
+      <p class="text-xs text-gray-400">{{ t('Excluded') }}</p>
       <p class="text-2xl font-semibold text-red-700" x-text="task.excluded_count || 0"></p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3">
-      <p class="text-xs text-gray-400">Uncertain</p>
+      <p class="text-xs text-gray-400">{{ t('Uncertain') }}</p>
       <p class="text-2xl font-semibold text-yellow-700" x-text="task.uncertain_count || 0"></p>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center">
       <button @click="triggerAnnotation()" :disabled="annotating"
               class="w-full text-sm bg-blue-600 text-white rounded-lg py-1.5 hover:bg-blue-700 disabled:opacity-50">
-        <span x-text="annotating ? 'Running…' : 'Run GSE Annotation'"></span>
+        <span x-text="annotating ? (tr(&quot;Running…&quot;)) : (tr(&quot;Run GSE Annotation&quot;))"></span>
       </button>
     </div>
     <div class="bg-white rounded-xl border border-gray-200 px-4 py-3 flex items-center">
       <button @click="runAllGsmAnnotation()" :disabled="gsmAnnotating"
               class="w-full text-sm bg-teal-600 text-white rounded-lg py-1.5 hover:bg-teal-700 disabled:opacity-50">
-        <span x-text="gsmAnnotating ? 'GSM 标注中…' : 'Run GSM Annotation'"></span>
+        <span x-text="gsmAnnotating ? (tr(&quot;GSM 标注中…&quot;)) : (tr(&quot;Run GSM Annotation&quot;))"></span>
       </button>
     </div>
   </div>
 
   <div x-show="task.status === 'running'" class="mb-6">
     <div class="flex justify-between text-xs text-gray-400 mb-1">
-      <span x-text="task.processed + ' / ' + task.total + ' processed'"></span>
+      <span x-text="task.processed + ' / ' + task.total + (&quot; &quot;+tr(&quot;processed&quot;))"></span>
       <span x-text="task.total ? Math.round(task.processed/task.total*100) + '%' : '0%'"></span>
     </div>
     <div class="w-full bg-gray-100 rounded-full h-2">
@@ -262,39 +262,38 @@
     </div>
   </div>
 
-  <p x-show="protocolError" x-text="protocolError" class="mb-3 text-sm text-red-600"></p>
+  <div class="selection-strip"><div><p class="font-medium">{{ t('从筛选文献到实验 Protocol') }}</p><p>{{ t('勾选下方文献，或提取全部已纳入的记录。') }}</p></div><div class="ui-actions"><button @click="createProtocol(false)" :disabled="protocolCreating || !protocolSelection.length" class="ui-button ui-button--primary" x-text="(tr(&quot;提取 Protocol（&quot;))+protocolSelection.length+(tr(&quot;）&quot;))"></button><button @click="createProtocol(true)" :disabled="protocolCreating" class="ui-button">{{ t('全部已纳入文献') }}</button></div></div>
+  <p x-show="protocolError" x-text="tr(protocolError)" class="mb-3 text-sm text-red-600"></p>
   <div class="flex justify-between items-center mb-4 gap-3 flex-wrap">
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
-        <label class="text-sm text-gray-500">筛选</label>
+        <label class="text-sm text-gray-500">{{ t('筛选') }}</label>
         <select x-model="decisionFilter" @change="reloadResults()"
                 class="border rounded-lg px-3 py-2 text-sm bg-white">
-          <option value="">全部候选</option>
-          <option value="include">Included</option>
-          <option value="exclude">Excluded</option>
-          <option value="uncertain">Uncertain</option>
+          <option value="">{{ t('全部候选') }}</option>
+          <option value="include">{{ t('Included') }}</option>
+          <option value="exclude">{{ t('Excluded') }}</option>
+          <option value="uncertain">{{ t('Uncertain') }}</option>
         </select>
       </div>
       <input type="text" x-model="accessionSearch"
              @input.debounce.300ms="reloadResults()"
-             placeholder="搜索 GSE…"
+             placeholder="{{ t('搜索 GSE…') }}"
              class="border rounded-lg px-3 py-2 text-sm bg-white w-36 focus:outline-none focus:ring-2 focus:ring-blue-300" />
     </div>
     <div class="flex items-center gap-2">
-      <button @click="createProtocol(false)" :disabled="protocolCreating || !protocolSelection.length" class="text-sm border rounded-lg px-3 py-2 disabled:opacity-40" x-text="'提取 Protocol（'+protocolSelection.length+'）'"></button>
-      <button @click="createProtocol(true)" :disabled="protocolCreating" class="text-sm border rounded-lg px-3 py-2 text-blue-600 disabled:opacity-40">全部 Included 提取</button>
       <a :href="'/tasks/' + taskId + '/export'"
-         class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
+         class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">{{ t('导出 CSV') }}</a>
       <button @click="fetchPapers()" :disabled="fetchingPdfs"
               class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
-              x-text="fetchingPdfs ? '下载中…' : '下载文章 PDF'"></button>
+              x-text="fetchingPdfs ? (tr(&quot;下载中…&quot;)) : (tr(&quot;下载文章 PDF&quot;))"></button>
       <button @click="runPaperCalibration()" :disabled="calibrating"
               class="text-sm bg-blue-50 hover:bg-blue-100 text-blue-700 px-4 py-2 rounded-lg font-medium disabled:opacity-50"
-              x-text="calibrating ? '校准中…' : '用文章重新校准'"></button>
+              x-text="calibrating ? (tr(&quot;校准中…&quot;)) : (tr(&quot;用文章重新校准&quot;))"></button>
       <div class="relative" x-data="{libOpen:false}">
         <button @click="libOpen=!libOpen"
                 class="border border-gray-300 text-gray-700 rounded-lg px-4 py-2 text-sm font-medium hover:bg-gray-50 flex items-center gap-1">
-          存入文献库 <span x-text="libOpen ? '▲' : '▼'" class="text-xs"></span>
+          {{ t('存入文献库') }} <span x-text="libOpen ? '▲' : '▼'" class="text-xs"></span>
         </button>
         <div x-show="libOpen" @click.outside="libOpen=false"
              class="absolute right-0 mt-1 bg-white border rounded-xl shadow-lg z-10 w-52 py-1">
@@ -303,9 +302,9 @@
                     class="w-full text-left px-4 py-2 text-sm hover:bg-gray-50 truncate"
                     x-text="lib.name"></button>
           </template>
-          <div x-show="libs.length===0" class="px-4 py-2 text-xs text-gray-400">暂无文献库</div>
+          <div x-show="libs.length===0" class="px-4 py-2 text-xs text-gray-400">{{ t('暂无文献库') }}</div>
           <div class="border-t mt-1 pt-1">
-            <a href="/library" class="block px-4 py-2 text-xs text-blue-600 hover:bg-gray-50">管理文献库 →</a>
+            <a href="/library" class="block px-4 py-2 text-xs text-blue-600 hover:bg-gray-50">{{ t('管理文献库 →') }}</a>
           </div>
         </div>
       </div>
@@ -316,31 +315,31 @@
     <table class="w-full text-sm">
       <thead class="bg-gray-50 border-b">
         <tr>
-          <th class="px-3 py-3"><input type="checkbox" aria-label="选择当前页" @change="toggleProtocolPage($event.target.checked)" :checked="results.length>0 && results.every(r=>protocolSelection.includes(r.id))" /></th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-36">Accession</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600">标题</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-20">Samples</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-48">实验类型</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">论文更新日期</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">最后更新</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">原始数据</th>
+          <th class="px-3 py-3"><input type="checkbox" aria-label="{{ t('选择当前页') }}" @change="toggleProtocolPage($event.target.checked)" :checked="results.length>0 && results.every(r=>protocolSelection.includes(r.id))" /></th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-36">{{ t('Accession') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('标题') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-20">{{ t('Samples') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-48">{{ t('实验类型') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">{{ t('论文更新日期') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">{{ t('最后更新') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">{{ t('原始数据') }}</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">PDF</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">Protocol</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">原始决策</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">决策</th>
-          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">操作</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">{{ t('原始决策') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">{{ t('决策') }}</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">{{ t('操作') }}</th>
         </tr>
       </thead>
       <template x-for="r in results" :key="r.id">
         <tbody class="divide-y" id="results-tbody">
           <tr @click="toggleExpand(r.id)" class="cursor-pointer hover:bg-gray-50">
-            <td class="px-3" @click.stop><input type="checkbox" :aria-label="'选择 '+r.dataset_id" :checked="protocolSelection.includes(r.id)" @change="toggleProtocolSelection(r.id,$event.target.checked)" /></td>
+            <td class="px-3" @click.stop><input type="checkbox" :aria-label="(tr(&quot;选择&quot;)+&quot; &quot;)+r.dataset_id" :checked="protocolSelection.includes(r.id)" @change="toggleProtocolSelection(r.id,$event.target.checked)" /></td>
             <td class="px-4 py-3">
               <p class="font-mono text-xs font-semibold text-blue-700" x-text="r.dataset_id"></p>
             </td>
             <td class="px-4 py-3 text-xs text-gray-800">
-              <p class="line-clamp-2 font-medium text-gray-900" x-text="r.title || '无标题数据集'"></p>
-              <p class="mt-1 text-[11px] text-gray-500" x-text="(r.labels && r.labels.length) ? ('已标注 ' + r.labels.length + ' 项') : '未生成标注'"></p>
+              <p class="line-clamp-2 font-medium text-gray-900" x-text="r.title || (tr(&quot;无标题数据集&quot;))"></p>
+              <p class="mt-1 text-[11px] text-gray-500" x-text="(r.labels &amp;&amp; r.labels.length) ? ((tr(&quot;已标注&quot;)+&quot; &quot;) + r.labels.length + (&quot; &quot;+tr(&quot;项&quot;))) : (tr(&quot;未生成标注&quot;))"></p>
             </td>
             <td class="px-4 py-3 text-xs text-center" x-text="r.n_samples || '—'"></td>
             <td class="px-4 py-3 text-xs text-gray-500 max-w-xs truncate" x-text="r.gse_type || '—'"></td>
@@ -363,34 +362,34 @@
             <td class="px-4 py-3">
               <span x-show="r.original_decision"
                     class="text-xs font-semibold px-2 py-0.5 rounded-full bg-gray-100 text-gray-500"
-                    x-text="({include:'Included',exclude:'Excluded',uncertain:'Uncertain'})[r.original_decision] || r.original_decision"></span>
+                    x-text="({include:(tr(&quot;Included&quot;)),exclude:(tr(&quot;Excluded&quot;)),uncertain:(tr(&quot;Uncertain&quot;))})[r.original_decision] || r.original_decision"></span>
             </td>
             <td class="px-4 py-3" @click.stop>
               <span x-show="!r.editingDecision"
                     :class="decisionClass(r.decision)"
                     class="text-xs font-semibold px-2 py-0.5 rounded-full cursor-pointer"
                     @click="r.editingDecision = true"
-                    x-text="({include:'Included',exclude:'Excluded',uncertain:'Uncertain'})[r.decision] || '—'"></span>
+                    x-text="({include:(tr(&quot;Included&quot;)),exclude:(tr(&quot;Excluded&quot;)),uncertain:(tr(&quot;Uncertain&quot;))})[r.decision] || '—'"></span>
               <select x-show="r.editingDecision"
                       class="text-xs border rounded px-1 py-0.5"
                       :value="r.decision"
                       @change="updateDecision(r, $event.target.value)"
                       @blur="r.editingDecision = false">
-                <option value="include">Included</option>
-                <option value="exclude">Excluded</option>
-                <option value="uncertain">Uncertain</option>
+                <option value="include">{{ t('Included') }}</option>
+                <option value="exclude">{{ t('Excluded') }}</option>
+                <option value="uncertain">{{ t('Uncertain') }}</option>
               </select>
             </td>
-            <td class="px-4 py-3 text-xs text-blue-600" x-text="expanded.has(r.id) ? '收起' : '展开'"></td>
+            <td class="px-4 py-3 text-xs text-blue-600" x-text="expanded.has(r.id) ? (tr(&quot;收起&quot;)) : (tr(&quot;展开&quot;))"></td>
           </tr>
           <tr x-show="expanded.has(r.id)" class="bg-slate-50">
             <td colspan="13" class="px-4 py-4">
               <div class="mb-4" x-data="labelEditor(r)">
                 <div class="flex items-center justify-between mb-2">
-                  <p class="text-xs font-semibold text-gray-500">标注</p>
+                  <p class="text-xs font-semibold text-gray-500">{{ t('标注') }}</p>
                   <button @click="runGseAnnotation(r.id)"
                           class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 px-3 py-1 rounded-lg border border-indigo-200">
-                    重新标注此 GSE
+                    {{ t('重新标注此 GSE') }}
                   </button>
                 </div>
                 <div class="flex flex-wrap gap-2">
@@ -408,26 +407,26 @@
                               x-text="lbl.editing ? '✓' : '✎'"></button>
                     </div>
                   </template>
-                  <span x-show="labels.length === 0" class="text-xs text-gray-400">暂无标注，点击 Run LLM Annotation 自动提取</span>
+                  <span x-show="labels.length === 0" class="text-xs text-gray-400">{{ t('暂无标注，点击 Run LLM Annotation 自动提取') }}</span>
                 </div>
               </div>
               <div x-show="r.samples && r.samples.length > 0">
                 <div class="flex items-center justify-between mb-2">
-                  <p class="text-xs font-semibold text-gray-500">样本列表 (GSM)</p>
+                  <p class="text-xs font-semibold text-gray-500">{{ t('样本列表 (GSM)') }}</p>
                   <button x-show="r.decision === 'include' || r.decision === 'uncertain' || !r.decision"
                           @click="runGsmAnnotation(r.id)"
                           class="text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-1 rounded-lg border border-blue-200">
-                    标注 GSM
+                    {{ t('标注 GSM') }}
                   </button>
                 </div>
                 <table class="w-full text-xs border rounded-lg overflow-hidden">
                   <thead class="bg-gray-100">
                     <tr>
-                      <th class="text-left px-3 py-2 font-medium text-gray-600">样本名称</th>
-                      <th class="text-left px-3 py-2 font-medium text-gray-600">标题</th>
-                      <th class="text-left px-3 py-2 font-medium text-gray-600">生物体</th>
-                      <th class="text-left px-3 py-2 font-medium text-gray-600">生物样本关系ID</th>
-                      <th class="text-left px-3 py-2 font-medium text-gray-600">cellCount</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('样本名称') }}</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('标题') }}</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('生物体') }}</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('生物样本关系ID') }}</th>
+                      <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('cellCount') }}</th>
                     </tr>
                   </thead>
                   <tbody class="divide-y bg-white">
@@ -448,7 +447,7 @@
                                     class="text-xs px-2 py-0.5 rounded-full font-medium"
                                     x-text="lbl.key + ': ' + (lbl.value || '—')"></span>
                             </template>
-                            <span x-show="gsmLabels.length === 0" class="text-xs text-gray-400">暂无标注</span>
+                            <span x-show="gsmLabels.length === 0" class="text-xs text-gray-400">{{ t('暂无标注') }}</span>
                           </div>
                         </td>
                       </tr>
@@ -457,7 +456,7 @@
                 </table>
               </div>
               <div x-show="r.summary" class="mt-3">
-                <p class="text-xs font-semibold text-gray-500 mb-1">筛选摘要</p>
+                <p class="text-xs font-semibold text-gray-500 mb-1">{{ t('筛选摘要') }}</p>
                 <p class="text-xs text-gray-600" x-text="r.summary"></p>
               </div>
             </td>
@@ -465,15 +464,15 @@
         </tbody>
       </template>
     </table>
-    <div x-show="results.length === 0 && !loading" class="text-center text-gray-400 py-8 text-sm">暂无结果</div>
+    <div x-show="results.length === 0 && !loading" class="text-center text-gray-400 py-8 text-sm">{{ t('暂无结果') }}</div>
   </div>
 
   <div class="flex flex-wrap justify-between items-center mt-4 gap-3 text-sm">
     <button @click="prevPage()" :disabled="page <= 1"
-            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">← Prev</button>
+            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">{{ t('← Prev') }}</button>
     <div class="flex flex-wrap items-center justify-center gap-2">
       <span class="text-gray-400">
-        第 <span x-text="page"></span> 页，共 <span x-text="totalPages"></span> 页
+        {{ t('第') }} <span x-text="page"></span> {{ t('页，共') }} <span x-text="totalPages"></span> {{ t('页') }}
       </span>
       <template x-for="item in visiblePaginationItems" :key="item.key">
         <template x-if="item.type === 'page'">
@@ -486,16 +485,16 @@
           <span class="px-1 text-sm text-gray-400">…</span>
         </template>
       </template>
-      <div class="flex items-center gap-2 ml-2">
-        <label class="text-sm text-gray-500">跳至页码</label>
+  <div class="flex items-center gap-2 ml-2">
+        <label class="text-sm text-gray-500">{{ t('跳至页码') }}</label>
         <input x-model.number="jumpPageInput" type="number" min="1" :max="totalPages"
                class="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
         <button @click="jumpToPage()"
-                class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Go</button>
+                class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">{{ t('Go') }}</button>
       </div>
     </div>
     <button @click="nextPage()" :disabled="page >= totalPages"
-            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">Next →</button>
+            class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40">{{ t('Next →') }}</button>
   </div>
 </div>
 
@@ -507,7 +506,7 @@
       decisionFilter: '', accessionSearch: '', annotating: false, annotationError: '', gsmAnnotating: false, gsmAnnotationError: '',
       fetchingPdfs: false, calibrating: false,
       protocolSelection: [], protocolCreating: false, protocolError: '',
-      protocolStateLabel(status) { return ({waiting_material:'待补材料',ready:'材料就绪',queued:'排队中',fetching:'获取材料',extracting:'提取中',needs_review:'待复核',needs_sources:'待补引用',no_protocol:'未找到',reviewed:'已复核',failed:'失败'})[status] || status; },
+      protocolStateLabel(status) { return ({waiting_material:(tr("待补材料")),ready:(tr("材料就绪")),queued:(tr("排队中")),fetching:(tr("获取材料")),extracting:(tr("提取中")),needs_review:(tr("待复核")),needs_sources:(tr("待补引用")),no_protocol:(tr("未找到")),reviewed:(tr("已复核")),failed:(tr("失败"))})[status] || status; },
       toggleProtocolSelection(id, checked) {
         this.protocolSelection = checked ? [...new Set([...this.protocolSelection,id])] : this.protocolSelection.filter(v=>v!==id);
       },
@@ -517,7 +516,7 @@
         try {
           const r=await fetch('/api/protocols/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_id:this.taskId,result_ids:allIncluded?null:this.protocolSelection})});
           const data=await r.json();
-          if(!r.ok) throw new Error(typeof data.detail==='string'?data.detail:'无法创建提取任务');
+          if(!r.ok) throw new Error(typeof data.detail==='string'?data.detail:(tr("无法创建提取任务")));
           window.location.href='/protocols/'+data.id;
         } catch(e) { this.protocolError=e.message; } finally { this.protocolCreating=false; }
       },
@@ -574,7 +573,7 @@
           const response = await fetch('/annotate/tasks/' + this.taskId + '/run', {method: 'POST'});
           if (!response.ok) {
             const payload = await response.json().catch(() => ({}));
-            throw new Error(payload.detail || 'Run LLM Annotation failed');
+            throw new Error(payload.detail || (tr("Run LLM Annotation failed")));
           }
           let polls = 0;
           const annotationPoll = setInterval(async () => {
@@ -623,7 +622,7 @@
         });
         if (r.ok) {
           const data = await r.json();
-          alert(`已存入 ${data.added} 条（跳过重复 ${data.skipped} 条）`);
+          alert(tr('已存入 {added} 条（跳过重复 {skipped} 条）',{added:data.added,skipped:data.skipped}));
         }
       },
       toggleExpand(id) {
@@ -661,7 +660,7 @@
             }
           } else {
             const payload = await r.json().catch(() => ({}));
-            this.gsmAnnotationError = payload.detail || 'Failed to run GSM annotation';
+            this.gsmAnnotationError = payload.detail || (tr("Failed to run GSM annotation"));
           }
         } finally {
           this.gsmAnnotating = false;
@@ -759,21 +758,21 @@
   async function createGsmTask() {
     const btn = document.getElementById('create-gsm-btn');
     btn.disabled = true;
-    btn.textContent = '创建中...';
+    btn.textContent = (tr("创建中..."));
     try {
       const resp = await fetch(`/tasks/{{ task_id }}/create-gsm-task`, {method: 'POST'});
       if (resp.ok) {
         const data = await resp.json();
         window.location.href = `/tasks/${data.id}/detail`;
       } else {
-        alert('创建失败');
+        alert((tr("创建失败")));
         btn.disabled = false;
-        btn.textContent = '创建 GSM 注释任务';
+        btn.textContent = (tr("创建 GSM 注释任务"));
       }
     } catch(e) {
-      alert('创建失败: ' + e);
+      alert((tr("创建失败:")+" ") + e);
       btn.disabled = false;
-      btn.textContent = '创建 GSM 注释任务';
+      btn.textContent = (tr("创建 GSM 注释任务"));
     }
   }
 

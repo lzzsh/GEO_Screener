@@ -20,6 +20,8 @@ GEO Screener turns the tedious process of systematic GEO dataset curation into a
 
 The `codex/v2-protocol` branch adds evidence-backed protocol extraction from selected screening results. See [v2 setup, workflow and limitations](docs/V2_PROTOCOL.md). The v1 baseline is preserved as `v1-baseline-20260910`; v2 can run with an isolated data copy on port 8002.
 
+The v2 research workspace supports **中文 / English** switching in the navigation area and remembers the selected language. Interface labels, actions and status messages are translated; paper content, custom annotation labels and exported data retain their original values. See [UI changes and validation](docs/UI_REFRESH.md).
+
 ## ✨ Features
 
 | | |

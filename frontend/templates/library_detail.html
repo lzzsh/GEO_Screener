@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}文献库详情 — GEO Screener{% endblock %}
+{% block title %}{{ t('文献库详情 — GEO Screener') }}{% endblock %}
 {% block content %}
 <div x-data="libraryDetailPage({{ library_id }})" x-init="init()">
   <div x-show="modal.open" class="fixed inset-0 z-50 flex items-center justify-center p-4"
@@ -20,19 +20,19 @@
         <table class="w-full text-sm border-collapse">
           <tbody class="divide-y divide-gray-100">
             <tr>
-              <td class="py-2 pr-6 text-gray-500 w-36 align-top">Organism</td>
+              <td class="py-2 pr-6 text-gray-500 w-36 align-top">{{ t('Organism') }}</td>
               <td class="py-2 text-gray-900" x-text="modal.organism || '—'"></td>
             </tr>
             <tr>
-              <td class="py-2 pr-6 text-gray-500 align-top">Experiment type</td>
+              <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Experiment type') }}</td>
               <td class="py-2 text-gray-900" x-text="modal.gse_type || '—'"></td>
             </tr>
             <tr x-show="modal.detail?.abstract">
-              <td class="py-2 pr-6 text-gray-500 align-top">Summary</td>
+              <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Summary') }}</td>
               <td class="py-2 text-gray-700 leading-relaxed" x-text="modal.detail?.abstract"></td>
             </tr>
             <tr x-show="modal.detail?.overall_design">
-              <td class="py-2 pr-6 text-gray-500 align-top">Overall design</td>
+              <td class="py-2 pr-6 text-gray-500 align-top">{{ t('Overall design') }}</td>
               <td class="py-2 text-gray-700 leading-relaxed" x-text="modal.detail?.overall_design"></td>
             </tr>
           </tbody>
@@ -43,39 +43,39 @@
           <table class="w-full text-sm border-collapse">
             <tbody class="divide-y divide-gray-100">
               <tr>
-                <td class="py-2 pr-6 text-gray-500 w-36">Contact name</td>
+                <td class="py-2 pr-6 text-gray-500 w-36">{{ t('Contact name') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.name || '—'"></td>
               </tr>
               <tr x-show="modal.detail?.contact?.email">
-                <td class="py-2 pr-6 text-gray-500">E-mail</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('E-mail') }}</td>
                 <td class="py-2"><a :href="'mailto:' + modal.detail?.contact?.email" class="text-blue-600 hover:underline" x-text="modal.detail?.contact?.email"></a></td>
               </tr>
               <tr x-show="modal.detail?.contact?.organization">
-                <td class="py-2 pr-6 text-gray-500">Organization</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('Organization') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.organization"></td>
               </tr>
               <tr x-show="modal.detail?.contact?.department">
-                <td class="py-2 pr-6 text-gray-500">Department</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('Department') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.department"></td>
               </tr>
               <tr x-show="modal.detail?.contact?.address">
-                <td class="py-2 pr-6 text-gray-500">Street address</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('Street address') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.address"></td>
               </tr>
               <tr x-show="modal.detail?.contact?.city">
-                <td class="py-2 pr-6 text-gray-500">City</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('City') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.city"></td>
               </tr>
               <tr x-show="modal.detail?.contact?.state">
-                <td class="py-2 pr-6 text-gray-500">State/province</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('State/province') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.state"></td>
               </tr>
               <tr x-show="modal.detail?.contact?.zip">
-                <td class="py-2 pr-6 text-gray-500">ZIP/Postal code</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('ZIP/Postal code') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.zip"></td>
               </tr>
               <tr x-show="modal.detail?.contact?.country">
-                <td class="py-2 pr-6 text-gray-500">Country</td>
+                <td class="py-2 pr-6 text-gray-500">{{ t('Country') }}</td>
                 <td class="py-2 text-gray-900" x-text="modal.detail?.contact?.country"></td>
               </tr>
               <tr x-show="modal.detail?.bioproject_id">
@@ -88,12 +88,12 @@
 
         <!-- Supplementary files -->
         <div x-show="modal.detail?.supplementary_files?.length > 0" class="border-t pt-4">
-          <p class="text-sm font-semibold text-gray-700 mb-3">Supplementary data files</p>
+          <p class="text-sm font-semibold text-gray-700 mb-3">{{ t('Supplementary data files') }}</p>
           <table class="w-full text-sm border rounded-lg overflow-hidden">
             <thead class="bg-gray-50 border-b">
               <tr>
-                <th class="text-left px-4 py-2 font-medium text-gray-600">文件名称</th>
-                <th class="text-left px-4 py-2 font-medium text-gray-600">下载地址</th>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">{{ t('文件名称') }}</th>
+                <th class="text-left px-4 py-2 font-medium text-gray-600">{{ t('下载地址') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y">
@@ -109,7 +109,7 @@
 
         <!-- 标注 -->
         <div class="border-t pt-4" x-data="labelEditor(() => modal.entry_id)" x-init="loadLabels()">
-          <p class="text-sm font-semibold text-gray-700 mb-3">标注</p>
+          <p class="text-sm font-semibold text-gray-700 mb-3">{{ t('标注') }}</p>
           <div class="flex flex-wrap gap-2 mb-2">
             <template x-for="lbl in labels" :key="lbl.key">
               <div class="flex items-center gap-1 bg-gray-50 border rounded-lg px-2 py-1 text-xs">
@@ -125,26 +125,26 @@
                         x-text="lbl.editing ? '✓' : '✎'"></button>
               </div>
             </template>
-            <span x-show="labels.length === 0" class="text-xs text-gray-400">暂无标注</span>
+            <span x-show="labels.length === 0" class="text-xs text-gray-400">{{ t('暂无标注') }}</span>
           </div>
           <div class="flex gap-2 mt-2">
-            <input x-model="newKey" placeholder="新标注维度" class="border rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-blue-400" />
-            <input x-model="newVal" placeholder="值" class="border rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-blue-400" />
-            <button @click="addLabel()" class="text-xs text-blue-600 hover:text-blue-800 px-2">+ 添加</button>
+            <input x-model="newKey" placeholder="{{ t('新标注维度') }}" class="border rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+            <input x-model="newVal" placeholder="{{ t('值') }}" class="border rounded px-2 py-1 text-xs w-32 focus:outline-none focus:ring-1 focus:ring-blue-400" />
+            <button @click="addLabel()" class="text-xs text-blue-600 hover:text-blue-800 px-2">{{ t('+ 添加') }}</button>
           </div>
         </div>
 
         <!-- GSM samples -->
         <div x-show="modal.samples?.length > 0" class="border-t pt-4">
-          <p class="text-sm font-semibold text-gray-700 mb-3">样本列表 (GSM)</p>
+          <p class="text-sm font-semibold text-gray-700 mb-3">{{ t('样本列表 (GSM)') }}</p>
           <table class="w-full text-xs border rounded-lg overflow-hidden">
             <thead class="bg-gray-50 border-b">
               <tr>
                 <th class="text-left px-3 py-2 font-medium text-gray-600">GSM ID</th>
-                <th class="text-left px-3 py-2 font-medium text-gray-600">标题</th>
-                <th class="text-left px-3 py-2 font-medium text-gray-600">生物体</th>
+                <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('标题') }}</th>
+                <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('生物体') }}</th>
                 <th class="text-left px-3 py-2 font-medium text-gray-600">BioSample</th>
-                <th class="text-left px-3 py-2 font-medium text-gray-600">cellCount</th>
+                <th class="text-left px-3 py-2 font-medium text-gray-600">{{ t('cellCount') }}</th>
               </tr>
             </thead>
             <tbody class="divide-y bg-white">
@@ -161,28 +161,28 @@
           </table>
         </div>
 
-        <div x-show="modal.loadingDetail" class="text-sm text-gray-400 py-4 text-center">加载详情中…</div>
+        <div x-show="modal.loadingDetail" class="text-sm text-gray-400 py-4 text-center">{{ t('加载详情中…') }}</div>
       </div>
     </div>
   </div>
 
   <div class="flex items-center gap-3 mb-6">
-    <a href="/library" class="text-gray-400 hover:text-gray-600 text-sm">← 文献库</a>
-    <h1 class="text-2xl font-bold" x-text="library.name || 'Loading…'"></h1>
-    <span class="text-xs text-gray-400" x-text="'共 ' + total + ' 条'"></span>
+    <a href="/library" class="text-gray-400 hover:text-gray-600 text-sm">{{ t('← 文献库') }}</a>
+    <h1 class="text-2xl font-bold" x-text="library.name || (tr(&quot;Loading…&quot;))"></h1>
+    <span class="text-xs text-gray-400" x-text="(tr(&quot;共&quot;)+&quot; &quot;) + total + (&quot; &quot;+tr(&quot;条&quot;))"></span>
   </div>
 
   <div class="flex flex-wrap items-center gap-3 mb-4">
     <select x-model="statusFilter" @change="reload()"
             class="border rounded-lg px-3 py-2 text-sm bg-white">
-      <option value="">全部状态</option>
-      <option value="new">New</option>
-      <option value="reviewing">Reviewing</option>
-      <option value="confirmed">Confirmed</option>
-      <option value="excluded">Excluded</option>
+      <option value="">{{ t('全部状态') }}</option>
+      <option value="new">{{ t('New') }}</option>
+      <option value="reviewing">{{ t('Reviewing') }}</option>
+      <option value="confirmed">{{ t('Confirmed') }}</option>
+      <option value="excluded">{{ t('Excluded') }}</option>
     </select>
     <a :href="'/library/' + libraryId + '/export'"
-       class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
+       class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">{{ t('导出 CSV') }}</a>
   </div>
 
   <div class="bg-white rounded-2xl border border-gray-200 overflow-hidden">
@@ -194,14 +194,14 @@
         </colgroup>
         <thead class="bg-gray-50 border-b">
           <tr>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">Accession</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">Title</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">Organism</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">Samples</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">Raw</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">实验类型</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">来源</th>
-            <th class="text-left px-4 py-3 font-medium text-gray-600">状态</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('Accession') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('Title') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('Organism') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('Samples') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('Raw') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('实验类型') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('来源') }}</th>
+            <th class="text-left px-4 py-3 font-medium text-gray-600">{{ t('状态') }}</th>
           </tr>
         </thead>
         <tbody class="divide-y">
@@ -221,7 +221,7 @@
               <td class="px-4 py-3 text-xs align-top">
                 <span :class="entry.source==='task' ? 'bg-purple-50 text-purple-700' : 'bg-blue-50 text-blue-700'"
                       class="px-2 py-0.5 rounded-full text-xs font-medium"
-                      x-text="entry.source==='task' ? '任务筛选' : '直接搜索'"></span>
+                      x-text="entry.source==='task' ? (tr(&quot;任务筛选&quot;)) : (tr(&quot;直接搜索&quot;))"></span>
               </td>
               <td class="px-4 py-3 align-top" @click.stop>
                 <select :value="entry.status"
@@ -233,10 +233,10 @@
                           'text-green-600': entry.status==='confirmed',
                           'text-red-500': entry.status==='excluded'
                         }">
-                  <option value="new">New</option>
-                  <option value="reviewing">Reviewing</option>
-                  <option value="confirmed">Confirmed</option>
-                  <option value="excluded">Excluded</option>
+                  <option value="new">{{ t('New') }}</option>
+                  <option value="reviewing">{{ t('Reviewing') }}</option>
+                  <option value="confirmed">{{ t('Confirmed') }}</option>
+                  <option value="excluded">{{ t('Excluded') }}</option>
                 </select>
               </td>
             </tr>
@@ -244,13 +244,13 @@
         </tbody>
       </table>
     </div>
-    <div x-show="entries.length === 0 && !loading" class="text-center text-gray-400 py-12 text-sm">暂无数据</div>
+    <div x-show="entries.length === 0 && !loading" class="text-center text-gray-400 py-12 text-sm">{{ t('暂无数据') }}</div>
     <div class="px-6 py-4 border-t flex flex-wrap items-center justify-between gap-3">
       <button @click="prevPage()" :disabled="page<=1"
-              class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-sm">← Prev</button>
+              class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-sm">{{ t('← Prev') }}</button>
       <div class="flex flex-wrap items-center justify-center gap-2">
         <span class="text-sm text-gray-500">
-          第 <span x-text="page"></span> 页，共 <span x-text="totalPages"></span> 页
+          {{ t('第') }} <span x-text="page"></span> {{ t('页，共') }} <span x-text="totalPages"></span> {{ t('页') }}
         </span>
         <template x-for="item in visiblePaginationItems" :key="item.key">
           <template x-if="item.type === 'page'">
@@ -264,15 +264,15 @@
           </template>
         </template>
         <div class="flex items-center gap-2 ml-2">
-          <label class="text-sm text-gray-500">跳至页码</label>
+          <label class="text-sm text-gray-500">{{ t('跳至页码') }}</label>
           <input x-model.number="jumpPageInput" type="number" min="1" :max="totalPages"
                  class="w-20 border rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <button @click="jumpToPage()"
-                  class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">Go</button>
+                  class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-sm">{{ t('Go') }}</button>
         </div>
       </div>
       <button @click="nextPage()" :disabled="page>=totalPages"
-              class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-sm">Next →</button>
+              class="px-3 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 disabled:opacity-40 text-sm">{{ t('Next →') }}</button>
     </div>
   </div>
 </div>

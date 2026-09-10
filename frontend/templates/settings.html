@@ -1,242 +1,52 @@
 {% extends "base.html" %}
-{% block title %}Settings — GEO Screener{% endblock %}
+{% block title %}{{ t('模型与连接 — GEO Screener') }}{% endblock %}
 {% block content %}
-<div x-data="settingsPage()" x-init="load()">
-  <h1 class="text-2xl font-bold mb-6">LLM Settings</h1>
-
-  <div class="flex gap-6 items-start">
-
-    <!-- Left: Active model -->
-    <div class="w-80 flex-shrink-0">
-      <h2 class="text-base font-semibold mb-3 text-gray-700">Active Model</h2>
-      <div class="bg-white rounded-xl border border-gray-200 p-5 space-y-4">
-        <div x-show="activeSaveMsg" class="text-green-600 text-sm" x-text="activeSaveMsg"></div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Provider</label>
-          <select x-model="activeForm.provider" @change="onActiveProviderChange()"
-                  class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
-            <template x-for="p in ALL_PROVIDERS" :key="p.value">
-              <option :value="p.value" x-text="p.label + (providerConfigs[p.value] && providerConfigs[p.value].has_key ? '' : ' (no key)')"></option>
-            </template>
-          </select>
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Model</label>
-          <input x-model="activeForm.model" type="text"
-                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        </div>
-        <div>
-          <label class="block text-sm font-medium mb-1">Temperature
-            <span class="text-gray-400 font-normal" x-text="'(' + activeForm.temperature + ')'"></span>
-          </label>
-          <input x-model.number="activeForm.temperature" type="range" min="0" max="1" step="0.05" class="w-full" />
-        </div>
-        <div class="flex gap-3">
-          <button @click="saveActive()" :disabled="activeSaving"
-                  class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-            <span x-text="activeSaving ? 'Saving…' : 'Save'"></span>
-          </button>
-          <button @click="testConn()" :disabled="testing"
-                  class="bg-gray-100 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-200 disabled:opacity-50">
-            <span x-text="testing ? 'Testing…' : 'Test Connection'"></span>
-          </button>
-        </div>
-        <div x-show="testResult !== null">
-          <span x-show="testResult === true" class="text-green-600 text-sm font-medium">✓ Connection successful</span>
-          <span x-show="testResult === false" class="text-red-600 text-sm font-medium" x-text="testError"></span>
-        </div>
+<script src="/static/settings.js"></script>
+<div x-data="settingsPage()" class="settings-page" @ui:language-change.window="if ((activeDirty() || modal.open) &amp;&amp; !confirm(tr('切换语言将重新加载页面，是否放弃未保存修改？'))) $event.preventDefault()" x-cloak>
+  <header class="page-heading">
+    <div><p class="eyebrow">{{ t('WORKSPACE SETTINGS') }}</p><h1>{{ t('模型与连接') }}</h1><p class="page-description">{{ t('为文献筛选与 Protocol 提取配置模型，统一管理服务商连接。') }}</p></div>
+    <span class="ui-badge ui-badge--blue"><span class="status-dot"></span>{{ t('OpenAI-compatible API') }}</span>
+  </header>
+  <p x-show="loading" class="ui-alert ui-alert--info">{{ t('正在加载配置…') }}</p>
+  <p x-show="error" x-text="tr(error)" class="ui-alert ui-alert--error" role="alert"></p>
+  <div class="settings-layout">
+    <section class="ui-card active-connection">
+      <div class="ui-card-header"><h2>{{ t('当前使用的模型') }}</h2><span class="ui-badge ui-badge--green" x-show="hasKey(savedActive.provider)">{{ t('已配置') }}</span></div>
+      <div class="active-connection-summary"><span class="ui-help" x-text="providerName(savedActive.provider)"></span><strong x-text="savedActive.model || '—'"></strong><p class="mono" x-text="endpoint(savedActive.provider)"></p></div>
+      <div class="ui-card-body">
+        <div class="ui-field"><label for="active-provider" class="ui-label">{{ t('服务商') }}</label><select id="active-provider" x-model="activeForm.provider" @change="onActiveProviderChange()" class="ui-input"><template x-for="p in ALL_PROVIDERS" :key="p.value"><option :value="p.value" x-text="p.label"></option></template></select></div>
+        <div class="ui-field"><label for="active-model" class="ui-label">{{ t('模型 ID') }}</label><input id="active-model" x-model="activeForm.model" class="ui-input mono" placeholder="{{ t('填写服务商提供的 Model ID') }}" /></div>
+        <div class="ui-field"><label for="temperature" class="ui-label">{{ t('温度') }} <span class="float-right mono" x-text="activeForm.temperature"></span></label><input id="temperature" x-model.number="activeForm.temperature" type="range" min="0" max="1" step="0.05" class="w-full accent-blue-600"/><p class="ui-help">{{ t('较低的值通常让回答更稳定。提取任务沿用各自的温度设置。') }}</p></div>
+        <p x-show="!hasKey(activeForm.provider)" class="ui-help"><button class="text-blue-600" @click="openModal(activeForm.provider)">{{ t('先配置该服务商的 API Key →') }}</button></p>
+        <div class="connection-actions"><div class="ui-actions"><button class="ui-button ui-button--primary" @click="saveActive()" :disabled="loading || activeSaving || !activeDirty() || !hasKey(activeForm.provider)" x-text="activeSaving ? (tr(&quot;保存中…&quot;)) : (tr(&quot;保存并启用&quot;))"></button><button class="ui-button" @click="testConn()" :disabled="loading || testing || activeSaving || activeDirty() || !hasKey(savedActive.provider)" x-text="testing ? (tr(&quot;测试中…&quot;)) : (tr(&quot;测试连接&quot;))"></button></div><p class="ui-help" x-show="activeDirty()">{{ t('有待保存的选择；保存后才会切换模型。') }}</p></div>
+        <p x-show="activeSaveMsg" x-text="activeSaveMsg" class="ui-help text-green-700" role="status"></p>
+        <p x-show="testResult === true" class="ui-help text-green-700" role="status">{{ t('连接成功，模型已返回响应。') }}</p><p x-show="testResult === false" x-text="tr(testError)" class="ui-help text-red-600" role="alert"></p>
       </div>
-    </div>
-
-    <!-- Right: Provider credentials -->
-    <div class="flex-1 min-w-0">
-      <h2 class="text-base font-semibold mb-3 text-gray-700">Provider Credentials</h2>
-      <div class="space-y-2">
-        <template x-for="p in ALL_PROVIDERS" :key="p.value">
-          <div class="bg-white rounded-xl border px-4 py-3 flex items-start gap-3"
-               :class="providerConfigs[p.value] && providerConfigs[p.value].has_key ? 'border-gray-200' : 'border-dashed border-gray-200 opacity-40'">
-            <div class="flex-1 min-w-0">
-              <div class="flex items-center gap-2 mb-1">
-                <span class="text-sm font-medium text-gray-800" x-text="p.label"></span>
-                <span x-show="providerConfigs[p.value] && providerConfigs[p.value].has_key"
-                      class="text-xs text-green-600">✓ key</span>
-              </div>
-              <div class="text-xs text-gray-500 font-mono truncate"
-                   x-text="providerConfigs[p.value] ? providerConfigs[p.value].effective_base_url : PROVIDER_EFFECTIVE_URLS[p.value]"></div>
-              <div class="text-xs text-gray-400 mt-0.5"
-                   x-show="providerConfigs[p.value] && providerConfigs[p.value].model"
-                   x-text="'model: ' + (providerConfigs[p.value] && providerConfigs[p.value].model || '')"></div>
-            </div>
-            <button @click="openModal(p.value)"
-                    class="text-xs text-blue-600 hover:text-blue-800 flex-shrink-0 mt-0.5">Edit</button>
-          </div>
-        </template>
-      </div>
-    </div>
-
+    </section>
+    <section>
+      <div class="provider-section-heading"><h2>{{ t('服务商连接') }}</h2><span class="ui-help" x-text="configuredCount()+' / '+ALL_PROVIDERS.length+(&quot; &quot;+tr(&quot;已配置&quot;))"></span></div>
+      <div class="provider-grid"><template x-for="p in ALL_PROVIDERS" :key="p.value">
+        <article class="ui-card provider-card" :class="{'is-active':savedActive.provider===p.value && hasKey(p.value)}">
+          <div class="provider-heading"><span class="provider-monogram" aria-hidden="true" x-text="p.value==='orcarouter'?'OR':p.label.slice(0,2).toUpperCase()"></span><div><h3 x-text="p.label"></h3><span class="ui-help" x-text="p.value==='custom'?(tr(&quot;自定义 API 连接&quot;)):(tr(&quot;OpenAI-compatible&quot;))"></span></div><span class="ui-badge ui-badge--blue ml-auto" x-show="savedActive.provider===p.value && hasKey(p.value)">{{ t('使用中') }}</span></div>
+          <p class="provider-endpoint mono" x-text="endpoint(p.value) || (tr(&quot;配置你的 API 地址&quot;))"></p><p class="provider-model mono mb-4" x-show="providerConfigs[p.value]?.model" x-text="providerConfigs[p.value]?.model"></p>
+          <div class="provider-footer"><span class="ui-badge" :class="hasKey(p.value)?'ui-badge--green':''"><span class="status-dot"></span><span x-text="hasKey(p.value)?(tr(&quot;密钥已保存&quot;)):(tr(&quot;待配置&quot;))"></span></span><button class="ui-button" @click="openModal(p.value)" :aria-label="(tr(&quot;配置&quot;)+&quot; &quot;)+p.label">{{ t('配置连接 ↗') }}</button></div>
+        </article>
+      </template></div>
+      <p class="settings-guide">{{ t('保存服务商连接不会自动启用它。需要切换时，在左侧选择服务商和模型，再点击“保存并启用”。') }}</p>
+    </section>
   </div>
-
-  <!-- Edit credentials modal -->
-  <div x-show="modal.open" x-cloak
-       class="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
-       @click.self="modal.open = false">
-    <div class="bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 space-y-4">
-      <div class="flex items-center justify-between">
-        <h3 class="text-base font-semibold" x-text="'Edit: ' + (ALL_PROVIDERS.find(p => p.value === modal.provider) || {}).label"></h3>
-        <button @click="modal.open = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+  <div x-show="modal.open" class="ui-modal-overlay" @click.self="closeModal()" @keydown.escape.window="closeModal()">
+    <section class="ui-modal" role="dialog" aria-modal="true" aria-labelledby="connection-title">
+      <header class="ui-card-header"><div><p class="eyebrow">{{ t('PROVIDER CONNECTION') }}</p><h2 id="connection-title" x-text="providerName(modal.provider)"></h2></div><button class="modal-close" @click="closeModal()" aria-label="{{ t('关闭配置') }}">×</button></header>
+      <div class="ui-card-body">
+        <p x-show="modal.error" x-text="tr(modal.error)" class="ui-alert ui-alert--error" role="alert"></p><p x-show="modal.saveMsg" x-text="modal.saveMsg" class="ui-alert ui-alert--success" role="status"></p>
+        <div class="ui-field"><label for="provider-url" class="ui-label">{{ t('Base URL') }}</label><input id="provider-url" x-model="modal.base_url" class="ui-input mono" type="url" placeholder="https://api.example.com/v1"/><p class="ui-help">{{ t('可使用官方或专属 API 地址；留空恢复该服务商的默认地址。') }}</p></div>
+        <div class="ui-field"><label for="provider-model" class="ui-label">{{ t('模型 ID') }}</label><input id="provider-model" x-model="modal.model" class="ui-input mono" placeholder="{{ t('填写服务商提供的 Model ID') }}"/></div>
+        <div class="ui-field"><label for="provider-key" class="ui-label">{{ t('API Key') }} <span class="text-green-700" x-show="hasKey(modal.provider)">{{ t('· 已保存') }}</span></label><input id="provider-key" x-ref="apiKey" x-model="modal.api_key" type="password" autocomplete="new-password" class="ui-input mono" placeholder="{{ t('留空保留已有密钥') }}"/></div>
+        <div x-show="modal.provider==='orcarouter'" class="referral-note"><a href="https://www.orcarouter.ai/ref/ref_3c070f5c24f3119666e7" target="_blank" rel="noopener noreferrer sponsored">{{ t('注册 OrcaRouter（项目推荐链接）↗') }}</a><p class="ui-help">{{ t('通过推荐链接注册，项目维护者可能获得分成。') }}</p></div>
       </div>
-
-      <div x-show="modal.saveMsg" class="text-green-600 text-sm" x-text="modal.saveMsg"></div>
-      <div x-show="modal.error" class="text-red-600 text-sm" x-text="modal.error"></div>
-
-      <div x-show="['custom', 'orcarouter'].includes(modal.provider)">
-        <label class="block text-sm font-medium mb-1">Base URL</label>
-        <input x-model="modal.base_url" type="url" placeholder="https://api.example.com/v1"
-               class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        <p x-show="modal.provider === 'orcarouter'" class="text-xs text-gray-500 mt-1">可填写专属 Base URL；留空使用 https://api.orcarouter.ai/v1</p>
-      </div>
-      <div x-show="!['custom', 'orcarouter'].includes(modal.provider)">
-        <label class="block text-sm font-medium mb-1 text-gray-500">Endpoint</label>
-        <div class="w-full border border-gray-100 rounded-lg px-3 py-2 bg-gray-50 text-sm text-gray-600 font-mono break-all"
-             x-text="PROVIDER_EFFECTIVE_URLS[modal.provider] || '—'"></div>
-      </div>
-
-      <div x-show="modal.provider === 'orcarouter'">
-        <label class="block text-sm font-medium mb-1" for="orca-model">Model ID</label>
-        <input id="orca-model" x-model="modal.model" type="text" placeholder="orcarouter/auto"
-               class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        <p class="text-xs text-gray-500 mt-1">填写提供给你的 Model ID；留空使用 orcarouter/auto。</p>
-        <a href="https://www.orcarouter.ai/ref/ref_3c070f5c24f3119666e7" target="_blank" rel="noopener noreferrer sponsored"
-           class="text-xs text-blue-600">注册 OrcaRouter（项目推荐链接）↗</a>
-        <p class="text-xs text-gray-500 mt-1">通过推荐链接注册，项目维护者可能获得分成。</p>
-      </div>
-
-      <div>
-        <label class="block text-sm font-medium mb-1">
-          API Key
-          <span x-show="providerConfigs[modal.provider] && providerConfigs[modal.provider].has_key"
-                class="ml-2 text-xs text-green-600 font-normal">✓ Key saved</span>
-        </label>
-        <input x-model="modal.api_key" type="password" placeholder="Leave blank to keep existing key"
-               class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
-      </div>
-
-      <div class="flex gap-3 pt-1">
-        <button @click="saveModal()" :disabled="modal.saving"
-                class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-          <span x-text="modal.saving ? 'Saving…' : 'Save'"></span>
-        </button>
-        <button @click="modal.open = false"
-                class="bg-gray-100 text-gray-700 px-5 py-2 rounded-lg text-sm font-medium hover:bg-gray-200">
-          Cancel
-        </button>
-      </div>
-    </div>
+      <footer class="ui-modal-footer"><button class="ui-button" @click="closeModal()" :disabled="modal.saving">{{ t('取消') }}</button><button class="ui-button ui-button--primary" @click="saveModal()" :disabled="modal.saving" x-text="modal.saving?(tr(&quot;保存中…&quot;)):(tr(&quot;保存连接&quot;))"></button></footer>
+    </section>
   </div>
 </div>
-
-<script>
-  const PROVIDER_MODELS = {
-    deepseek: 'deepseek-chat', glm: 'glm-4', minimax: 'abab6.5s-chat',
-    'campus-minimax': 'minimax', 'campus-glm': 'glm', orcarouter: 'orcarouter/auto', custom: ''
-  };
-  const PROVIDER_EFFECTIVE_URLS = {
-    deepseek: 'https://api.deepseek.com/v1',
-    glm: 'https://open.bigmodel.cn/api/paas/v4',
-    minimax: 'https://api.minimax.chat/v1',
-    'campus-minimax': 'http://10.28.0.22:30530/v1',
-    'campus-glm': 'http://10.28.0.22:30530/v1',
-    orcarouter: 'https://api.orcarouter.ai/v1',
-    custom: ''
-  };
-  const ALL_PROVIDERS = [
-    {value: 'deepseek', label: 'DeepSeek'},
-    {value: 'glm', label: 'GLM (Zhipu)'},
-    {value: 'minimax', label: 'MiniMax'},
-    {value: 'campus-minimax', label: '校内 MiniMax'},
-    {value: 'campus-glm', label: '校内 GLM'},
-    {value: 'orcarouter', label: 'OrcaRouter'},
-    {value: 'custom', label: 'Custom'},
-  ];
-
-  function settingsPage() {
-    return {
-      providerConfigs: {},
-      activeForm: {provider: 'deepseek', model: 'deepseek-chat', temperature: 0.1},
-      activeSaving: false, activeSaveMsg: '',
-      modal: {open: false, provider: '', api_key: '', base_url: '', model: '', saving: false, saveMsg: '', error: ''},
-      testing: false, testResult: null, testError: '',
-
-      async load() {
-        const r = await fetch('/llm/config');
-        if (r.status === 401) { window.location.href = '/login'; return; }
-        if (r.ok) {
-          const d = await r.json();
-          this.providerConfigs = d.provider_configs || {};
-          this.activeForm = {provider: d.provider, model: d.model || '', temperature: d.temperature ?? 0.1};
-        }
-      },
-
-      onActiveProviderChange() {
-        const saved = this.providerConfigs[this.activeForm.provider];
-        this.activeForm.model = (saved && saved.model) || PROVIDER_MODELS[this.activeForm.provider] || '';
-        this.testResult = null;
-      },
-
-      openModal(provider) {
-        const saved = this.providerConfigs[provider] || {};
-        this.modal = {open: true, provider, api_key: '', base_url: saved.base_url || PROVIDER_EFFECTIVE_URLS[provider] || '',
-                      model: saved.model || PROVIDER_MODELS[provider] || '',
-                      saving: false, saveMsg: '', error: ''};
-      },
-
-      async saveModal() {
-        this.modal.saving = true; this.modal.error = ''; this.modal.saveMsg = '';
-        const body = {provider: this.modal.provider, base_url: this.modal.base_url,
-                      model: this.modal.model.trim() || PROVIDER_MODELS[this.modal.provider] || '',
-                      temperature: (this.providerConfigs[this.modal.provider] || {}).temperature ?? 0.1};
-        if (this.modal.api_key.trim()) body.api_key = this.modal.api_key.trim();
-        const r = await fetch('/llm/credentials', {
-          method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-        this.modal.saving = false;
-        if (r.ok) {
-          const d = await r.json();
-          this.providerConfigs = d.provider_configs || {};
-          if (this.activeForm.provider === this.modal.provider) {
-            this.activeForm.model = this.providerConfigs[this.modal.provider].model || '';
-          }
-          this.modal.api_key = '';
-          this.modal.saveMsg = 'Saved!';
-          setTimeout(() => { this.modal.saveMsg = ''; this.modal.open = false; }, 800);
-        } else {
-          const d = await r.json(); this.modal.error = d.detail || 'Save failed';
-        }
-      },
-
-      async saveActive() {
-        this.activeSaving = true; this.activeSaveMsg = '';
-        const body = {provider: this.activeForm.provider, model: this.activeForm.model, temperature: this.activeForm.temperature};
-        const r = await fetch('/llm/config', {
-          method: 'PUT', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body)});
-        this.activeSaving = false;
-        if (r.ok) {
-          const d = await r.json();
-          this.providerConfigs = d.provider_configs || {};
-          this.activeSaveMsg = 'Saved!'; setTimeout(() => this.activeSaveMsg = '', 2000);
-        }
-      },
-
-      async testConn() {
-        this.testing = true; this.testResult = null; this.testError = '';
-        const r = await fetch('/llm/test', {method: 'POST'});
-        this.testing = false;
-        if (r.ok) {
-          const d = await r.json(); this.testResult = d.success === true;
-          if (!this.testResult) this.testError = 'Model returned an empty response';
-        }
-        else { this.testResult = false; const d = await r.json(); this.testError = d.detail || 'Connection failed'; }
-      }
-    }
-  }
-</script>
 {% endblock %}

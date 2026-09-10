@@ -1,8 +1,8 @@
 {% extends "base.html" %}
-{% block title %}Annotation Schemas — GEO Screener{% endblock %}
+{% block title %}{{ t('Annotation Schemas — GEO Screener') }}{% endblock %}
 {% block content %}
 <div x-data="criteriaPage()" x-init="load(); init()">
-  <h1 class="text-2xl font-bold mb-6">Annotation Schemas</h1>
+  <h1 class="text-2xl font-bold mb-6">{{ t('Annotation Schemas') }}</h1>
 
   <!-- Schema management -->
   <div class="flex gap-6">
@@ -10,7 +10,7 @@
     <div class="w-64 flex-shrink-0">
       <button @click="newSchema()"
               class="w-full mb-3 bg-blue-600 text-white rounded-lg py-2 text-sm font-medium hover:bg-blue-700">
-        + New Schema
+        {{ t('+ New Schema') }}
       </button>
       <div class="space-y-1">
         <template x-for="s in schemaList" :key="s.id">
@@ -23,16 +23,16 @@
                 <span x-text="s.name"></span>
               </p>
               <span x-show="activeSchemaId === s.id || (s.is_default && !activeSchemaId)"
-                    class="flex-shrink-0 text-xs text-green-600 font-semibold">✓ Active</span>
+                    class="flex-shrink-0 text-xs text-green-600 font-semibold">{{ t('✓ Active') }}</span>
               <button x-show="!(activeSchemaId === s.id || (s.is_default && !activeSchemaId))"
                       @click.stop="setActive(s)"
                       class="flex-shrink-0 text-xs text-blue-500 hover:text-blue-700">
-                Set active
+                {{ t('Set active') }}
               </button>
             </div>
             <p class="text-xs text-gray-400 mt-0.5">
-              <span x-show="s.is_default">Default Example</span>
-              <span x-show="!s.is_default" x-text="s.id ? new Date(s.updated_at).toLocaleDateString() : 'unsaved'"></span>
+              <span x-show="s.is_default">{{ t('Default Example') }}</span>
+              <span x-show="!s.is_default" x-text="s.id ? new Date(s.updated_at).toLocaleDateString() : tr('unsaved')"></span>
             </p>
           </div>
         </template>
@@ -42,7 +42,7 @@
     <!-- Right panel: schema editor -->
     <div class="flex-1 bg-white rounded-xl border border-gray-200 p-6">
       <div x-show="!selectedSchema" class="text-gray-400 text-sm text-center py-16">
-        Select a schema or create a new one.
+        {{ t('Select a schema or create a new one.') }}
       </div>
       <template x-if="selectedSchema"><div>
         <!-- Schema title -->
@@ -52,11 +52,11 @@
         </div>
 
         <div x-show="schemaSaveMsg" class="mb-3 text-green-600 text-sm" x-text="schemaSaveMsg"></div>
-        <div x-show="schemaError" class="mb-3 text-red-600 text-sm" x-text="schemaError"></div>
+        <div x-show="schemaError" class="mb-3 text-red-600 text-sm" x-text="tr(schemaError)"></div>
 
         <!-- Default schema indicator -->
         <div x-show="selectedSchema.is_default" class="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-          <p class="text-sm text-blue-700">📋 <strong>Default Schema (Example)</strong> - This is a read-only template showing the standard labels and prompts.</p>
+          <p class="text-sm text-blue-700">📋 <strong>{{ t('Default Schema (Example)') }}</strong> {{ t('- This is a read-only template showing the standard labels and prompts.') }}</p>
         </div>
 
         <!-- Schema tabs -->
@@ -64,25 +64,25 @@
           <button @click="schemaTab = 'labels'"
                   :class="schemaTab === 'labels' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
                   class="px-3 py-2 font-medium text-sm transition">
-            Labels
+            {{ t('Labels') }}
           </button>
           <button @click="schemaTab = 'prompts'"
                   :class="schemaTab === 'prompts' ? 'border-b-2 border-blue-600 text-blue-600' : 'text-gray-600'"
                   class="px-3 py-2 font-medium text-sm transition">
-            Prompts
+            {{ t('Prompts') }}
           </button>
         </div>
 
         <!-- Labels Tab -->
         <div x-show="schemaTab === 'labels'">
           <div class="mb-4">
-            <label class="block text-sm font-medium mb-1">Edit Name</label>
+            <label class="block text-sm font-medium mb-1">{{ t('Edit Name') }}</label>
             <input x-model="schemaEditName" type="text" :disabled="selectedSchema.is_default"
                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed" />
           </div>
 
           <div class="mb-4">
-            <label class="block text-sm font-medium mb-1">Edit Description</label>
+            <label class="block text-sm font-medium mb-1">{{ t('Edit Description') }}</label>
             <input x-model="schemaEditDesc" type="text" :disabled="selectedSchema.is_default"
                    class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed" />
           </div>
@@ -90,8 +90,8 @@
           <!-- GSE Labels -->
           <div class="mb-6">
             <div class="flex justify-between items-center mb-3">
-              <h3 class="text-sm font-semibold">GSE Labels</h3>
-              <button @click="addGseLabel()" x-show="!selectedSchema.is_default" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+              <h3 class="text-sm font-semibold">{{ t('GSE Labels') }}</h3>
+              <button @click="addGseLabel()" x-show="!selectedSchema.is_default" class="text-xs text-blue-600 hover:text-blue-700">{{ t('+ Add Label') }}</button>
             </div>
             <div class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
               <template x-for="(label, idx) in schemaEditGseLabels" :key="idx">
@@ -101,36 +101,36 @@
                           class="w-full text-left p-3 hover:bg-gray-50 transition disabled:cursor-not-allowed">
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
-                        <p class="font-medium" x-text="label.name || '(untitled)'"></p>
+                        <p class="font-medium" x-text="label.name || tr('(untitled)')"></p>
                         <p class="text-xs text-gray-600" x-text="label.description"></p>
-                        <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                        <p class="text-xs text-gray-500 mt-1">{{ t('Type:') }} <span x-text="tr(label.type)"></span></p>
                       </div>
                       <button @click.stop="removeGseLabel(idx)" x-show="!selectedSchema.is_default" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
                   </button>
                   <div x-show="editingGseIdx === idx && !selectedSchema.is_default" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
                     <div>
-                      <label class="block text-xs font-medium mb-1">Name</label>
-                      <input x-model="label.name" type="text" placeholder="e.g., data_modality"
+                      <label class="block text-xs font-medium mb-1">{{ t('Name') }}</label>
+                      <input x-model="label.name" type="text" placeholder="{{ t('e.g., data_modality') }}"
                              class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium mb-1">Description</label>
-                      <input x-model="label.description" type="text" placeholder="e.g., Type of data (scRNA-seq, scATAC-seq, etc.)"
+                      <label class="block text-xs font-medium mb-1">{{ t('Description') }}</label>
+                      <input x-model="label.description" type="text" placeholder="{{ t('e.g., Type of data (scRNA-seq, scATAC-seq, etc.)') }}"
                              class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium mb-1">Type</label>
+                      <label class="block text-xs font-medium mb-1">{{ t('Type') }}</label>
                       <select x-model="label.type" class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        <option value="free_text">Free Text</option>
-                        <option value="enum">Enum (predefined options)</option>
-                        <option value="array">Array</option>
-                        <option value="object_array">Object Array</option>
+                        <option value="free_text">{{ t('Free Text') }}</option>
+                        <option value="enum">{{ t('Enum (predefined options)') }}</option>
+                        <option value="array">{{ t('Array') }}</option>
+                        <option value="object_array">{{ t('Object Array') }}</option>
                       </select>
                     </div>
-                    <div x-show="label.type === 'enum'">
-                      <label class="block text-xs font-medium mb-1">Allowed Values (comma-separated)</label>
-                      <input x-model="label.allowed_values_str" type="text" placeholder="e.g., scRNA-seq, scATAC-seq, spatial"
+                    <div x-show="label.type === (tr(&quot;enum&quot;))">
+                      <label class="block text-xs font-medium mb-1">{{ t('Allowed Values (comma-separated)') }}</label>
+                      <input x-model="label.allowed_values_str" type="text" placeholder="{{ t('e.g., scRNA-seq, scATAC-seq, spatial') }}"
                              @change="label.allowed_values = label.allowed_values_str.split(',').map(v => v.trim()).filter(v => v)"
                              class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                     </div>
@@ -143,8 +143,8 @@
           <!-- GSM Labels -->
           <div class="mb-6">
             <div class="flex justify-between items-center mb-3">
-              <h3 class="text-sm font-semibold">GSM Labels</h3>
-              <button @click="addGsmLabel()" x-show="!selectedSchema.is_default" class="text-xs text-blue-600 hover:text-blue-700">+ Add Label</button>
+              <h3 class="text-sm font-semibold">{{ t('GSM Labels') }}</h3>
+              <button @click="addGsmLabel()" x-show="!selectedSchema.is_default" class="text-xs text-blue-600 hover:text-blue-700">{{ t('+ Add Label') }}</button>
             </div>
             <div class="space-y-2 max-h-96 overflow-y-auto border rounded-lg p-3 bg-gray-50">
               <template x-for="(label, idx) in schemaEditGsmLabels" :key="idx">
@@ -154,36 +154,36 @@
                           class="w-full text-left p-3 hover:bg-gray-50 transition disabled:cursor-not-allowed">
                     <div class="flex justify-between items-start">
                       <div class="flex-1">
-                        <p class="font-medium" x-text="label.name || '(untitled)'"></p>
+                        <p class="font-medium" x-text="label.name || tr('(untitled)')"></p>
                         <p class="text-xs text-gray-600" x-text="label.description"></p>
-                        <p class="text-xs text-gray-500 mt-1">Type: <span x-text="label.type"></span></p>
+                        <p class="text-xs text-gray-500 mt-1">{{ t('Type:') }} <span x-text="tr(label.type)"></span></p>
                       </div>
                       <button @click.stop="removeGsmLabel(idx)" x-show="!selectedSchema.is_default" class="text-red-500 hover:text-red-700 text-xs">✕</button>
                     </div>
                   </button>
                   <div x-show="editingGsmIdx === idx && !selectedSchema.is_default" class="border-t border-gray-200 p-3 space-y-3 bg-gray-50">
                     <div>
-                      <label class="block text-xs font-medium mb-1">Name</label>
-                      <input x-model="label.name" type="text" placeholder="e.g., start_cell"
+                      <label class="block text-xs font-medium mb-1">{{ t('Name') }}</label>
+                      <input x-model="label.name" type="text" placeholder="{{ t('e.g., start_cell') }}"
                              class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium mb-1">Description</label>
-                      <input x-model="label.description" type="text" placeholder="e.g., Starting cell type (iPSC, ESC, PSC)"
+                      <label class="block text-xs font-medium mb-1">{{ t('Description') }}</label>
+                      <input x-model="label.description" type="text" placeholder="{{ t('e.g., Starting cell type (iPSC, ESC, PSC)') }}"
                              class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                     </div>
                     <div>
-                      <label class="block text-xs font-medium mb-1">Type</label>
+                      <label class="block text-xs font-medium mb-1">{{ t('Type') }}</label>
                       <select x-model="label.type" class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400">
-                        <option value="free_text">Free Text</option>
-                        <option value="enum">Enum (predefined options)</option>
-                        <option value="array">Array</option>
-                        <option value="object_array">Object Array</option>
+                        <option value="free_text">{{ t('Free Text') }}</option>
+                        <option value="enum">{{ t('Enum (predefined options)') }}</option>
+                        <option value="array">{{ t('Array') }}</option>
+                        <option value="object_array">{{ t('Object Array') }}</option>
                       </select>
                     </div>
-                    <div x-show="label.type === 'enum'">
-                      <label class="block text-xs font-medium mb-1">Allowed Values (comma-separated)</label>
-                      <input x-model="label.allowed_values_str" type="text" placeholder="e.g., iPSC, ESC, PSC"
+                    <div x-show="label.type === (tr(&quot;enum&quot;))">
+                      <label class="block text-xs font-medium mb-1">{{ t('Allowed Values (comma-separated)') }}</label>
+                      <input x-model="label.allowed_values_str" type="text" placeholder="{{ t('e.g., iPSC, ESC, PSC') }}"
                              @change="label.allowed_values = label.allowed_values_str.split(',').map(v => v.trim()).filter(v => v)"
                              class="w-full border rounded px-2 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
                     </div>
@@ -197,27 +197,27 @@
         <!-- Prompts Tab -->
         <div x-show="schemaTab === 'prompts'">
           <div class="mb-4">
-            <label class="block text-sm font-medium mb-2">Select Prompt Type</label>
+            <label class="block text-sm font-medium mb-2">{{ t('Select Prompt Type') }}</label>
             <select x-model="selectedPromptType" class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
-              <option value="label_prompt">GSE Label Prompt</option>
-              <option value="gsm_label_prompt">GSM Label Prompt</option>
-              <option value="paper_calibration_prompt">Paper Calibration Prompt</option>
+              <option value="label_prompt">{{ t('GSE Label Prompt') }}</option>
+              <option value="gsm_label_prompt">{{ t('GSM Label Prompt') }}</option>
+              <option value="paper_calibration_prompt">{{ t('Paper Calibration Prompt') }}</option>
             </select>
           </div>
 
-          <div x-show="promptLoading" class="text-gray-500 text-sm">Loading prompt...</div>
+          <div x-show="promptLoading" class="text-gray-500 text-sm">{{ t('Loading prompt...') }}</div>
           <div x-show="!promptLoading">
             <textarea x-model="promptContent" rows="16" :disabled="selectedSchema.is_default"
                       class="w-full border rounded-lg px-3 py-2 font-mono text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:bg-gray-100 disabled:cursor-not-allowed"></textarea>
             <div class="flex gap-3 mt-3" x-show="selectedSchema && selectedSchema.id && !selectedSchema.is_default">
               <button @click="savePrompt()" :disabled="promptSaving"
                       class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-                <span x-text="promptSaving ? 'Saving…' : 'Save Prompt'"></span>
+                <span x-text="promptSaving ? (tr(&quot;Saving…&quot;)) : (tr(&quot;Save Prompt&quot;))"></span>
               </button>
             </div>
             <div class="text-xs text-gray-500 mt-3" x-show="!selectedSchema || !selectedSchema.id || selectedSchema.is_default">
-              <span x-show="selectedSchema.is_default">This is a read-only default prompt</span>
-              <span x-show="!selectedSchema || !selectedSchema.id">Save schema first to save prompt changes</span>
+              <span x-show="selectedSchema.is_default">{{ t('This is a read-only default prompt') }}</span>
+              <span x-show="!selectedSchema || !selectedSchema.id">{{ t('Save schema first to save prompt changes') }}</span>
             </div>
           </div>
         </div>
@@ -225,10 +225,10 @@
         <div class="flex gap-3 mt-6" x-show="schemaTab === 'labels'">
           <button @click="saveSchema()" :disabled="schemaSaving || selectedSchema.is_default"
                   class="bg-blue-600 text-white px-5 py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-            <span x-text="schemaSaving ? 'Saving…' : 'Save'"></span>
+            <span x-text="schemaSaving ? (tr(&quot;Saving…&quot;)) : (tr(&quot;Save&quot;))"></span>
           </button>
           <button @click="deleteSchema()" x-show="selectedSchema && selectedSchema.id && !selectedSchema.is_default"
-                  class="text-red-500 hover:text-red-700 px-4 py-2 text-sm">Delete</button>
+                  class="text-red-500 hover:text-red-700 px-4 py-2 text-sm">{{ t('Delete') }}</button>
         </div>
       </div></template>
     </div>
@@ -398,15 +398,15 @@
             const updated = await r.json();
             this.selectedSchema = {...updated, is_default: false};
             await this.loadSchemas();
-            this.schemaSaveMsg = 'Saved!';
+            this.schemaSaveMsg = tr('Saved!');
             setTimeout(() => this.schemaSaveMsg = '', 2000);
           } else {
-            const d = await r.json(); this.schemaError = d.detail || 'Save failed';
+            const d = await r.json(); this.schemaError = d.detail || (tr("Save failed"));
           }
         } finally { this.schemaSaving = false; }
       },
       async deleteSchema() {
-        if (!confirm('Delete this annotation schema?')) return;
+        if (!confirm((tr("Delete this annotation schema?")))) return;
         await fetch('/annotation-schemas/' + this.selectedSchema.id, {method: 'DELETE'});
         this.selectedSchema = null;
         await this.loadSchemas();
@@ -423,11 +423,11 @@
               const data = await promptR.json();
               this.promptContent = data.content;
             } else {
-              this.promptContent = '[Default prompt file not found]';
+              this.promptContent = (tr("[Default prompt file not found]"));
             }
           } catch (e) {
             console.error('Failed to load default prompt:', e);
-            this.promptContent = '[Error loading default prompt]';
+            this.promptContent = (tr("[Error loading default prompt]"));
           } finally {
             this.promptLoading = false;
           }
@@ -462,10 +462,10 @@
             body: JSON.stringify({content: this.promptContent})
           });
           if (r.ok) {
-            this.schemaSaveMsg = 'Prompt saved!';
+            this.schemaSaveMsg = (tr("Prompt saved!"));
             setTimeout(() => this.schemaSaveMsg = '', 2000);
           } else {
-            this.schemaError = 'Failed to save prompt';
+            this.schemaError = (tr("Failed to save prompt"));
           }
         } finally {
           this.promptSaving = false;

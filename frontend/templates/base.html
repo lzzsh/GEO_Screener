@@ -1,33 +1,36 @@
 <!DOCTYPE html>
-<html lang="en" x-data="appState()" x-init="init()">
+<html lang="{{ ui_lang }}" x-data="appState()">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>{% block title %}GEO Screener{% endblock %}</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+  {% include "_i18n.html" %}
   <script src="/static/app.js"></script>
+  <link rel="stylesheet" href="/static/workspace.css" />
 </head>
-<body class="bg-gray-50 text-gray-900 min-h-screen flex">
+<body class="app-shell">
   <!-- Left Sidebar -->
-  <aside class="w-48 bg-white border-r border-gray-200 fixed h-full flex flex-col z-10">
-    <div class="px-5 py-5 border-b border-gray-100">
-      <a href="/search" class="font-semibold text-blue-600 text-base">GEO Screener</a>
+  <aside class="app-sidebar">
+    <div class="app-brand">
+      <a href="/search"><span class="brand-mark" aria-hidden="true">G</span><span>GEO Screener<small>{{ t('RESEARCH WORKSPACE') }}</small></span></a>
     </div>
-    <nav class="flex-1 py-2 overflow-y-auto">
-      <a href="/search" class="block px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">论文列表</a>
-      <a href="/tasks-list" class="block px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">任务管理</a>
-      <a href="/protocols" class="block px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">Protocol 提取 <span class="text-[10px] text-blue-600">v2</span></a>
-      <a href="/library" class="block px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">文献库</a>
-      <a href="/criteria-page" class="block px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">配置管理</a>
-      <a href="/settings" class="block px-5 py-3 text-sm text-gray-600 hover:bg-gray-50 hover:text-gray-900">Settings</a>
+    <p class="nav-caption">{{ t('研究流程') }}</p>
+    <nav class="app-nav" aria-label="{{ t('主导航') }}">
+      {% for href, label, icon in [('/search','文献检索','⌕'),('/tasks-list','筛选任务','☷'),('/protocols','Protocol 提取','⌘'),('/library','文献库','▤'),('/criteria-page','筛选与标注规则','≡'),('/settings','模型与连接','⚙')] %}
+      {% set active = request.url.path.startswith(href) or (href == '/tasks-list' and request.url.path.startswith('/tasks/')) %}
+      <a href="{{ href }}" {% if active %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ icon }}</span>{{ t(label) }}</a>
+      {% endfor %}
     </nav>
-    <div class="px-5 py-4 border-t border-gray-100">
-      <button @click="logout()" class="text-sm text-red-500 hover:text-red-700">退出登录</button>
+    <div class="sidebar-footer">
+      {% include "_language.html" %}
+      <span class="version-label">GEO SCREENER <b>V2</b></span>
+      <button @click="logout()" class="logout-button">{{ t('退出登录 ↗') }}</button>
     </div>
   </aside>
   <!-- Main Content -->
-  <main class="ml-48 flex-1 px-6 py-6 min-w-0">
+  <main class="app-main" id="main-content">
     {% block content %}{% endblock %}
   </main>
 </body>

@@ -1,12 +1,12 @@
 {% extends "base.html" %}
-{% block title %}文献库 — GEO Screener{% endblock %}
+{% block title %}{{ t('文献库 — GEO Screener') }}{% endblock %}
 {% block content %}
 <div x-data="libraryListPage()" x-init="load()">
   <div class="flex items-center justify-between mb-6">
-    <h1 class="text-2xl font-bold">文献库</h1>
+    <h1 class="text-2xl font-bold">{{ t('文献库') }}</h1>
     <button @click="showCreate=true"
             class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700">
-      + 新建集合
+      {{ t('+ 新建集合') }}
     </button>
   </div>
 
@@ -14,25 +14,25 @@
        @click.self="showCreate=false">
     <div class="absolute inset-0 bg-black/40"></div>
     <div class="relative bg-white rounded-2xl shadow-xl w-full max-w-md p-6 z-10">
-      <h2 class="text-lg font-semibold mb-4">新建集合</h2>
+      <h2 class="text-lg font-semibold mb-4">{{ t('新建集合') }}</h2>
       <div class="space-y-3">
-        <input x-model="newName" placeholder="集合名称（必填）"
+        <input x-model="newName" placeholder="{{ t('集合名称（必填）') }}"
                class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
-        <textarea x-model="newDesc" placeholder="描述（可选）" rows="2"
+        <textarea x-model="newDesc" placeholder="{{ t('描述（可选）') }}" rows="2"
                   class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
       </div>
       <div class="flex gap-2 mt-4 justify-end">
-        <button @click="showCreate=false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">取消</button>
+        <button @click="showCreate=false" class="px-4 py-2 text-sm text-gray-600 hover:text-gray-900">{{ t('取消') }}</button>
         <button @click="createLib()" :disabled="!newName.trim()"
                 class="bg-blue-600 text-white rounded-lg px-4 py-2 text-sm font-medium hover:bg-blue-700 disabled:opacity-50">
-          创建
+          {{ t('创建') }}
         </button>
       </div>
     </div>
   </div>
 
   <div x-show="libraries.length === 0 && !loading" class="text-center text-gray-400 py-16 text-sm">
-    暂无文献库集合，点击「新建集合」开始
+    {{ t('暂无文献库集合，点击「新建集合」开始') }}
   </div>
 
   <div class="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
@@ -87,7 +87,7 @@
         }
       },
       async deleteLib(id) {
-        if (!confirm('确认删除该集合及其所有数据？')) return;
+        if (!confirm((tr("确认删除该集合及其所有数据？")))) return;
         const r = await fetch('/library/' + id, {method: 'DELETE'});
         if (r.status === 401) { window.location.href = '/login'; return; }
         if (r.ok) this.libraries = this.libraries.filter(l => l.id !== id);

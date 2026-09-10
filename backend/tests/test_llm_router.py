@@ -66,3 +66,15 @@ async def test_orcarouter_credentials_and_switch_preserve_custom_endpoint(auth_c
     # Explicitly clearing the override restores the official endpoint.
     response = await auth_client.put('/llm/credentials', json={'provider': 'orcarouter', 'base_url': ''})
     assert response.json()['provider_configs']['orcarouter']['effective_base_url'] == 'https://api.orcarouter.ai/v1'
+
+
+@pytest.mark.asyncio
+async def test_editing_existing_provider_retains_pi_endpoint(auth_client):
+    response = await auth_client.put('/llm/config', json={
+        'provider':'deepseek', 'base_url':'https://hpc.example.org/v1', 'model':'deepseek_pro', 'api_key':'test-hpc',
+    })
+    assert response.json()['effective_base_url'] == 'https://hpc.example.org/v1'
+    response = await auth_client.put('/llm/config', json={'provider':'deepseek','model':'deepseek'})
+    assert response.json()['effective_base_url'] == 'https://hpc.example.org/v1'
+    response = await auth_client.put('/llm/credentials', json={'provider':'deepseek','api_key':'test-new'})
+    assert response.json()['provider_configs']['deepseek']['effective_base_url'] == 'https://hpc.example.org/v1'

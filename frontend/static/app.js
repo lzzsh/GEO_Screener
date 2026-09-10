@@ -11,7 +11,7 @@ function appState() {
       if (body) opts.body = JSON.stringify(body);
       const r = await fetch(path, opts);
       if (r.status === 401) { window.location.href = '/login'; return null; }
-      if (!r.ok) { const d = await r.json(); throw new Error(d.detail || 'Request failed'); }
+      if (!r.ok) { const d = await r.json(); throw new Error(d.detail || (tr("Request failed"))); }
       return r.json();
     }
   }

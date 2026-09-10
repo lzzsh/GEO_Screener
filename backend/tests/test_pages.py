@@ -128,7 +128,7 @@ async def test_search_and_task_detail_include_library_actions():
         assert "<template x-for=\"r in results\" :key=\"r.id\">\n          <tbody>" not in task_response.text
         assert "annotationError" in task_response.text
         assert "无标题数据集" in task_response.text
-        assert "已标注 " in task_response.text
+        assert "已标注" in task_response.text
 
         library_response = await client.get("/library/1")
         assert "visiblePaginationItems" in library_response.text

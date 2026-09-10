@@ -1,63 +1,63 @@
 {% extends "base.html" %}
-{% block title %}New Task — GEO Screener{% endblock %}
+{% block title %}{{ t('New Task — GEO Screener') }}{% endblock %}
 {% block content %}
 <div x-data="newTaskPage()" x-init="loadCriteria()">
-  <h1 class="text-2xl font-bold mb-6">New Screening Task</h1>
+  <h1 class="text-2xl font-bold mb-6">{{ t('New Screening Task') }}</h1>
 
-  <div x-show="error" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="error"></div>
+  <div x-show="error" class="mb-4 text-red-600 text-sm bg-red-50 rounded-lg px-4 py-2" x-text="tr(error)"></div>
 
   <div class="bg-white rounded-xl border border-gray-200 p-6 space-y-5">
     <div>
-      <label class="block text-sm font-medium mb-1">Task Name</label>
-      <input x-model="name" type="text" placeholder="e.g. Cancer RNA-seq screen"
+      <label class="block text-sm font-medium mb-1">{{ t('Task Name') }}</label>
+      <input x-model="name" type="text" placeholder="{{ t('e.g. Cancer RNA-seq screen') }}"
              class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
     </div>
 
     <div>
-      <label class="block text-sm font-medium mb-1">Natural-Language Screening Criteria
-        <span class="text-gray-400 font-normal">(Optional)</span>
+      <label class="block text-sm font-medium mb-1">{{ t('Natural-Language Screening Criteria') }}
+        <span class="text-gray-400 font-normal">{{ t('(Optional)') }}</span>
       </label>
       <select x-model="criteriaId" @change="onCriteriaSelect()"
               class="w-full border rounded-lg px-3 py-2 mb-2 focus:outline-none focus:ring-2 focus:ring-blue-400">
-        <option value="">— Optional: select template or write custom —</option>
+        <option value="">{{ t('— Optional: select template or write custom —') }}</option>
         <template x-for="c in criteriaList" :key="c.id">
           <option :value="c.id" x-text="c.name"></option>
         </template>
       </select>
-      <textarea x-model="criteriaText" rows="5" placeholder="Optional: describe how to screen GEO candidate descriptions…"
+      <textarea x-model="criteriaText" rows="5" placeholder="{{ t('Optional: describe how to screen GEO candidate descriptions…') }}"
                 class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"></textarea>
     </div>
 
     <!-- Source tabs -->
     <div>
-      <label class="block text-sm font-medium mb-2">Dataset Source</label>
+      <label class="block text-sm font-medium mb-2">{{ t('Dataset Source') }}</label>
       <div class="flex gap-2 mb-4">
         <button @click="source='csv'" :class="source==='csv' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'"
-                class="px-4 py-1.5 rounded-lg text-sm font-medium">Upload CSV</button>
+                class="px-4 py-1.5 rounded-lg text-sm font-medium">{{ t('Upload CSV') }}</button>
         <button @click="source='geo'" :class="source==='geo' ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'"
-                class="px-4 py-1.5 rounded-lg text-sm font-medium">GEO Search</button>
+                class="px-4 py-1.5 rounded-lg text-sm font-medium">{{ t('GEO Search') }}</button>
       </div>
 
       <!-- CSV tab -->
       <div x-show="source==='csv'">
         <input type="file" accept=".csv" @change="onFile($event)"
                class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:bg-blue-50 file:text-blue-700" />
-        <p x-show="csvRows > 0" class="text-xs text-gray-400 mt-1" x-text="csvRows + ' datasets detected'"></p>
+        <p x-show="csvRows > 0" class="text-xs text-gray-400 mt-1" x-text="csvRows + (&quot; &quot;+tr(&quot;datasets detected&quot;))"></p>
       </div>
 
       <!-- GEO search tab -->
       <div x-show="source==='geo'" class="space-y-3">
         <div class="flex gap-2">
-          <input x-model="geoQuery" type="text" placeholder="Enter literature keywords to search GEO candidates"
+          <input x-model="geoQuery" type="text" placeholder="{{ t('Enter literature keywords to search GEO candidates') }}"
                  @keydown.enter="searchGEO()"
                  class="flex-1 border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400" />
           <button @click="searchGEO()" :disabled="geoLoading"
                   class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-blue-700 disabled:opacity-50">
-            Preview Candidates
+            {{ t('Preview Candidates') }}
           </button>
         </div>
         <p class="text-xs text-gray-500">
-          The task will save all GEO keyword matches first, then optionally screen each candidate description with your natural-language criteria.
+          {{ t('The task will save all GEO keyword matches first, then optionally screen each candidate description with your natural-language criteria.') }}
         </p>
         <div x-show="geoResults.length > 0" class="border rounded-lg divide-y max-h-64 overflow-y-auto">
           <template x-for="r in geoResults" :key="r.id">
@@ -68,13 +68,13 @@
           </template>
         </div>
         <p x-show="geoResults.length > 0" class="text-xs text-gray-400"
-           x-text="geoResults.length + ' GEO candidates will be saved before criteria screening'"></p>
+           x-text="geoResults.length + (&quot; &quot;+tr(&quot;GEO candidates will be saved before criteria screening&quot;))"></p>
         <div class="mt-3">
-          <label class="block text-sm font-medium mb-1">标注维度
-            <span class="text-gray-400 font-normal">（每行一个，LLM 将自动提取）</span>
+          <label class="block text-sm font-medium mb-1">{{ t('标注维度') }}
+            <span class="text-gray-400 font-normal">{{ t('（每行一个，LLM 将自动提取）') }}</span>
           </label>
           <textarea x-model="labelSchema" rows="5"
-                    placeholder="起始细胞类型&#10;分化体系&#10;数据平台&#10;是否提供原始测序数据&#10;单细胞测序数据类型"
+                    placeholder="{{ t('起始细胞类型\n分化体系\n数据平台\n是否提供原始测序数据\n单细胞测序数据类型') }}"
                     class="w-full border rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400 font-mono text-sm"></textarea>
         </div>
       </div>
@@ -82,7 +82,7 @@
 
     <button @click="submit()" :disabled="submitting"
             class="w-full bg-blue-600 text-white rounded-lg py-2.5 font-medium hover:bg-blue-700 disabled:opacity-50">
-      <span x-text="submitting ? 'Creating…' : 'Start Screening'"></span>
+      <span x-text="submitting ? (tr(&quot;Creating…&quot;)) : (tr(&quot;Start Screening&quot;))"></span>
     </button>
   </div>
 </div>
@@ -122,7 +122,7 @@
       },
       async submit() {
         if (!this.name.trim()) {
-          this.error = 'Task name is required.'; return;
+          this.error = (tr("Task name is required.")); return;
         }
         this.submitting = true; this.error = '';
         try {
@@ -150,7 +150,7 @@
             window.location.href = '/tasks/' + d.id + '/detail';
           } else {
             const d = await r.json();
-            this.error = d.detail || 'Failed to create task';
+            this.error = d.detail || (tr("Failed to create task"));
           }
         } finally { this.submitting = false; }
       }

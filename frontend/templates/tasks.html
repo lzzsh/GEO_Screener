@@ -1,25 +1,25 @@
 {% extends "base.html" %}
-{% block title %}Tasks — GEO Screener{% endblock %}
+{% block title %}{{ t('Tasks — GEO Screener') }}{% endblock %}
 {% block content %}
 <div x-data="tasksPage()" x-init="load()">
   <div class="flex items-center justify-between mb-6">
     <div>
-      <h1 class="text-2xl font-bold">Screening Tasks</h1>
-      <p class="text-sm text-gray-500 mt-1">Tasks are now created from the Search workspace after you inspect GEO candidates.</p>
+      <h1 class="text-2xl font-bold">{{ t('Screening Tasks') }}</h1>
+      <p class="text-sm text-gray-500 mt-1">{{ t('Tasks are now created from the Search workspace after you inspect GEO candidates.') }}</p>
     </div>
     <div class="flex gap-2">
       <button @click="openImportModal()"
               class="bg-gray-100 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-200 text-sm font-medium">
-        批量导入 GSE
+        {{ t('批量导入 GSE') }}
       </button>
       <a href="/search" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 text-sm font-medium">
-        Go to Search
+        {{ t('Go to Search') }}
       </a>
     </div>
   </div>
 
-  <div x-show="loading" class="text-gray-400 text-sm">Loading…</div>
-  <div x-show="!loading && tasks.length === 0" class="text-gray-400 text-sm">No tasks yet.</div>
+  <div x-show="loading" class="text-gray-400 text-sm">{{ t('Loading…') }}</div>
+  <div x-show="!loading && tasks.length === 0" class="text-gray-400 text-sm">{{ t('No tasks yet.') }}</div>
 
   <div class="space-y-3">
     <template x-for="t in tasks" :key="t.id">
@@ -28,26 +28,26 @@
           <a :href="'/tasks/' + t.id + '/detail'" class="min-w-0 flex-1">
             <div class="flex items-center gap-2">
               <p class="font-medium" x-text="t.name"></p>
-              <span x-show="t.task_type === 'gsm_annotation'" style="background:#0d9488;color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">GSM注释</span>
-              <span x-show="t.task_type !== 'gsm_annotation'" style="background:#2563eb;color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">GSE筛选</span>
+              <span x-show="t.task_type === 'gsm_annotation'" style="background:#0d9488;color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">{{ t('GSM注释') }}</span>
+              <span x-show="t.task_type !== 'gsm_annotation'" style="background:#2563eb;color:white;padding:2px 8px;border-radius:4px;font-size:0.75rem;">{{ t('GSE筛选') }}</span>
             </div>
-            <div x-show="t.task_type === 'gsm_annotation' && t.parent_task_name" style="font-size:0.8rem;color:#6b7280;" x-text="'来源: ' + t.parent_task_name"></div>
+            <div x-show="t.task_type === 'gsm_annotation' && t.parent_task_name" style="font-size:0.8rem;color:#6b7280;" x-text="(tr(&quot;来源:&quot;)+&quot; &quot;) + t.parent_task_name"></div>
             <p class="text-xs text-blue-600 mt-1 truncate" x-show="t.search_query" x-text="t.search_query"></p>
             <p class="text-xs text-gray-400 mt-1" x-text="new Date(t.created_at).toLocaleString()"></p>
           </a>
           <div class="flex items-center gap-3">
             <a :href="'/tasks/' + t.id + '/detail'" class="text-right">
               <span :class="statusClass(t.status)"
-                    class="text-xs font-semibold px-2 py-1 rounded-full" x-text="t.status"></span>
-              <p class="text-xs text-gray-400 mt-1" x-text="`${t.processed} / ${t.total} screened`"></p>
-              <p class="text-xs text-gray-400 mt-1" x-text="`${t.candidate_count || t.total} candidates · ${t.included_count || 0} included`"></p>
+                    class="text-xs font-semibold px-2 py-1 rounded-full" x-text="tr(t.status)"></span>
+              <p class="text-xs text-gray-400 mt-1" x-text="tr('{processed} / {total} screened',{processed:t.processed,total:t.total})"></p>
+              <p class="text-xs text-gray-400 mt-1" x-text="tr('{candidates} candidates · {included} included',{candidates:t.candidate_count || t.total,included:t.included_count || 0})"></p>
             </a>
             <button type="button"
                     @click="deleteTask(t)"
                     :disabled="deletingId === t.id"
                     class="inline-flex h-9 w-9 items-center justify-center rounded-md border border-red-200 text-red-600 hover:bg-red-50 disabled:opacity-50"
-                    :title="'Delete ' + t.name"
-                    aria-label="Delete task">
+                    :title="(tr(&quot;Delete&quot;)+&quot; &quot;) + t.name"
+                    aria-label="{{ t('Delete task') }}">
               <span x-show="deletingId !== t.id">×</span>
               <span x-show="deletingId === t.id">…</span>
             </button>
@@ -70,27 +70,27 @@
   <div class="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6 space-y-4"
        @click.stop>
     <div class="flex items-center justify-between">
-      <h2 class="text-lg font-semibold">批量导入 GSE</h2>
+      <h2 class="text-lg font-semibold">{{ t('批量导入 GSE') }}</h2>
       <button @click="importModal = false" class="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
     </div>
 
     <div>
-      <label class="block text-sm font-medium mb-1">任务名称</label>
+      <label class="block text-sm font-medium mb-1">{{ t('任务名称') }}</label>
       <input x-model="importName" type="text"
              class="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400" />
     </div>
 
     <div>
-      <label class="block text-sm font-medium mb-1">GSE ID 列表
-        <span class="text-gray-400 font-normal">（支持 JSON 数组或纯文本，换行/逗号/空格分隔）</span>
+      <label class="block text-sm font-medium mb-1">{{ t('GSE ID 列表') }}
+        <span class="text-gray-400 font-normal">{{ t('（支持 JSON 数组或纯文本，换行/逗号/空格分隔）') }}</span>
       </label>
       <textarea x-model="importInput" @input="parseGseInput()" rows="6"
-                placeholder='["GSE288587", "GSE129096", ...] 或每行一个 GSE ID'
+                placeholder='{{ t('["GSE288587", "GSE129096", ...] 或每行一个 GSE ID') }}'
                 class="w-full border rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"></textarea>
     </div>
 
     <div x-show="importParsed.length > 0" class="space-y-2">
-      <p class="text-sm text-gray-500" x-text="`已识别 ${importParsed.length} 个 GSE ID：`"></p>
+      <p class="text-sm text-gray-500" x-text="tr('已识别 {count} 个 GSE ID：',{count:importParsed.length})"></p>
       <div class="flex flex-wrap gap-1.5 max-h-32 overflow-y-auto">
         <template x-for="id in importParsed" :key="id">
           <span class="bg-blue-50 text-blue-700 text-xs px-2 py-0.5 rounded-full" x-text="id"></span>
@@ -102,11 +102,11 @@
 
     <div class="flex justify-end gap-2 pt-2">
       <button @click="importModal = false"
-              class="px-4 py-2 text-sm rounded-lg border hover:bg-gray-50">取消</button>
+              class="px-4 py-2 text-sm rounded-lg border hover:bg-gray-50">{{ t('取消') }}</button>
       <button @click="submitImport()"
               :disabled="importParsed.length === 0 || importSubmitting"
               class="px-4 py-2 text-sm rounded-lg bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-50">
-        <span x-text="importSubmitting ? '创建中…' : '创建任务'"></span>
+        <span x-text="importSubmitting ? (tr(&quot;创建中…&quot;)) : (tr(&quot;创建任务&quot;))"></span>
       </button>
     </div>
   </div>
@@ -137,7 +137,7 @@
         const r = await fetch('/tasks');
         if (r.status === 401) { window.location.href = '/login'; return; }
         if (!r.ok) {
-          alert(await this.readError(r, '任务列表加载失败'));
+          alert(await this.readError(r, (tr("任务列表加载失败"))));
           this.loading = false;
           return;
         }
@@ -145,12 +145,12 @@
         this.loading = false;
       },
       async deleteTask(task) {
-        if (!confirm('确认删除任务“' + task.name + '”及其所有筛选结果？')) return;
+        if (!confirm((tr("确认删除任务“")) + task.name + (tr("”及其所有筛选结果？")))) return;
         this.deletingId = task.id;
         const r = await fetch('/tasks/' + task.id, {method: 'DELETE'});
         if (r.status === 401) { window.location.href = '/login'; return; }
         if (!r.ok) {
-          alert(await this.readError(r, '任务删除失败'));
+          alert(await this.readError(r, (tr("任务删除失败"))));
           this.deletingId = null;
           return;
         }
@@ -182,7 +182,7 @@
         try {
           const parsed = JSON.parse(raw);
           if (Array.isArray(parsed)) tokens = parsed.map(String);
-          else { this.importError = 'JSON 格式无效，请输入数组'; return; }
+          else { this.importError = (tr("JSON 格式无效，请输入数组")); return; }
         } catch {
           tokens = raw.split(/[\n,\s]+/);
         }
@@ -190,12 +190,12 @@
           .map(t => t.trim().toUpperCase())
           .filter(t => /^GSE\d+$/.test(t));
         if (this.importParsed.length === 0)
-          this.importError = '未识别到有效的 GSE ID（格式：GSExxxxxx）';
+          this.importError = (tr("未识别到有效的 GSE ID（格式：GSExxxxxx）"));
       },
       async submitImport() {
         this.parseGseInput();
         if (this.importParsed.length === 0) return;
-        if (!this.importName.trim()) { this.importError = '请填写任务名称'; return; }
+        if (!this.importName.trim()) { this.importError = (tr("请填写任务名称")); return; }
         this.importSubmitting = true;
         this.importError = '';
         try {
@@ -211,7 +211,7 @@
             window.location.href = '/tasks/' + d.id + '/detail';
           } else {
             const d = await r.json().catch(() => ({}));
-            this.importError = d.detail || '创建任务失败';
+            this.importError = d.detail || (tr("创建任务失败"));
           }
         } finally {
           this.importSubmitting = false;

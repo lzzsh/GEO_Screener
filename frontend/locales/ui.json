@@ -1,0 +1,2394 @@
+{
+  "GSM Task Detail — GEO Screener": {
+    "zh": "GSM 任务详情 — GEO Screener",
+    "en": "GSM Task Detail — GEO Screener"
+  },
+  "← Tasks": {
+    "zh": "← 筛选任务",
+    "en": "← Tasks"
+  },
+  "Total GSEs": {
+    "zh": "GSE 总数",
+    "en": "Total GSEs"
+  },
+  "Total GSMs": {
+    "zh": "GSM 总数",
+    "en": "Total GSMs"
+  },
+  "Annotated GSMs": {
+    "zh": "已标注 GSM",
+    "en": "Annotated GSMs"
+  },
+  "Available": {
+    "zh": "可用",
+    "en": "Available"
+  },
+  "Run GSM Annotation": {
+    "zh": "运行 GSM 标注",
+    "en": "Run GSM Annotation"
+  },
+  "状态：": {
+    "zh": "状态：",
+    "en": "Status: "
+  },
+  "清除所有注释": {
+    "zh": "清除所有注释",
+    "en": "Clear all annotations"
+  },
+  "Accession": {
+    "zh": "编号",
+    "en": "Accession"
+  },
+  "Title": {
+    "zh": "标题",
+    "en": "Title"
+  },
+  "Samples": {
+    "zh": "样本",
+    "en": "Samples"
+  },
+  "原决策": {
+    "zh": "原决策",
+    "en": "Original decision"
+  },
+  "已注释": {
+    "zh": "已注释",
+    "en": "Annotated"
+  },
+  "展开": {
+    "zh": "展开",
+    "en": "Expand"
+  },
+  "标题": {
+    "zh": "标题",
+    "en": "Title"
+  },
+  "avail": {
+    "zh": "可用性",
+    "en": "avail"
+  },
+  "start_cell": {
+    "zh": "起始细胞",
+    "en": "start_cell"
+  },
+  "genetic_background": {
+    "zh": "遗传背景",
+    "en": "genetic_background"
+  },
+  "target_cell": {
+    "zh": "目标细胞",
+    "en": "target_cell"
+  },
+  "culture_sys": {
+    "zh": "培养体系",
+    "en": "culture_sys"
+  },
+  "modality": {
+    "zh": "数据模态",
+    "en": "modality"
+  },
+  "platform": {
+    "zh": "平台",
+    "en": "platform"
+  },
+  "raw_data": {
+    "zh": "原始数据",
+    "en": "raw_data"
+  },
+  "true": {
+    "zh": "是",
+    "en": "true"
+  },
+  "false": {
+    "zh": "否",
+    "en": "false"
+  },
+  "unknown": {
+    "zh": "未知",
+    "en": "unknown"
+  },
+  "详情": {
+    "zh": "详情",
+    "en": "Details"
+  },
+  "diff_path:": {
+    "zh": "分化路径：",
+    "en": "diff_path:"
+  },
+  "genetic_background:": {
+    "zh": "遗传背景：",
+    "en": "genetic_background:"
+  },
+  "cell_line:": {
+    "zh": "细胞系：",
+    "en": "cell_line:"
+  },
+  "sex:": {
+    "zh": "性别：",
+    "en": "sex:"
+  },
+  "age:": {
+    "zh": "年龄：",
+    "en": "age:"
+  },
+  "reprog:": {
+    "zh": "重编程：",
+    "en": "reprog:"
+  },
+  "passage:": {
+    "zh": "传代：",
+    "en": "passage:"
+  },
+  "matrix:": {
+    "zh": "基质：",
+    "en": "matrix:"
+  },
+  "medium:": {
+    "zh": "培养基：",
+    "en": "medium:"
+  },
+  "density:": {
+    "zh": "密度：",
+    "en": "density:"
+  },
+  "o2_lvl:": {
+    "zh": "氧浓度：",
+    "en": "o2_lvl:"
+  },
+  "perturb:": {
+    "zh": "扰动：",
+    "en": "perturb:"
+  },
+  "LLM Reasoning:": {
+    "zh": "模型推理：",
+    "en": "LLM Reasoning:"
+  },
+  "暂无结果": {
+    "zh": "暂无结果",
+    "en": "No results yet"
+  },
+  "确认清除该任务所有 GSM 注释？清除后需重新运行 annotation。": {
+    "zh": "确认清除该任务所有 GSM 注释？清除后需重新运行 annotation。",
+    "en": "Clear all GSM annotations for this task? You will need to run annotation again."
+  },
+  "清除失败": {
+    "zh": "清除失败",
+    "en": "Could not clear annotations"
+  },
+  "运行中...": {
+    "zh": "运行中...",
+    "en": "Running…"
+  },
+  "启动 GSM annotation 失败": {
+    "zh": "启动 GSM annotation 失败",
+    "en": "Could not start GSM annotation"
+  },
+  "Tasks — GEO Screener": {
+    "zh": "筛选任务 — GEO Screener",
+    "en": "Tasks — GEO Screener"
+  },
+  "Screening Tasks": {
+    "zh": "筛选任务",
+    "en": "Screening Tasks"
+  },
+  "Tasks are now created from the Search workspace after you inspect GEO candidates.": {
+    "zh": "在文献检索页查看 GEO 候选记录后，即可创建筛选任务。",
+    "en": "Tasks are now created from the Search workspace after you inspect GEO candidates."
+  },
+  "批量导入 GSE": {
+    "zh": "批量导入 GSE",
+    "en": "Batch import GSEs"
+  },
+  "Go to Search": {
+    "zh": "前往文献检索",
+    "en": "Go to Search"
+  },
+  "Loading…": {
+    "zh": "加载中…",
+    "en": "Loading…"
+  },
+  "No tasks yet.": {
+    "zh": "暂无任务。",
+    "en": "No tasks yet."
+  },
+  "GSM注释": {
+    "zh": "GSM注释",
+    "en": "GSM annotation"
+  },
+  "GSE筛选": {
+    "zh": "GSE筛选",
+    "en": "GSE screening"
+  },
+  "来源:": {
+    "zh": "来源:",
+    "en": "Source: "
+  },
+  "Delete task": {
+    "zh": "删除任务",
+    "en": "Delete task"
+  },
+  "任务名称": {
+    "zh": "任务名称",
+    "en": "Task name"
+  },
+  "GSE ID 列表": {
+    "zh": "GSE ID 列表",
+    "en": "GSE ID list"
+  },
+  "（支持 JSON 数组或纯文本，换行/逗号/空格分隔）": {
+    "zh": "（支持 JSON 数组或纯文本，换行/逗号/空格分隔）",
+    "en": "(JSON array or text separated by newlines, commas or spaces)"
+  },
+  "[\"GSE288587\", \"GSE129096\", ...] 或每行一个 GSE ID": {
+    "zh": "[\"GSE288587\", \"GSE129096\", ...] 或每行一个 GSE ID",
+    "en": "[\"GSE288587\", \"GSE129096\", ...] or one GSE ID per line"
+  },
+  "取消": {
+    "zh": "取消",
+    "en": "Cancel"
+  },
+  "创建中…": {
+    "zh": "创建中…",
+    "en": "Creating…"
+  },
+  "创建任务": {
+    "zh": "创建任务",
+    "en": "Create task"
+  },
+  "任务列表加载失败": {
+    "zh": "任务列表加载失败",
+    "en": "Could not load tasks"
+  },
+  "确认删除任务“": {
+    "zh": "确认删除任务“",
+    "en": "Delete task “"
+  },
+  "”及其所有筛选结果？": {
+    "zh": "”及其所有筛选结果？",
+    "en": "” and all its screening results?"
+  },
+  "任务删除失败": {
+    "zh": "任务删除失败",
+    "en": "Could not delete task"
+  },
+  "JSON 格式无效，请输入数组": {
+    "zh": "JSON 格式无效，请输入数组",
+    "en": "Invalid JSON. Enter an array."
+  },
+  "未识别到有效的 GSE ID（格式：GSExxxxxx）": {
+    "zh": "未识别到有效的 GSE ID（格式：GSExxxxxx）",
+    "en": "No valid GSE ID found (expected GSExxxxxx)."
+  },
+  "请填写任务名称": {
+    "zh": "请填写任务名称",
+    "en": "Enter a task name"
+  },
+  "创建任务失败": {
+    "zh": "创建任务失败",
+    "en": "Could not create task"
+  },
+  "文献库 — GEO Screener": {
+    "zh": "文献库 — GEO Screener",
+    "en": "Library — GEO Screener"
+  },
+  "文献库": {
+    "zh": "文献库",
+    "en": "Library"
+  },
+  "+ 新建集合": {
+    "zh": "+ 新建集合",
+    "en": "+ New collection"
+  },
+  "新建集合": {
+    "zh": "新建集合",
+    "en": "New collection"
+  },
+  "集合名称（必填）": {
+    "zh": "集合名称（必填）",
+    "en": "Collection name (required)"
+  },
+  "描述（可选）": {
+    "zh": "描述（可选）",
+    "en": "Description (optional)"
+  },
+  "创建": {
+    "zh": "创建",
+    "en": "Create"
+  },
+  "暂无文献库集合，点击「新建集合」开始": {
+    "zh": "暂无文献库集合，点击「新建集合」开始",
+    "en": "No collections yet. Select “New collection” to begin."
+  },
+  "确认删除该集合及其所有数据？": {
+    "zh": "确认删除该集合及其所有数据？",
+    "en": "Delete this collection and all its data?"
+  },
+  "RESEARCH WORKSPACE": {
+    "zh": "科研工作台",
+    "en": "RESEARCH WORKSPACE"
+  },
+  "研究流程": {
+    "zh": "研究流程",
+    "en": "RESEARCH WORKFLOW"
+  },
+  "主导航": {
+    "zh": "主导航",
+    "en": "Main navigation"
+  },
+  "退出登录 ↗": {
+    "zh": "退出登录 ↗",
+    "en": "Sign out ↗"
+  },
+  "Login — GEO Screener": {
+    "zh": "登录 — GEO Screener",
+    "en": "Login — GEO Screener"
+  },
+  "Username": {
+    "zh": "用户名",
+    "en": "Username"
+  },
+  "Password": {
+    "zh": "密码",
+    "en": "Password"
+  },
+  "Protocol 工作台 — GEO Screener v2": {
+    "zh": "Protocol 工作台 — GEO Screener v2",
+    "en": "Protocol workspace — GEO Screener v2"
+  },
+  "← Protocol 提取任务": {
+    "zh": "← Protocol 提取任务",
+    "en": "← Protocol jobs"
+  },
+  "Protocol 工作台": {
+    "zh": "Protocol 工作台",
+    "en": "Protocol workspace"
+  },
+  "查看来源筛选任务 ↗": {
+    "zh": "查看来源筛选任务 ↗",
+    "en": "View source screening task ↗"
+  },
+  "批量提取待处理项": {
+    "zh": "批量提取待处理项",
+    "en": "Extract pending items"
+  },
+  "重试失败项": {
+    "zh": "重试失败项",
+    "en": "Retry failed items"
+  },
+  "导出已复核 TSV": {
+    "zh": "导出已复核 TSV",
+    "en": "Export reviewed TSV"
+  },
+  "更多导出": {
+    "zh": "更多导出",
+    "en": "More exports"
+  },
+  "草稿 TSV": {
+    "zh": "草稿 TSV",
+    "en": "Draft TSV"
+  },
+  "已复核证据 JSON": {
+    "zh": "已复核证据 JSON",
+    "en": "Reviewed evidence JSON"
+  },
+  "草稿证据 JSON": {
+    "zh": "草稿证据 JSON",
+    "en": "Draft evidence JSON"
+  },
+  "待确认项 JSON": {
+    "zh": "待确认项 JSON",
+    "en": "Open issues JSON"
+  },
+  "来源文献 ·": {
+    "zh": "来源文献 ·",
+    "en": "Source papers · "
+  },
+  "长时间无进度，可重试": {
+    "zh": "长时间无进度，可重试",
+    "en": "No recent progress; retry available"
+  },
+  "提取与复核": {
+    "zh": "提取与复核",
+    "en": "Extraction & review"
+  },
+  "获取正文 PDF": {
+    "zh": "获取正文 PDF",
+    "en": "Get article PDF"
+  },
+  "重新提取为新版本": {
+    "zh": "重新提取为新版本",
+    "en": "Extract a new version"
+  },
+  "开始提取": {
+    "zh": "开始提取",
+    "en": "Start extraction"
+  },
+  "来源材料（": {
+    "zh": "来源材料（",
+    "en": "Source materials ("
+  },
+  "） · 上传正文 / 补充材料": {
+    "zh": "） · 上传正文 / 补充材料",
+    "en": ") · Upload article / supplement"
+  },
+  "支持 PDF、TXT、MD，每份最多 30 MB。扫描件请先 OCR；表格可转为 PDF。引用来源请注明与目标论文的关系。": {
+    "zh": "支持 PDF、TXT、MD，每份最多 30 MB。扫描件请先 OCR；表格可转为 PDF。引用来源请注明与目标论文的关系。",
+    "en": "PDF, TXT and MD, up to 30 MB per file. Run OCR on scans first; export tables as PDF. State how cited sources relate to the target paper."
+  },
+  "正文": {
+    "zh": "正文",
+    "en": "Main article"
+  },
+  "补充材料": {
+    "zh": "补充材料",
+    "en": "Supplement"
+  },
+  "引用来源": {
+    "zh": "引用来源",
+    "en": "Cited source"
+  },
+  "上传材料": {
+    "zh": "上传材料",
+    "en": "Upload material"
+  },
+  "来源 DOI / 引用编号及采用关系（引用来源必填）": {
+    "zh": "来源 DOI / 引用编号及采用关系（引用来源必填）",
+    "en": "Source DOI / citation number and relationship (required for cited sources)"
+  },
+  "页": {
+    "zh": "页",
+    "en": "pages"
+  },
+  "添加材料后点击“开始提取”。系统会整理扰动与培养时间，并为每条记录保留原文证据。": {
+    "zh": "添加材料后点击“开始提取”。系统会整理扰动与培养时间，并为每条记录保留原文证据。",
+    "en": "Add materials, then select “Start extraction”. Each perturbation and time window retains its supporting source evidence."
+  },
+  "或手动整理第一条记录": {
+    "zh": "或手动整理第一条记录",
+    "en": "Or create the first record manually"
+  },
+  "结果版本": {
+    "zh": "结果版本",
+    "en": "Result version"
+  },
+  "人工修订": {
+    "zh": "人工修订",
+    "en": "Human revision"
+  },
+  "机器提取": {
+    "zh": "机器提取",
+    "en": "Machine extraction"
+  },
+  "· 已复核": {
+    "zh": "· 已复核",
+    "en": "· Reviewed"
+  },
+  "· 草稿": {
+    "zh": "· 草稿",
+    "en": "· Draft"
+  },
+  "· 当前": {
+    "zh": "· 当前",
+    "en": "· Current"
+  },
+  "提取结论": {
+    "zh": "提取结论",
+    "en": "Extraction outcome"
+  },
+  "已提取 Protocol": {
+    "zh": "已提取 Protocol",
+    "en": "Protocol extracted"
+  },
+  "材料中未找到 Protocol": {
+    "zh": "材料中未找到 Protocol",
+    "en": "No protocol found in materials"
+  },
+  "需要补充来源": {
+    "zh": "需要补充来源",
+    "en": "Additional sources needed"
+  },
+  "说明提取结果或材料限制": {
+    "zh": "说明提取结果或材料限制",
+    "en": "Describe the results or material limitations"
+  },
+  "已解决": {
+    "zh": "已解决",
+    "en": "Resolved"
+  },
+  "需要补充的引用或材料：": {
+    "zh": "需要补充的引用或材料：",
+    "en": "Citation or material needed: "
+  },
+  "+ 添加待补来源": {
+    "zh": "+ 添加待补来源",
+    "en": "+ Add missing source"
+  },
+  "复核前需解决": {
+    "zh": "复核前需解决",
+    "en": "Resolve before review"
+  },
+  "待确认项 ·": {
+    "zh": "待确认项 ·",
+    "en": "Items to check · "
+  },
+  "全部 Protocol / 实验组": {
+    "zh": "全部 Protocol / 实验组",
+    "en": "All protocols / groups"
+  },
+  "+ 添加记录": {
+    "zh": "+ 添加记录",
+    "en": "+ Add record"
+  },
+  "扰动": {
+    "zh": "扰动",
+    "en": "Perturbation"
+  },
+  "剂量": {
+    "zh": "剂量",
+    "en": "Dose"
+  },
+  "时间": {
+    "zh": "时间",
+    "en": "Time"
+  },
+  "操作": {
+    "zh": "操作",
+    "en": "Actions"
+  },
+  "编辑": {
+    "zh": "编辑",
+    "en": "Edit"
+  },
+  "删除": {
+    "zh": "删除",
+    "en": "Delete"
+  },
+  "编辑记录": {
+    "zh": "编辑记录",
+    "en": "Edit record "
+  },
+  "Protocol / 实验组名称": {
+    "zh": "Protocol / 实验组名称",
+    "en": "Protocol / group name"
+  },
+  "原文证据": {
+    "zh": "原文证据",
+    "en": "Source evidence"
+  },
+  "+ 添加证据": {
+    "zh": "+ 添加证据",
+    "en": "+ Add evidence"
+  },
+  "证据页码": {
+    "zh": "证据页码",
+    "en": "Evidence page"
+  },
+  "复制对应页中的原文片段": {
+    "zh": "复制对应页中的原文片段",
+    "en": "Copy an exact quote from the corresponding page"
+  },
+  "查看原文": {
+    "zh": "查看原文",
+    "en": "View source"
+  },
+  "移除": {
+    "zh": "移除",
+    "en": "Remove"
+  },
+  "保存修订": {
+    "zh": "保存修订",
+    "en": "Save revision"
+  },
+  "保存并标记已复核": {
+    "zh": "保存并标记已复核",
+    "en": "Save & mark reviewed"
+  },
+  "有未保存修改": {
+    "zh": "有未保存修改",
+    "en": "Unsaved changes"
+  },
+  "来源证据": {
+    "zh": "来源证据",
+    "en": "Source evidence"
+  },
+  "页码": {
+    "zh": "页码",
+    "en": "Page"
+  },
+  "打开原文件 ↗": {
+    "zh": "打开原文件 ↗",
+    "en": "Open original file ↗"
+  },
+  "原始 PDF": {
+    "zh": "原始 PDF",
+    "en": "Original PDF"
+  },
+  "本页提取文本 · 对照原文件核查表格与版面": {
+    "zh": "本页提取文本 · 对照原文件核查表格与版面",
+    "en": "Extracted page text · Check tables and layout in the original file"
+  },
+  "上传正文或补充材料后，这里将显示原文。点击提取记录可定位对应证据。": {
+    "zh": "上传正文或补充材料后，这里将显示原文。点击提取记录可定位对应证据。",
+    "en": "Upload an article or supplement to view it here. Select a record to locate its evidence."
+  },
+  "Task Detail — GEO Screener": {
+    "zh": "筛选任务详情 — GEO Screener",
+    "en": "Task Detail — GEO Screener"
+  },
+  "从筛选文献到实验 Protocol": {
+    "zh": "从筛选文献到实验 Protocol",
+    "en": "From screened papers to experimental protocols"
+  },
+  "勾选下方文献，或提取全部已纳入的记录。": {
+    "zh": "勾选下方文献，或提取全部已纳入的记录。",
+    "en": "Select papers below, or extract all included records."
+  },
+  "提取 Protocol（": {
+    "zh": "提取 Protocol（",
+    "en": "Extract protocols ("
+  },
+  "全部已纳入文献": {
+    "zh": "全部已纳入文献",
+    "en": "All included papers"
+  },
+  "加载中…": {
+    "zh": "加载中…",
+    "en": "Loading…"
+  },
+  "Status": {
+    "zh": "状态",
+    "en": "Status"
+  },
+  "Sample type": {
+    "zh": "样本类型",
+    "en": "Sample type"
+  },
+  "Source name": {
+    "zh": "来源名称",
+    "en": "Source name"
+  },
+  "Organism": {
+    "zh": "物种",
+    "en": "Organism"
+  },
+  "Characteristics": {
+    "zh": "特征",
+    "en": "Characteristics"
+  },
+  "Treatment protocol": {
+    "zh": "处理方案",
+    "en": "Treatment protocol"
+  },
+  "Growth protocol": {
+    "zh": "培养方案",
+    "en": "Growth protocol"
+  },
+  "Extracted molecule": {
+    "zh": "提取分子",
+    "en": "Extracted molecule"
+  },
+  "Extraction protocol": {
+    "zh": "提取方案",
+    "en": "Extraction protocol"
+  },
+  "Library strategy": {
+    "zh": "建库策略",
+    "en": "Library strategy"
+  },
+  "Library source": {
+    "zh": "文库来源",
+    "en": "Library source"
+  },
+  "Library selection": {
+    "zh": "文库选择",
+    "en": "Library selection"
+  },
+  "Instrument model": {
+    "zh": "仪器型号",
+    "en": "Instrument model"
+  },
+  "Description": {
+    "zh": "描述",
+    "en": "Description"
+  },
+  "Data processing": {
+    "zh": "数据处理",
+    "en": "Data processing"
+  },
+  "Submission date": {
+    "zh": "提交日期",
+    "en": "Submission date"
+  },
+  "Last update date": {
+    "zh": "最后更新日期",
+    "en": "Last update date"
+  },
+  "Contact name": {
+    "zh": "联系人",
+    "en": "Contact name"
+  },
+  "E-mail(s)": {
+    "zh": "电子邮箱",
+    "en": "E-mail(s)"
+  },
+  "Organization name": {
+    "zh": "机构名称",
+    "en": "Organization name"
+  },
+  "Department": {
+    "zh": "部门",
+    "en": "Department"
+  },
+  "Street address": {
+    "zh": "街道地址",
+    "en": "Street address"
+  },
+  "City": {
+    "zh": "城市",
+    "en": "City"
+  },
+  "State/province": {
+    "zh": "省／州",
+    "en": "State/province"
+  },
+  "ZIP/Postal code": {
+    "zh": "邮政编码",
+    "en": "ZIP/Postal code"
+  },
+  "Country": {
+    "zh": "国家／地区",
+    "en": "Country"
+  },
+  "Platform ID": {
+    "zh": "平台 ID",
+    "en": "Platform ID"
+  },
+  "Series": {
+    "zh": "系列",
+    "en": "Series"
+  },
+  "Relations": {
+    "zh": "关联信息",
+    "en": "Relations"
+  },
+  "Supplementary file": {
+    "zh": "补充文件",
+    "en": "Supplementary file"
+  },
+  "文件": {
+    "zh": "文件",
+    "en": "File"
+  },
+  "类型": {
+    "zh": "类型",
+    "en": "Type"
+  },
+  "Annotation Schema": {
+    "zh": "标注方案",
+    "en": "Annotation Schema"
+  },
+  "GEO Candidates": {
+    "zh": "GEO 候选记录",
+    "en": "GEO Candidates"
+  },
+  "Included": {
+    "zh": "已纳入",
+    "en": "Included"
+  },
+  "Excluded": {
+    "zh": "已排除",
+    "en": "Excluded"
+  },
+  "Uncertain": {
+    "zh": "待确认",
+    "en": "Uncertain"
+  },
+  "GSM 标注中…": {
+    "zh": "GSM 标注中…",
+    "en": "Annotating GSMs…"
+  },
+  "筛选": {
+    "zh": "筛选",
+    "en": "Filter"
+  },
+  "全部候选": {
+    "zh": "全部候选",
+    "en": "All candidates"
+  },
+  "搜索 GSE…": {
+    "zh": "搜索 GSE…",
+    "en": "Search GSE…"
+  },
+  "导出 CSV": {
+    "zh": "导出 CSV",
+    "en": "Export CSV"
+  },
+  "下载中…": {
+    "zh": "下载中…",
+    "en": "Downloading…"
+  },
+  "下载文章 PDF": {
+    "zh": "下载文章 PDF",
+    "en": "Download article PDFs"
+  },
+  "校准中…": {
+    "zh": "校准中…",
+    "en": "Calibrating…"
+  },
+  "用文章重新校准": {
+    "zh": "用文章重新校准",
+    "en": "Recalibrate from articles"
+  },
+  "存入文献库": {
+    "zh": "存入文献库",
+    "en": "Save to library"
+  },
+  "暂无文献库": {
+    "zh": "暂无文献库",
+    "en": "No library collections"
+  },
+  "管理文献库 →": {
+    "zh": "管理文献库 →",
+    "en": "Manage library →"
+  },
+  "选择当前页": {
+    "zh": "选择当前页",
+    "en": "Select current page"
+  },
+  "实验类型": {
+    "zh": "实验类型",
+    "en": "Experiment type"
+  },
+  "论文更新日期": {
+    "zh": "论文更新日期",
+    "en": "Publication update date"
+  },
+  "最后更新": {
+    "zh": "最后更新",
+    "en": "Last updated"
+  },
+  "原始数据": {
+    "zh": "原始数据",
+    "en": "Raw data"
+  },
+  "原始决策": {
+    "zh": "原始决策",
+    "en": "Original decision"
+  },
+  "决策": {
+    "zh": "决策",
+    "en": "Decision"
+  },
+  "选择": {
+    "zh": "选择",
+    "en": "Select "
+  },
+  "无标题数据集": {
+    "zh": "无标题数据集",
+    "en": "Untitled dataset"
+  },
+  "已标注": {
+    "zh": "已标注",
+    "en": "Annotated "
+  },
+  "项": {
+    "zh": "项",
+    "en": "fields"
+  },
+  "未生成标注": {
+    "zh": "未生成标注",
+    "en": "No annotations yet"
+  },
+  "收起": {
+    "zh": "收起",
+    "en": "Collapse"
+  },
+  "标注": {
+    "zh": "标注",
+    "en": "Annotations"
+  },
+  "重新标注此 GSE": {
+    "zh": "重新标注此 GSE",
+    "en": "Re-annotate this GSE"
+  },
+  "暂无标注，点击 Run LLM Annotation 自动提取": {
+    "zh": "暂无标注，点击 Run LLM Annotation 自动提取",
+    "en": "No annotations yet. Run LLM Annotation to extract them."
+  },
+  "样本列表 (GSM)": {
+    "zh": "样本列表 (GSM)",
+    "en": "Samples (GSM)"
+  },
+  "标注 GSM": {
+    "zh": "标注 GSM",
+    "en": "Annotate GSMs"
+  },
+  "样本名称": {
+    "zh": "样本名称",
+    "en": "Sample name"
+  },
+  "生物体": {
+    "zh": "生物体",
+    "en": "Organism"
+  },
+  "生物样本关系ID": {
+    "zh": "生物样本关系ID",
+    "en": "BioSample ID"
+  },
+  "cellCount": {
+    "zh": "细胞数",
+    "en": "cellCount"
+  },
+  "暂无标注": {
+    "zh": "暂无标注",
+    "en": "No annotations"
+  },
+  "筛选摘要": {
+    "zh": "筛选摘要",
+    "en": "Screening summary"
+  },
+  "← Prev": {
+    "zh": "← 上一页",
+    "en": "← Prev"
+  },
+  "第": {
+    "zh": "第",
+    "en": "Page "
+  },
+  "页，共": {
+    "zh": "页，共",
+    "en": "of "
+  },
+  "跳至页码": {
+    "zh": "跳至页码",
+    "en": "Go to page"
+  },
+  "Go": {
+    "zh": "跳转",
+    "en": "Go"
+  },
+  "Next →": {
+    "zh": "下一页 →",
+    "en": "Next →"
+  },
+  "待补材料": {
+    "zh": "待补材料",
+    "en": "Needs materials"
+  },
+  "材料就绪": {
+    "zh": "材料就绪",
+    "en": "Materials ready"
+  },
+  "排队中": {
+    "zh": "排队中",
+    "en": "Queued"
+  },
+  "获取材料": {
+    "zh": "获取材料",
+    "en": "Fetching materials"
+  },
+  "提取中": {
+    "zh": "提取中",
+    "en": "Extracting"
+  },
+  "待复核": {
+    "zh": "待复核",
+    "en": "Needs review"
+  },
+  "待补引用": {
+    "zh": "待补引用",
+    "en": "Needs sources"
+  },
+  "未找到": {
+    "zh": "未找到",
+    "en": "Not found"
+  },
+  "已复核": {
+    "zh": "已复核",
+    "en": "Reviewed"
+  },
+  "失败": {
+    "zh": "失败",
+    "en": "Failed"
+  },
+  "无法创建提取任务": {
+    "zh": "无法创建提取任务",
+    "en": "Could not create extraction job"
+  },
+  "可用": {
+    "zh": "可用",
+    "en": "Available"
+  },
+  "不可用": {
+    "zh": "不可用",
+    "en": "Unavailable"
+  },
+  "待确认": {
+    "zh": "待确认",
+    "en": "Needs confirmation"
+  },
+  "创建中...": {
+    "zh": "创建中...",
+    "en": "Creating…"
+  },
+  "创建失败": {
+    "zh": "创建失败",
+    "en": "Creation failed"
+  },
+  "创建 GSM 注释任务": {
+    "zh": "创建 GSM 注释任务",
+    "en": "Create GSM annotation task"
+  },
+  "创建失败:": {
+    "zh": "创建失败:",
+    "en": "Creation failed: "
+  },
+  "New Task — GEO Screener": {
+    "zh": "新建任务 — GEO Screener",
+    "en": "New Task — GEO Screener"
+  },
+  "New Screening Task": {
+    "zh": "新建筛选任务",
+    "en": "New Screening Task"
+  },
+  "Task Name": {
+    "zh": "任务名称",
+    "en": "Task Name"
+  },
+  "e.g. Cancer RNA-seq screen": {
+    "zh": "例如：肿瘤 RNA-seq 筛选",
+    "en": "e.g. Cancer RNA-seq screen"
+  },
+  "Natural-Language Screening Criteria": {
+    "zh": "自然语言筛选条件",
+    "en": "Natural-Language Screening Criteria"
+  },
+  "(Optional)": {
+    "zh": "（可选）",
+    "en": "(Optional)"
+  },
+  "— Optional: select template or write custom —": {
+    "zh": "— 可选：选择模板或自行填写 —",
+    "en": "— Optional: select template or write custom —"
+  },
+  "Optional: describe how to screen GEO candidate descriptions…": {
+    "zh": "可选：描述如何筛选 GEO 候选记录…",
+    "en": "Optional: describe how to screen GEO candidate descriptions…"
+  },
+  "Dataset Source": {
+    "zh": "数据来源",
+    "en": "Dataset Source"
+  },
+  "Upload CSV": {
+    "zh": "上传 CSV",
+    "en": "Upload CSV"
+  },
+  "GEO Search": {
+    "zh": "GEO 检索",
+    "en": "GEO Search"
+  },
+  "Enter literature keywords to search GEO candidates": {
+    "zh": "输入文献关键词检索 GEO 候选记录",
+    "en": "Enter literature keywords to search GEO candidates"
+  },
+  "Preview Candidates": {
+    "zh": "预览候选记录",
+    "en": "Preview Candidates"
+  },
+  "The task will save all GEO keyword matches first, then optionally screen each candidate description with your natural-language criteria.": {
+    "zh": "任务会先保存全部 GEO 关键词匹配结果，再按你填写的自然语言条件筛选描述。",
+    "en": "The task will save all GEO keyword matches first, then optionally screen each candidate description with your natural-language criteria."
+  },
+  "标注维度": {
+    "zh": "标注维度",
+    "en": "Annotation fields"
+  },
+  "（每行一个，LLM 将自动提取）": {
+    "zh": "（每行一个，LLM 将自动提取）",
+    "en": "(one per line; extracted automatically by the model)"
+  },
+  "起始细胞类型\n分化体系\n数据平台\n是否提供原始测序数据\n单细胞测序数据类型": {
+    "zh": "起始细胞类型\n分化体系\n数据平台\n是否提供原始测序数据\n单细胞测序数据类型",
+    "en": "Starting cell type\\nDifferentiation system\\nData platform\\nRaw sequencing data availability\\nSingle-cell assay type"
+  },
+  "Public": {
+    "zh": "公开",
+    "en": "Public"
+  },
+  "Experiment type": {
+    "zh": "实验类型",
+    "en": "Experiment type"
+  },
+  "Summary": {
+    "zh": "摘要",
+    "en": "Summary"
+  },
+  "Overall design": {
+    "zh": "总体设计",
+    "en": "Overall design"
+  },
+  "E-mail": {
+    "zh": "电子邮箱",
+    "en": "E-mail"
+  },
+  "Organization": {
+    "zh": "机构",
+    "en": "Organization"
+  },
+  "Supplementary data files": {
+    "zh": "补充数据文件",
+    "en": "Supplementary data files"
+  },
+  "文件名称": {
+    "zh": "文件名称",
+    "en": "File name"
+  },
+  "下载地址": {
+    "zh": "下载地址",
+    "en": "Download link"
+  },
+  "加载详情中…": {
+    "zh": "加载详情中…",
+    "en": "Loading details…"
+  },
+  "支持关键词、GSE/GSM accession、BioSample ID，以及 AND / OR / NOT / 引号短语 · Ctrl+Enter 搜索": {
+    "zh": "支持关键词、GSE/GSM accession、BioSample ID，以及 AND / OR / NOT / 引号短语 · Ctrl+Enter 搜索",
+    "en": "Search keywords, GSE/GSM accessions or BioSample IDs. Supports AND / OR / NOT and quoted phrases · Ctrl+Enter to search"
+  },
+  "上限": {
+    "zh": "上限",
+    "en": "Limit"
+  },
+  "搜索中…": {
+    "zh": "搜索中…",
+    "en": "Searching…"
+  },
+  "搜索 GEO": {
+    "zh": "搜索 GEO",
+    "en": "Search GEO"
+  },
+  "清空搜索": {
+    "zh": "清空搜索",
+    "en": "Clear search"
+  },
+  "共": {
+    "zh": "共",
+    "en": "Total "
+  },
+  "条结果\n        · 第": {
+    "zh": "条结果\n        · 第",
+    "en": "results · Page "
+  },
+  "每页": {
+    "zh": "每页",
+    "en": "Per page"
+  },
+  "全部候选建任务": {
+    "zh": "全部候选建任务",
+    "en": "Create task from all candidates"
+  },
+  "当前页建任务": {
+    "zh": "当前页建任务",
+    "en": "Create task from this page"
+  },
+  "暂无文献库，请先新建": {
+    "zh": "暂无文献库，请先新建",
+    "en": "No collections. Create one first."
+  },
+  "样本数": {
+    "zh": "样本数",
+    "en": "Samples"
+  },
+  "详情 →": {
+    "zh": "详情 →",
+    "en": "Details →"
+  },
+  "输入关键词搜索 GEO 数据集": {
+    "zh": "输入关键词搜索 GEO 数据集",
+    "en": "Search GEO datasets by keyword"
+  },
+  "起始细胞类型": {
+    "zh": "起始细胞类型",
+    "en": "Starting cell type"
+  },
+  "分化体系": {
+    "zh": "分化体系",
+    "en": "Differentiation system"
+  },
+  "数据平台": {
+    "zh": "数据平台",
+    "en": "Data platform"
+  },
+  "是否提供原始测序数据": {
+    "zh": "是否提供原始测序数据",
+    "en": "Raw sequencing data available"
+  },
+  "单细胞测序数据类型": {
+    "zh": "单细胞测序数据类型",
+    "en": "Single-cell assay type"
+  },
+  "请输入关键词": {
+    "zh": "请输入关键词",
+    "en": "Enter a search term"
+  },
+  "请先搜索": {
+    "zh": "请先搜索",
+    "en": "Run a search first"
+  },
+  "存入文献库失败": {
+    "zh": "存入文献库失败",
+    "en": "Could not save to library"
+  },
+  "模型与连接 — GEO Screener": {
+    "zh": "模型与连接 — GEO Screener",
+    "en": "Models & connections — GEO Screener"
+  },
+  "WORKSPACE SETTINGS": {
+    "zh": "工作台设置",
+    "en": "WORKSPACE SETTINGS"
+  },
+  "模型与连接": {
+    "zh": "模型与连接",
+    "en": "Models & connections"
+  },
+  "为文献筛选与 Protocol 提取配置模型，统一管理服务商连接。": {
+    "zh": "为文献筛选与 Protocol 提取配置模型，统一管理服务商连接。",
+    "en": "Configure models for literature screening and protocol extraction in one workspace."
+  },
+  "OpenAI-compatible API": {
+    "zh": "兼容 OpenAI 的 API",
+    "en": "OpenAI-compatible API"
+  },
+  "正在加载配置…": {
+    "zh": "正在加载配置…",
+    "en": "Loading configuration…"
+  },
+  "当前使用的模型": {
+    "zh": "当前使用的模型",
+    "en": "Active model"
+  },
+  "已配置": {
+    "zh": "已配置",
+    "en": "Configured"
+  },
+  "服务商": {
+    "zh": "服务商",
+    "en": "Provider"
+  },
+  "模型 ID": {
+    "zh": "模型 ID",
+    "en": "Model ID"
+  },
+  "填写服务商提供的 Model ID": {
+    "zh": "填写服务商提供的 Model ID",
+    "en": "Enter the Model ID supplied by your provider"
+  },
+  "温度": {
+    "zh": "温度",
+    "en": "Temperature"
+  },
+  "较低的值通常让回答更稳定。提取任务沿用各自的温度设置。": {
+    "zh": "较低的值通常让回答更稳定。提取任务沿用各自的温度设置。",
+    "en": "Lower values usually produce more consistent responses. Extraction tasks retain their own temperature settings."
+  },
+  "先配置该服务商的 API Key →": {
+    "zh": "先配置该服务商的 API Key →",
+    "en": "Configure this provider’s API key first →"
+  },
+  "保存中…": {
+    "zh": "保存中…",
+    "en": "Saving…"
+  },
+  "保存并启用": {
+    "zh": "保存并启用",
+    "en": "Save & activate"
+  },
+  "测试中…": {
+    "zh": "测试中…",
+    "en": "Testing…"
+  },
+  "测试连接": {
+    "zh": "测试连接",
+    "en": "Test connection"
+  },
+  "有待保存的选择；保存后才会切换模型。": {
+    "zh": "有待保存的选择；保存后才会切换模型。",
+    "en": "You have a pending selection. Save to activate it."
+  },
+  "连接成功，模型已返回响应。": {
+    "zh": "连接成功，模型已返回响应。",
+    "en": "Connected. The model returned a response."
+  },
+  "服务商连接": {
+    "zh": "服务商连接",
+    "en": "Provider connections"
+  },
+  "自定义 API 连接": {
+    "zh": "自定义 API 连接",
+    "en": "Custom API connection"
+  },
+  "使用中": {
+    "zh": "使用中",
+    "en": "Active"
+  },
+  "配置你的 API 地址": {
+    "zh": "配置你的 API 地址",
+    "en": "Configure your API endpoint"
+  },
+  "密钥已保存": {
+    "zh": "密钥已保存",
+    "en": "Key saved"
+  },
+  "待配置": {
+    "zh": "待配置",
+    "en": "Not configured"
+  },
+  "配置": {
+    "zh": "配置",
+    "en": "Configure "
+  },
+  "配置连接 ↗": {
+    "zh": "配置连接 ↗",
+    "en": "Configure ↗"
+  },
+  "保存服务商连接不会自动启用它。需要切换时，在左侧选择服务商和模型，再点击“保存并启用”。": {
+    "zh": "保存服务商连接不会自动启用它。需要切换时，在左侧选择服务商和模型，再点击“保存并启用”。",
+    "en": "Saving a connection does not activate it. Select the provider and model in the active-model panel, then choose “Save & activate”."
+  },
+  "PROVIDER CONNECTION": {
+    "zh": "服务商连接",
+    "en": "PROVIDER CONNECTION"
+  },
+  "Base URL": {
+    "zh": "API 地址",
+    "en": "Base URL"
+  },
+  "可使用官方或专属 API 地址；留空恢复该服务商的默认地址。": {
+    "zh": "可使用官方或专属 API 地址；留空恢复该服务商的默认地址。",
+    "en": "Use the official or a dedicated endpoint. Leave blank to restore the provider’s default."
+  },
+  "API Key": {
+    "zh": "API 密钥",
+    "en": "API Key"
+  },
+  "· 已保存": {
+    "zh": "· 已保存",
+    "en": "· Saved"
+  },
+  "留空保留已有密钥": {
+    "zh": "留空保留已有密钥",
+    "en": "Leave blank to keep the existing key"
+  },
+  "注册 OrcaRouter（项目推荐链接）↗": {
+    "zh": "注册 OrcaRouter（项目推荐链接）↗",
+    "en": "Sign up for OrcaRouter (project referral) ↗"
+  },
+  "通过推荐链接注册，项目维护者可能获得分成。": {
+    "zh": "通过推荐链接注册，项目维护者可能获得分成。",
+    "en": "The project maintainer may receive a commission through this link."
+  },
+  "保存连接": {
+    "zh": "保存连接",
+    "en": "Save connection"
+  },
+  "Protocol 提取 — GEO Screener v2": {
+    "zh": "Protocol 提取 — GEO Screener v2",
+    "en": "Protocol extraction — GEO Screener v2"
+  },
+  "EVIDENCE TO PROTOCOL": {
+    "zh": "从文献证据到实验方案",
+    "en": "EVIDENCE TO PROTOCOL"
+  },
+  "Protocol 提取": {
+    "zh": "Protocol 提取",
+    "en": "Protocol extraction"
+  },
+  "从已筛选文献整理实验配方，让每条记录都有来源可查。": {
+    "zh": "从已筛选文献整理实验配方，让每条记录都有来源可查。",
+    "en": "Turn screened papers into experimental protocols with traceable source evidence."
+  },
+  "从筛选任务创建 →": {
+    "zh": "从筛选任务创建 →",
+    "en": "Create from screening task →"
+  },
+  "01 · 筛选文献": {
+    "zh": "01 · 筛选文献",
+    "en": "01 · Screen papers"
+  },
+  "02 · 提取 Protocol": {
+    "zh": "02 · 提取 Protocol",
+    "en": "02 · Extract protocols"
+  },
+  "03 · 核对证据并导出": {
+    "zh": "03 · 核对证据并导出",
+    "en": "03 · Review evidence & export"
+  },
+  "正在加载任务…": {
+    "zh": "正在加载任务…",
+    "en": "Loading jobs…"
+  },
+  "建立第一份可追溯的 Protocol": {
+    "zh": "建立第一份可追溯的 Protocol",
+    "en": "Build your first traceable protocol"
+  },
+  "打开筛选任务，勾选需要的文献。上传正文与补充材料后，即可开始提取和人工复核。": {
+    "zh": "打开筛选任务，勾选需要的文献。上传正文与补充材料后，即可开始提取和人工复核。",
+    "en": "Open a screening task and select papers. Upload the article and supplements, then start extraction and review."
+  },
+  "选择来源文献 →": {
+    "zh": "选择来源文献 →",
+    "en": "Select source papers →"
+  },
+  "来源筛选任务 #": {
+    "zh": "来源筛选任务 #",
+    "en": "Source screening task #"
+  },
+  "条文献记录": {
+    "zh": "条文献记录",
+    "en": "paper records"
+  },
+  "文献库详情 — GEO Screener": {
+    "zh": "文献库详情 — GEO Screener",
+    "en": "Library detail — GEO Screener"
+  },
+  "新标注维度": {
+    "zh": "新标注维度",
+    "en": "New annotation field"
+  },
+  "值": {
+    "zh": "值",
+    "en": "Value"
+  },
+  "+ 添加": {
+    "zh": "+ 添加",
+    "en": "+ Add"
+  },
+  "← 文献库": {
+    "zh": "← 文献库",
+    "en": "← Library"
+  },
+  "条": {
+    "zh": "条",
+    "en": "records"
+  },
+  "全部状态": {
+    "zh": "全部状态",
+    "en": "All statuses"
+  },
+  "New": {
+    "zh": "新建",
+    "en": "New"
+  },
+  "Reviewing": {
+    "zh": "审核中",
+    "en": "Reviewing"
+  },
+  "Confirmed": {
+    "zh": "已确认",
+    "en": "Confirmed"
+  },
+  "Raw": {
+    "zh": "原始数据",
+    "en": "Raw"
+  },
+  "来源": {
+    "zh": "来源",
+    "en": "Source"
+  },
+  "状态": {
+    "zh": "状态",
+    "en": "Status"
+  },
+  "任务筛选": {
+    "zh": "任务筛选",
+    "en": "Screening task"
+  },
+  "直接搜索": {
+    "zh": "直接搜索",
+    "en": "Direct search"
+  },
+  "暂无数据": {
+    "zh": "暂无数据",
+    "en": "No data yet"
+  },
+  "Annotation Schemas — GEO Screener": {
+    "zh": "标注方案 — GEO Screener",
+    "en": "Annotation Schemas — GEO Screener"
+  },
+  "Annotation Schemas": {
+    "zh": "标注方案",
+    "en": "Annotation Schemas"
+  },
+  "+ New Schema": {
+    "zh": "+ 新建方案",
+    "en": "+ New Schema"
+  },
+  "✓ Active": {
+    "zh": "✓ 使用中",
+    "en": "✓ Active"
+  },
+  "Set active": {
+    "zh": "设为当前方案",
+    "en": "Set active"
+  },
+  "Default Example": {
+    "zh": "默认示例",
+    "en": "Default Example"
+  },
+  "Select a schema or create a new one.": {
+    "zh": "选择一个方案，或创建新方案。",
+    "en": "Select a schema or create a new one."
+  },
+  "Default Schema (Example)": {
+    "zh": "默认方案（示例）",
+    "en": "Default Schema (Example)"
+  },
+  "- This is a read-only template showing the standard labels and prompts.": {
+    "zh": "— 此模板只读，展示标准标注字段和提示词。",
+    "en": "- This is a read-only template showing the standard labels and prompts."
+  },
+  "Labels": {
+    "zh": "标注字段",
+    "en": "Labels"
+  },
+  "Prompts": {
+    "zh": "提示词",
+    "en": "Prompts"
+  },
+  "Edit Name": {
+    "zh": "编辑名称",
+    "en": "Edit Name"
+  },
+  "Edit Description": {
+    "zh": "编辑描述",
+    "en": "Edit Description"
+  },
+  "GSE Labels": {
+    "zh": "GSE 标注字段",
+    "en": "GSE Labels"
+  },
+  "+ Add Label": {
+    "zh": "+ 添加字段",
+    "en": "+ Add Label"
+  },
+  "Type:": {
+    "zh": "类型：",
+    "en": "Type:"
+  },
+  "Name": {
+    "zh": "名称",
+    "en": "Name"
+  },
+  "e.g., data_modality": {
+    "zh": "例如：data_modality",
+    "en": "e.g., data_modality"
+  },
+  "e.g., Type of data (scRNA-seq, scATAC-seq, etc.)": {
+    "zh": "例如：数据类型（scRNA-seq、scATAC-seq 等）",
+    "en": "e.g., Type of data (scRNA-seq, scATAC-seq, etc.)"
+  },
+  "Type": {
+    "zh": "类型",
+    "en": "Type"
+  },
+  "Free Text": {
+    "zh": "自由文本",
+    "en": "Free Text"
+  },
+  "Enum (predefined options)": {
+    "zh": "枚举（预设选项）",
+    "en": "Enum (predefined options)"
+  },
+  "Array": {
+    "zh": "数组",
+    "en": "Array"
+  },
+  "Object Array": {
+    "zh": "对象数组",
+    "en": "Object Array"
+  },
+  "Allowed Values (comma-separated)": {
+    "zh": "允许值（以逗号分隔）",
+    "en": "Allowed Values (comma-separated)"
+  },
+  "e.g., scRNA-seq, scATAC-seq, spatial": {
+    "zh": "例如：scRNA-seq, scATAC-seq, spatial",
+    "en": "e.g., scRNA-seq, scATAC-seq, spatial"
+  },
+  "GSM Labels": {
+    "zh": "GSM 标注字段",
+    "en": "GSM Labels"
+  },
+  "e.g., start_cell": {
+    "zh": "例如：start_cell",
+    "en": "e.g., start_cell"
+  },
+  "e.g., Starting cell type (iPSC, ESC, PSC)": {
+    "zh": "例如：起始细胞类型（iPSC、ESC、PSC）",
+    "en": "e.g., Starting cell type (iPSC, ESC, PSC)"
+  },
+  "e.g., iPSC, ESC, PSC": {
+    "zh": "例如：iPSC, ESC, PSC",
+    "en": "e.g., iPSC, ESC, PSC"
+  },
+  "Select Prompt Type": {
+    "zh": "选择提示词类型",
+    "en": "Select Prompt Type"
+  },
+  "GSE Label Prompt": {
+    "zh": "GSE 标注提示词",
+    "en": "GSE Label Prompt"
+  },
+  "GSM Label Prompt": {
+    "zh": "GSM 标注提示词",
+    "en": "GSM Label Prompt"
+  },
+  "Paper Calibration Prompt": {
+    "zh": "论文校准提示词",
+    "en": "Paper Calibration Prompt"
+  },
+  "Loading prompt...": {
+    "zh": "正在加载提示词…",
+    "en": "Loading prompt..."
+  },
+  "This is a read-only default prompt": {
+    "zh": "此默认提示词为只读",
+    "en": "This is a read-only default prompt"
+  },
+  "Save schema first to save prompt changes": {
+    "zh": "先保存方案，才能保存提示词修改",
+    "en": "Save schema first to save prompt changes"
+  },
+  "Delete": {
+    "zh": "删除",
+    "en": "Delete"
+  },
+  "GSE 编号": {
+    "zh": "GSE 编号",
+    "en": "GSE ID"
+  },
+  "GSM 编号": {
+    "zh": "GSM 编号",
+    "en": "GSM ID"
+  },
+  "论文标题": {
+    "zh": "论文标题",
+    "en": "Article title"
+  },
+  "目标细胞类型": {
+    "zh": "目标细胞类型",
+    "en": "Final cell type"
+  },
+  "阶段名称": {
+    "zh": "阶段名称",
+    "en": "Stage name"
+  },
+  "阶段顺序": {
+    "zh": "阶段顺序",
+    "en": "Stage order"
+  },
+  "扰动名称": {
+    "zh": "扰动名称",
+    "en": "Perturbation name"
+  },
+  "添加背景": {
+    "zh": "添加背景",
+    "en": "Addition context"
+  },
+  "扰动类型": {
+    "zh": "扰动类型",
+    "en": "Perturbation type"
+  },
+  "剂量数值": {
+    "zh": "剂量数值",
+    "en": "Dose value"
+  },
+  "剂量单位": {
+    "zh": "剂量单位",
+    "en": "Dose unit"
+  },
+  "开始时间": {
+    "zh": "开始时间",
+    "en": "Start time"
+  },
+  "结束时间": {
+    "zh": "结束时间",
+    "en": "End time"
+  },
+  "持续时间": {
+    "zh": "持续时间",
+    "en": "Duration"
+  },
+  "时间单位": {
+    "zh": "时间单位",
+    "en": "Time unit"
+  },
+  "采样时间": {
+    "zh": "采样时间",
+    "en": "Collection time"
+  },
+  "培养基": {
+    "zh": "培养基",
+    "en": "Culture medium"
+  },
+  "培养体系": {
+    "zh": "培养体系",
+    "en": "Culture system"
+  },
+  "批次编号": {
+    "zh": "批次编号",
+    "en": "Batch ID"
+  },
+  "收集方法": {
+    "zh": "收集方法",
+    "en": "Collection method"
+  },
+  "参考来源": {
+    "zh": "参考来源",
+    "en": "Reference"
+  },
+  "未找到 Protocol": {
+    "zh": "未找到 Protocol",
+    "en": "No protocol found"
+  },
+  "请先登录": {
+    "zh": "请先登录",
+    "en": "Please sign in"
+  },
+  "请求失败": {
+    "zh": "请求失败",
+    "en": "Request failed"
+  },
+  "当前有未保存修改。放弃修改并切换文献？": {
+    "zh": "当前有未保存修改。放弃修改并切换文献？",
+    "en": "Discard unsaved changes and switch papers?"
+  },
+  "请选择材料文件": {
+    "zh": "请选择材料文件",
+    "en": "Select a material file"
+  },
+  "材料已存在，已复用。": {
+    "zh": "材料已存在，已复用。",
+    "en": "Material already exists and has been reused."
+  },
+  "材料已保存。": {
+    "zh": "材料已保存。",
+    "en": "Material saved."
+  },
+  "请先保存当前修改再运行": {
+    "zh": "请先保存当前修改再运行",
+    "en": "Save your changes before running extraction"
+  },
+  "任务已提交。已有人工版本会保留，新提取结果可在版本菜单中查看。": {
+    "zh": "任务已提交。已有人工版本会保留，新提取结果可在版本菜单中查看。",
+    "en": "Job submitted. Human revisions are retained; new extraction results appear in the version selector."
+  },
+  "正在获取已有或关联的正文 PDF。": {
+    "zh": "正在获取已有或关联的正文 PDF。",
+    "en": "Fetching the existing or linked article PDF."
+  },
+  "已提交": {
+    "zh": "已提交",
+    "en": "Queued "
+  },
+  "条记录；已有提取结果保留。": {
+    "zh": "条记录；已有提取结果保留。",
+    "en": "records; existing results are retained."
+  },
+  "已保存并标记为已复核。": {
+    "zh": "已保存并标记为已复核。",
+    "en": "Saved and marked as reviewed."
+  },
+  "修订已保存；校验结果已更新。": {
+    "zh": "修订已保存；校验结果已更新。",
+    "en": "Revision saved. Validation results updated."
+  },
+  "校内 MiniMax": {
+    "zh": "校内 MiniMax",
+    "en": "Campus MiniMax"
+  },
+  "校内 GLM": {
+    "zh": "校内 GLM",
+    "en": "Campus GLM"
+  },
+  "保存失败，请重试": {
+    "zh": "保存失败，请重试",
+    "en": "Could not save. Please try again."
+  },
+  "连接已保存": {
+    "zh": "连接已保存",
+    "en": "Connection saved"
+  },
+  "已保存，后续任务将使用此模型。": {
+    "zh": "已保存，后续任务将使用此模型。",
+    "en": "Saved. New tasks will use this model."
+  },
+  "连接失败": {
+    "zh": "连接失败",
+    "en": "Connection failed"
+  },
+  "模型返回了空响应": {
+    "zh": "模型返回了空响应",
+    "en": "The model returned an empty response"
+  },
+  "文献检索": {
+    "zh": "文献检索",
+    "en": "Literature search"
+  },
+  "筛选任务": {
+    "zh": "筛选任务",
+    "en": "Screening tasks"
+  },
+  "筛选与标注规则": {
+    "zh": "筛选与标注规则",
+    "en": "Annotation rules"
+  },
+  "OpenAI-compatible": {
+    "zh": "兼容 OpenAI",
+    "en": "OpenAI-compatible"
+  },
+  "Custom": {
+    "zh": "自定义",
+    "en": "Custom"
+  },
+  "Login failed": {
+    "zh": "登录失败",
+    "en": "Login failed"
+  },
+  "Signing in…": {
+    "zh": "登录中…",
+    "en": "Signing in…"
+  },
+  "Sign in": {
+    "zh": "登录",
+    "en": "Sign in"
+  },
+  "Run LLM Annotation": {
+    "zh": "运行模型标注",
+    "en": "Run LLM annotation"
+  },
+  "Run LLM Annotation failed": {
+    "zh": "模型标注启动失败",
+    "en": "Could not start model annotation"
+  },
+  "Failed to run GSM annotation": {
+    "zh": "GSM 标注启动失败",
+    "en": "Could not start GSM annotation"
+  },
+  "Task name is required.": {
+    "zh": "请填写任务名称。",
+    "en": "Enter a task name."
+  },
+  "Failed to create task": {
+    "zh": "任务创建失败",
+    "en": "Could not create task"
+  },
+  "detail fetch failed": {
+    "zh": "详情获取失败",
+    "en": "Could not fetch details"
+  },
+  "Search failed": {
+    "zh": "检索失败",
+    "en": "Search failed"
+  },
+  "Save failed": {
+    "zh": "保存失败",
+    "en": "Save failed"
+  },
+  "Delete this annotation schema?": {
+    "zh": "删除此标注方案？",
+    "en": "Delete this annotation schema?"
+  },
+  "[Default prompt file not found]": {
+    "zh": "[未找到默认提示词文件]",
+    "en": "[Default prompt file not found]"
+  },
+  "[Error loading default prompt]": {
+    "zh": "[默认提示词加载失败]",
+    "en": "[Error loading default prompt]"
+  },
+  "Prompt saved!": {
+    "zh": "提示词已保存！",
+    "en": "Prompt saved!"
+  },
+  "Failed to save prompt": {
+    "zh": "提示词保存失败",
+    "en": "Could not save prompt"
+  },
+  "Request failed": {
+    "zh": "请求失败",
+    "en": "Request failed"
+  },
+  "Save": {
+    "zh": "保存",
+    "en": "Save"
+  },
+  "Cancel": {
+    "zh": "取消",
+    "en": "Cancel"
+  },
+  "Saving…": {
+    "zh": "保存中…",
+    "en": "Saving…"
+  },
+  "Create Task": {
+    "zh": "创建任务",
+    "en": "Create task"
+  },
+  "Creating…": {
+    "zh": "创建中…",
+    "en": "Creating…"
+  },
+  "Edit": {
+    "zh": "编辑",
+    "en": "Edit"
+  },
+  "Save Changes": {
+    "zh": "保存修改",
+    "en": "Save changes"
+  },
+  "Save Prompt": {
+    "zh": "保存提示词",
+    "en": "Save prompt"
+  },
+  "Clear": {
+    "zh": "清除",
+    "en": "Clear"
+  },
+  "Untitled task": {
+    "zh": "未命名任务",
+    "en": "Untitled task"
+  },
+  "关闭配置": {
+    "zh": "关闭配置",
+    "en": "Close configuration"
+  },
+  "pending": {
+    "zh": "待处理",
+    "en": "Pending"
+  },
+  "running": {
+    "zh": "运行中",
+    "en": "Running"
+  },
+  "done": {
+    "zh": "已完成",
+    "en": "Completed"
+  },
+  "failed": {
+    "zh": "失败",
+    "en": "Failed"
+  },
+  "include": {
+    "zh": "已纳入",
+    "en": "Included"
+  },
+  "exclude": {
+    "zh": "已排除",
+    "en": "Excluded"
+  },
+  "uncertain": {
+    "zh": "待确认",
+    "en": "Uncertain"
+  },
+  "new": {
+    "zh": "新建",
+    "en": "New"
+  },
+  "reviewing": {
+    "zh": "审核中",
+    "en": "Reviewing"
+  },
+  "confirmed": {
+    "zh": "已确认",
+    "en": "Confirmed"
+  },
+  "Language": {
+    "zh": "界面语言",
+    "en": "Language"
+  },
+  "切换语言将重新加载页面，是否放弃未保存修改？": {
+    "zh": "切换语言将重新加载页面，是否放弃未保存修改？",
+    "en": "Switching language reloads the page. Discard unsaved changes?"
+  },
+  "已存入 {added} 条（跳过重复 {skipped} 条）": {
+    "zh": "已存入 {added} 条（跳过重复 {skipped} 条）",
+    "en": "Saved {added} records ({skipped} duplicates skipped)"
+  },
+  "GSM annotated: {annotated}/{samples}; GSE processed: {processed}/{total}": {
+    "zh": "GSM 已标注：{annotated}/{samples}；GSE 已处理：{processed}/{total}",
+    "en": "GSM annotated: {annotated}/{samples}; GSE processed: {processed}/{total}"
+  },
+  "Invalid credentials": {
+    "zh": "用户名或密码错误",
+    "en": "Invalid credentials"
+  },
+  "API key not configured": {
+    "zh": "尚未配置 API 密钥",
+    "en": "API key not configured"
+  },
+  "Failed to fetch": {
+    "zh": "网络连接失败，请重试",
+    "en": "Network connection failed. Please retry."
+  },
+  "Saved!": {
+    "zh": "已保存！",
+    "en": "Saved!"
+  },
+  "unsaved": {
+    "zh": "未保存",
+    "en": "unsaved"
+  },
+  "(untitled)": {
+    "zh": "（未命名）",
+    "en": "(untitled)"
+  },
+  "error": {
+    "zh": "错误",
+    "en": "error"
+  },
+  "text": {
+    "zh": "文本",
+    "en": "text"
+  },
+  "enum": {
+    "zh": "枚举",
+    "en": "enum"
+  },
+  "array": {
+    "zh": "数组",
+    "en": "array"
+  },
+  "object_array": {
+    "zh": "对象数组",
+    "en": "object_array"
+  },
+  "研究文献，整理可复核的实验流程。": {
+    "zh": "研究文献，整理可复核的实验流程。",
+    "en": "Explore literature and build reviewable experimental workflows."
+  },
+  "引用配方或补充材料尚未补齐，请添加来源后重新提取": {
+    "zh": "引用配方或补充材料尚未补齐，请添加来源后重新提取",
+    "en": "Cited protocols or supplements are missing. Add sources and extract again."
+  },
+  "GSE 与来源不一致": {
+    "zh": "GSE 与来源不一致",
+    "en": "GSE does not match the source"
+  },
+  "尚未映射到 GSM；保留为文献级 protocol": {
+    "zh": "尚未映射到 GSM；保留为文献级 protocol",
+    "en": "No GSM mapping yet; retained as a paper-level protocol"
+  },
+  "纯培养基行的 Pert_name 应为 NA": {
+    "zh": "纯培养基行的 Pert_name 应为 NA",
+    "en": "Pert_name must be NA for a basal-medium row"
+  },
+  "扰动名称缺失": {
+    "zh": "扰动名称缺失",
+    "en": "Perturbation name is missing"
+  },
+  "Stage_order 应为正整数或 NA": {
+    "zh": "Stage_order 应为正整数或 NA",
+    "en": "Stage_order must be a positive integer or NA"
+  },
+  "结束时间早于开始时间": {
+    "zh": "结束时间早于开始时间",
+    "en": "End time is earlier than start time"
+  },
+  "持续时间与开始/结束时间不一致": {
+    "zh": "持续时间与开始/结束时间不一致",
+    "en": "Duration does not match start and end times"
+  },
+  "结束时间超过该 GSM 采样时间": {
+    "zh": "结束时间超过该 GSM 采样时间",
+    "en": "End time is later than this GSM collection time"
+  },
+  "evidence 必须为列表": {
+    "zh": "evidence 必须为列表",
+    "en": "evidence must be a list"
+  },
+  "证据格式不正确": {
+    "zh": "证据格式不正确",
+    "en": "Invalid evidence format"
+  },
+  "证据页码或原文片段无法核实": {
+    "zh": "证据页码或原文片段无法核实",
+    "en": "Evidence page or quote could not be verified"
+  },
+  "缺少原文证据": {
+    "zh": "缺少原文证据",
+    "en": "Source evidence is missing"
+  },
+  "与前面的事件重复": {
+    "zh": "与前面的事件重复",
+    "en": "Duplicate of an earlier event"
+  },
+  "提取任务不存在": {
+    "zh": "提取任务不存在",
+    "en": "Extraction job not found"
+  },
+  "提取记录不存在": {
+    "zh": "提取记录不存在",
+    "en": "Extraction item not found"
+  },
+  "无法提交任务，请重试": {
+    "zh": "无法提交任务，请重试",
+    "en": "Could not submit job. Please retry."
+  },
+  "请先在 Settings 配置并启用 LLM": {
+    "zh": "请先在 Settings 配置并启用 LLM",
+    "en": "Configure and activate a model in Settings first."
+  },
+  "筛选任务不存在": {
+    "zh": "筛选任务不存在",
+    "en": "Screening task not found"
+  },
+  "请勾选至少一条记录": {
+    "zh": "请勾选至少一条记录",
+    "en": "Select at least one record"
+  },
+  "所选记录不属于该筛选任务": {
+    "zh": "所选记录不属于该筛选任务",
+    "en": "Selected records do not belong to this task"
+  },
+  "没有 Included 记录；也可以手动勾选待提取的记录": {
+    "zh": "没有 Included 记录；也可以手动勾选待提取的记录",
+    "en": "No included records. You can manually select records for extraction."
+  },
+  "提取进行中，完成后可添加材料": {
+    "zh": "提取进行中，完成后可添加材料",
+    "en": "Extraction is running. Add materials after it finishes."
+  },
+  "每条记录最多 20 份材料": {
+    "zh": "每条记录最多 20 份材料",
+    "en": "Up to 20 materials per item"
+  },
+  "引用材料须注明目标论文的引用编号或引用关系": {
+    "zh": "引用材料须注明目标论文的引用编号或引用关系",
+    "en": "State the citation number or relationship for referenced material"
+  },
+  "提取已开始，请稍后上传": {
+    "zh": "提取已开始，请稍后上传",
+    "en": "Extraction has started. Upload later."
+  },
+  "材料不存在": {
+    "zh": "材料不存在",
+    "en": "Material not found"
+  },
+  "页码不存在": {
+    "zh": "页码不存在",
+    "en": "Page not found"
+  },
+  "材料文件不可用，请重新上传": {
+    "zh": "材料文件不可用，请重新上传",
+    "en": "Material file unavailable. Upload it again."
+  },
+  "该记录正在处理，请等待；20 分钟无进度后可重试": {
+    "zh": "该记录正在处理，请等待；20 分钟无进度后可重试",
+    "en": "This item is processing. Retry after 20 minutes without progress."
+  },
+  "提取进行中，请稍后保存": {
+    "zh": "提取进行中，请稍后保存",
+    "en": "Extraction is running. Save later."
+  },
+  "结果已在其他窗口更新，请刷新后重试": {
+    "zh": "结果已在其他窗口更新，请刷新后重试",
+    "en": "Updated in another window. Refresh and try again."
+  },
+  "来源版本不存在": {
+    "zh": "来源版本不存在",
+    "en": "Source revision not found"
+  },
+  "请先添加来源材料": {
+    "zh": "请先添加来源材料",
+    "en": "Add source materials first"
+  },
+  "记录已更新或开始提取，请刷新后重试": {
+    "zh": "记录已更新或开始提取，请刷新后重试",
+    "en": "The item changed or started extraction. Refresh and try again."
+  },
+  "没有可导出的已复核结果；未复核内容请使用草稿导出": {
+    "zh": "没有可导出的已复核结果；未复核内容请使用草稿导出",
+    "en": "No reviewed results to export. Use draft export for unreviewed content."
+  },
+  "尚无可导出的结果": {
+    "zh": "尚无可导出的结果",
+    "en": "No results to export yet"
+  },
+  "材料为空或超过 30 MB": {
+    "zh": "材料为空或超过 30 MB",
+    "en": "Material is empty or exceeds 30 MB"
+  },
+  "文件内容不是 PDF": {
+    "zh": "文件内容不是 PDF",
+    "en": "File contents are not PDF"
+  },
+  "PDF 超过 300 页，请拆分材料": {
+    "zh": "PDF 超过 300 页，请拆分材料",
+    "en": "PDF exceeds 300 pages. Split the material."
+  },
+  "提取文本超过容量，请拆分材料": {
+    "zh": "提取文本超过容量，请拆分材料",
+    "en": "Extracted text exceeds capacity. Split the material."
+  },
+  "PDF 损坏、加密或无法解析": {
+    "zh": "PDF 损坏、加密或无法解析",
+    "en": "PDF is damaged, encrypted or unreadable"
+  },
+  "文本文件须使用 UTF-8 编码": {
+    "zh": "文本文件须使用 UTF-8 编码",
+    "en": "Text files must use UTF-8 encoding"
+  },
+  "文本超过容量，请拆分材料": {
+    "zh": "文本超过容量，请拆分材料",
+    "en": "Text exceeds capacity. Split the material."
+  },
+  "当前支持 PDF、TXT、MD；其他补充材料请先转为 PDF 或 UTF-8 文本": {
+    "zh": "当前支持 PDF、TXT、MD；其他补充材料请先转为 PDF 或 UTF-8 文本",
+    "en": "PDF, TXT and MD are supported. Convert other supplements to PDF or UTF-8 text."
+  },
+  "材料没有足够的可搜索文本，请上传 OCR 后的 PDF 或对应文本": {
+    "zh": "材料没有足够的可搜索文本，请上传 OCR 后的 PDF 或对应文本",
+    "en": "Not enough searchable text. Upload an OCR-processed PDF or matching text."
+  },
+  "已有 PDF 超过 30 MB，请拆分后上传": {
+    "zh": "已有 PDF 超过 30 MB，请拆分后上传",
+    "en": "Existing PDF exceeds 30 MB. Split it before uploading."
+  },
+  "此记录没有可用于自动定位的 GSE，请上传正文": {
+    "zh": "此记录没有可用于自动定位的 GSE，请上传正文",
+    "en": "No GSE available for automatic lookup. Upload the article."
+  },
+  "GEO 没有明确关联的 PMID，请上传正文及补充材料": {
+    "zh": "GEO 没有明确关联的 PMID，请上传正文及补充材料",
+    "en": "GEO has no explicit PMID link. Upload the article and supplements."
+  },
+  "下载文件超过 30 MB，请拆分后上传": {
+    "zh": "下载文件超过 30 MB，请拆分后上传",
+    "en": "Downloaded file exceeds 30 MB. Split it before uploading."
+  },
+  "模型输出达到 8192 token 限制，请减少本次材料或使用非深度推理模型": {
+    "zh": "模型输出达到 8192 token 限制，请减少本次材料或使用非深度推理模型",
+    "en": "Model output reached the 8,192-token limit. Use less material or a non-reasoning model."
+  },
+  "模型没有返回可解析的 protocol JSON": {
+    "zh": "模型没有返回可解析的 protocol JSON",
+    "en": "The model returned no parsable protocol JSON"
+  },
+  "模型未返回有效的 protocol 结果": {
+    "zh": "模型未返回有效的 protocol 结果",
+    "en": "The model returned no valid protocol result"
+  },
+  "模型未返回 events 列表": {
+    "zh": "模型未返回 events 列表",
+    "en": "The model did not return an events list"
+  },
+  "模型声称已提取但没有事件": {
+    "zh": "模型声称已提取但没有事件",
+    "en": "The model reported extraction but returned no events"
+  },
+  "模型声称没有 protocol 却返回了事件": {
+    "zh": "模型声称没有 protocol 却返回了事件",
+    "en": "The model reported no protocol but returned events"
+  },
+  "模型的引用请求格式不正确": {
+    "zh": "模型的引用请求格式不正确",
+    "en": "Invalid format for requested source references"
+  },
+  "材料超过单次 80 个文本块限制，请按 protocol 分批上传": {
+    "zh": "材料超过单次 80 个文本块限制，请按 protocol 分批上传",
+    "en": "Materials exceed 80 text chunks per run. Upload separately by protocol."
+  },
+  "events 必须为列表且不超过 2000 行": {
+    "zh": "events 必须为列表且不超过 2000 行",
+    "en": "events must be a list with at most 2,000 rows"
+  },
+  "extracted 结果不能没有事件": {
+    "zh": "extracted 结果不能没有事件",
+    "en": "An extracted result must include events"
+  },
+  "no_protocol 结果不能包含事件": {
+    "zh": "no_protocol 结果不能包含事件",
+    "en": "A no_protocol result cannot include events"
+  },
+  "reference_requests 必须为文本列表": {
+    "zh": "reference_requests 必须为文本列表",
+    "en": "reference_requests must be a text list"
+  },
+  "Default": {
+    "zh": "默认方案",
+    "en": "Default"
+  },
+  "Running…": {
+    "zh": "运行中…",
+    "en": "Running…"
+  },
+  "Run GSE Annotation": {
+    "zh": "运行 GSE 标注",
+    "en": "Run GSE annotation"
+  },
+  "processed": {
+    "zh": "已处理",
+    "en": "processed"
+  },
+  "datasets detected": {
+    "zh": "个数据集已识别",
+    "en": "datasets detected"
+  },
+  "GEO candidates will be saved before criteria screening": {
+    "zh": "条 GEO 候选记录将在条件筛选前保存",
+    "en": "GEO candidates will be saved before criteria screening"
+  },
+  "Start Screening": {
+    "zh": "开始筛选",
+    "en": "Start screening"
+  },
+  "on": {
+    "zh": "于",
+    "en": "on"
+  },
+  "{processed} / {total} screened": {
+    "zh": "已筛选 {processed} / {total}",
+    "en": "{processed} / {total} screened"
+  },
+  "{candidates} candidates · {included} included": {
+    "zh": "{candidates} 条候选 · {included} 条已纳入",
+    "en": "{candidates} candidates · {included} included"
+  },
+  "已识别 {count} 个 GSE ID：": {
+    "zh": "已识别 {count} 个 GSE ID：",
+    "en": "Recognized {count} GSE IDs: "
+  },
+  "）": {
+    "zh": "）",
+    "en": ")"
+  },
+  "样本与细胞": {
+    "zh": "样本与细胞",
+    "en": "Sample & cells"
+  },
+  "阶段与时间": {
+    "zh": "阶段与时间",
+    "en": "Stages & timing"
+  },
+  "扰动与剂量": {
+    "zh": "扰动与剂量",
+    "en": "Perturbations & doses"
+  },
+  "培养与来源": {
+    "zh": "培养与来源",
+    "en": "Culture & references"
+  },
+  "逐页文本": {
+    "zh": "逐页文本",
+    "en": "Page text"
+  },
+  "PDF 预览": {
+    "zh": "PDF 预览",
+    "en": "PDF preview"
+  },
+  "若浏览器无法预览，请打开原文件。": {
+    "zh": "若浏览器无法预览，请打开原文件。",
+    "en": "If your browser cannot preview the PDF, open the original file."
+  }
+}
