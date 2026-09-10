@@ -18,7 +18,7 @@
     </div>
     <p class="nav-caption">{{ t('研究流程') }}</p>
     <nav class="app-nav" aria-label="{{ t('主导航') }}">
-      {% for href, label, icon in [('/search','文献检索','⌕'),('/tasks-list','筛选任务','☷'),('/protocols','Protocol 提取','⌘'),('/library','文献库','▤'),('/criteria-page','筛选与标注规则','≡'),('/settings','模型与连接','⚙')] %}
+      {% for href, label, icon in [('/search','文献检索','⌕'),('/tasks-list','筛选任务','☷'),('/protocols','Protocol 提取','⌘'),('/library','文献库','▤'),('/criteria-page','筛选与标注规则','≡'),('/settings','模型与连接','⚙'),('/guide','使用指南','?')] %}
       {% set active = request.url.path.startswith(href) or (href == '/tasks-list' and request.url.path.startswith('/tasks/')) %}
       <a href="{{ href }}" {% if active %}aria-current="page"{% endif %}><span class="nav-icon" aria-hidden="true">{{ icon }}</span>{{ t(label) }}</a>
       {% endfor %}

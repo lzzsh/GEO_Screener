@@ -22,6 +22,8 @@ The `codex/v2-protocol` branch adds evidence-backed protocol extraction from sel
 
 The v2 research workspace supports **中文 / English** switching in the navigation area and remembers the selected language. Interface labels, actions and status messages are translated; paper content, custom annotation labels and exported data retain their original values. See [UI changes and validation](docs/UI_REFRESH.md).
 
+Open **使用指南 / User guide** in the navigation (`/guide`) for the complete workflow, material requirements, protocol field rules, review/export steps, a timeline example and troubleshooting in both languages.
+
 ## ✨ Features
 
 | | |

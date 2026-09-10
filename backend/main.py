@@ -160,6 +160,11 @@ async def settings_page(request: Request):
     return templates.TemplateResponse(request, "settings.html")
 
 
+@app.get("/guide")
+async def guide_page(request: Request):
+    return templates.TemplateResponse(request, "guide.html")
+
+
 @app.get("/library")
 async def library_list_page(
     request: Request,

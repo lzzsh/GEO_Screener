@@ -22,3 +22,9 @@ Validation: provider endpoint persistence regression; settings-state and failure
 - Endpoint regression: updating DeepSeek credentials or the active model retains an existing Pi API URL when no replacement URL is supplied.
 
 UI checks used an isolated synthetic database. No paid extraction or model requests were made for this UI refresh.
+
+## Bilingual user guide
+
+`/guide` is linked from the shared navigation. It covers model/rule setup, GEO screening, GSM annotation and libraries, source selection and PDF material limits, extraction states and retry, evidence review and revisions, field conventions, exports, a fictional timing example, the 24-column reference and troubleshooting. Instructions distinguish automatic quote/format checks from scientific verification and document the current OCR and citation-retrieval limits.
+
+Guide validation: **9 passed** with `python -m pytest backend/tests/test_ui_i18n.py backend/tests/test_pages.py -q --disable-warnings`; both languages render, including the complete guide. Chinese desktop layout was inspected in the browser on port 8002.

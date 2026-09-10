@@ -28,7 +28,7 @@ class VisibleCopy(HTMLParser):
 async def test_all_workspace_pages_render_in_selected_language(language):
     from backend.main import app
     routes = ['/login', '/search', '/tasks-list', '/tasks/new', '/tasks/1/detail',
-              '/settings', '/criteria-page', '/library', '/library/1', '/protocols', '/protocols/1']
+              '/settings', '/criteria-page', '/library', '/library/1', '/protocols', '/protocols/1', '/guide']
     async with AsyncClient(transport=ASGITransport(app=app), base_url='http://test', headers={'accept':'text/html'}, cookies={'geo_ui_lang': language}) as client:
         for route in routes:
             response = await client.get(route)
