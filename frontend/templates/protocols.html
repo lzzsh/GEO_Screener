@@ -9,7 +9,7 @@
   <div x-show="!loading && !jobs.length && !error" class="empty-state"><div class="empty-symbol" aria-hidden="true">⌘</div><h2>{{ t('建立第一份可追溯的 Protocol') }}</h2><p>{{ t('打开筛选任务，勾选需要的文献。上传正文与补充材料后，即可开始提取和人工复核。') }}</p><a href="/tasks-list" class="ui-button ui-button--primary">{{ t('选择来源文献 →') }}</a></div>
   <div class="grid gap-4"><template x-for="job in jobs" :key="job.id">
     <a :href="'/protocols/'+job.id" class="ui-card job-card">
-      <div class="flex justify-between gap-4"><div><h2 class="font-semibold" x-text="job.name"></h2><p class="ui-help" x-text="(tr(&quot;来源筛选任务 #&quot;))+job.source_task_id+' · '+job.total+(&quot; &quot;+tr(&quot;条文献记录&quot;))"></p></div><div class="text-right shrink-0"><p class="text-xl text-blue-700 font-semibold" x-text="reviewed(job)+' / '+job.total"></p><p class="ui-help">{{ t('已复核') }}</p></div></div>
+      <div class="flex justify-between gap-4"><div><h2 class="font-semibold" x-text="job.name"></h2><p class="ui-help" x-text="(tr(&quot;来源筛选任务 #&quot;))+job.source_task_id+' · '+job.total+(&quot; &quot;+(job.extraction_unit==='gsm'?tr('个 GSM 样本'):tr('条文献记录')))"></p></div><div class="text-right shrink-0"><p class="text-xl text-blue-700 font-semibold" x-text="reviewed(job)+' / '+job.total"></p><p class="ui-help">{{ t('已复核') }}</p></div></div>
       <div class="job-progress"><span :style="'width:'+(job.total?100*reviewed(job)/job.total:0)+'%'"></span></div>
       <div class="mt-4 flex gap-2 flex-wrap"><template x-for="[status,count] in Object.entries(job.counts)" :key="status"><span class="ui-badge" :class="statusClass(status)"><span class="status-dot"></span><span x-text="label(status)+' '+count"></span></span></template></div>
     </a>

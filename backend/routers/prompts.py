@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from backend.database import get_db
 from backend.models import AnnotationSchema, User
 from backend.auth import get_current_user
+from backend.prompt_store import read_prompt, prompt_path
 
 router = APIRouter(tags=["prompts"])
 
@@ -21,20 +22,18 @@ def _get_prompts_dir() -> Path:
 
 def _get_prompt_path(schema_name: str, prompt_type: str) -> Path:
     """Get the full path to a prompt file."""
-    prompts_dir = _get_prompts_dir()
-    return prompts_dir / schema_name / f"{prompt_type}.txt"
+    try:
+        return prompt_path(schema_name, prompt_type)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc))
 
 @router.get("/prompts/default/{prompt_type}")
 async def get_default_prompt(prompt_type: str):
     """Get default prompt file (public endpoint)."""
-    prompt_path = _get_prompt_path("default", prompt_type)
-
-    if not prompt_path.exists():
-        raise HTTPException(status_code=404, detail=f"Prompt file not found at {prompt_path}")
-
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
+    _get_prompt_path('default', prompt_type)
+    content = read_prompt('default', prompt_type)
+    if not content:
+        raise HTTPException(404, 'Default prompt is unavailable')
     return {"content": content}
 
 @router.get("/annotation-schemas/{schema_id}/prompts/{prompt_type}")
@@ -46,14 +45,10 @@ async def get_prompt(schema_id: int, prompt_type: str, db: AsyncSession = Depend
     if not schema:
         raise HTTPException(status_code=404, detail="Schema not found")
 
-    prompt_path = _get_prompt_path(schema.name, prompt_type)
-
-    if not prompt_path.exists():
-        raise HTTPException(status_code=404, detail="Prompt file not found")
-
-    with open(prompt_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-
+    _get_prompt_path(schema.name, prompt_type)
+    content = read_prompt(schema.name, prompt_type)
+    if not content:
+        raise HTTPException(404, 'Prompt is unavailable')
     return {"content": content}
 
 @router.put("/annotation-schemas/{schema_id}/prompts/{prompt_type}")

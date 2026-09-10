@@ -69,3 +69,9 @@ test('late protocol refresh cannot overwrite a newly edited draft',async()=>{
   c.fetch=async()=>({ok:true,json:async()=>{p.dirty=true;return {revisions:[],documents:[]};}});
   await p.refreshItem();assert.equal(p.draft.summary,'unsaved');
 });
+test('PDF publication errors translate without changing identifiers',()=>{
+  const c=environment();
+  c.window.uiLang='zh';
+  c.window.uiMessages=Object.fromEntries(Object.entries(catalog).map(([k,v])=>[k,v.zh]));
+  assert.equal(vm.runInContext("tr('PDF: Verify the associated publication and upload the article; PMID: 123, 456')",c),'PDF: 请核对文章关联并上传正确正文；PMID：123, 456');
+});

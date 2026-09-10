@@ -43,6 +43,8 @@ async def _run_sqlite_migrations(conn):
         return
 
     required_columns = {
+        "protocol_jobs": {"extraction_unit": "VARCHAR(16) NOT NULL DEFAULT 'article'"},
+        "protocol_revisions": {"sample_id": "INTEGER REFERENCES protocol_samples(id)"},
         "users": {
             "active_annotation_schema_id": "INTEGER REFERENCES annotation_schemas(id)",
         },

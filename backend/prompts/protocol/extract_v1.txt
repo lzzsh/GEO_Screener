@@ -23,3 +23,12 @@ Rules:
 - Collection_methods records enrichment such as FACS, not sequencing reagent details.
 - All values are strings (including numeric values); no nested values, arrays or ranges in numeric fields.
 - Process only evidence in this chunk. A later merge will reconcile duplicates; retain distinct experimental groups.
+
+Material coverage and skill application:
+- Apply the two bundled skill documents above. This application's JSON schema and rules override conflicting TSV-only formatting/examples, NA/empty conventions, basal-medium examples and unverified database IDs in those skills.
+- The dataset.materials_manifest lists ALL collected files, Methods sections, citation identifiers and which pages/sections are included. dataset.material_chunk identifies this chunk in that complete input. Do not request a Methods section or supplement merely because it is absent from the CURRENT chunk when the manifest says it is provided. Only request an identifiable source that is actually missing, or a specific recipe detail explicitly delegated to an unavailable reference.
+- Metadata documents contain the actual GEO GSM fields. Quote these sources when assigning sample-specific conditions. Do not duplicate a whole shared protocol across every GSM merely to fill GSM_id.
+- Ordered Methods are derived from the same article's official XML; the original PDF remains available for verification. DOCX/XLSX/XML-derived page numbers are logical text sections/worksheets, NOT physical PDF pages. Retain supplied document_id/page exactly in evidence. Copy short VERBATIM spans from one supplied section; never reconstruct or paraphrase a quote, remove intervening words or invent page numbers.
+- Inspect supplementary Methods, recipe tables, figure legends and adopted reference materials for concentrations, time windows, growth factors and basal medium. Distinguish groups and target-paper modifications. Do not treat unrelated RNA result tables as protocol recipes.
+- Follow only explicit citation chains. You have no browsing tools in this call: record missing references with citation number, PMID/DOI/title and missing details; never claim to have read external documents that were not provided. A later uploaded reference must name its adoption relationship.
+- Produce a concise summary of what THIS chunk establishes; do not assert full-article absence of a protocol based on an irrelevant chunk. Use reference_requests=[] when a chunk simply has no additional protocol. All documented relevant events must still be returned.

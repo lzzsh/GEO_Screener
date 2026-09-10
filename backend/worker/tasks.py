@@ -1,7 +1,7 @@
 import asyncio
 import json
 import logging
-from sqlalchemy import func, select
+from sqlalchemy import func, select, update
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import selectinload
 from backend.worker.celery_app import celery_app
@@ -100,8 +100,9 @@ async def _geo_context_for_result(sr: ScreeningResult) -> str:
     samples = []
     try:
         detail = await fetch_gse_detail(sr.dataset_id)
-        if detail and detail.get("pmid") and not sr.pmid:
-            sr.pmid = detail["pmid"]
+        pmids = list(dict.fromkeys(detail.get("pmids") or ([detail["pmid"]] if detail.get("pmid") else [])))
+        if len(pmids) == 1 and not sr.pmid:
+            sr.pmid = pmids[0]
     except Exception as exc:
         logger.warning("GSE detail fetch failed for %s: %s", sr.dataset_id, exc)
     try:
@@ -111,6 +112,62 @@ async def _geo_context_for_result(sr: ScreeningResult) -> str:
     if not samples:
         samples = _stored_samples_to_dicts(sr)
     return _build_geo_metadata_context(sr.description or "", detail, samples, sr.has_raw_data)
+
+@celery_app.task(bind=True, name="worker.tasks.run_screening")
+def run_screening(self, task_id: int):
+    _run(_run_screening_async(task_id))
+
+
+async def _run_screening_async(task_id: int):
+    from backend.decision_sync import recompute_task_decision_counts
+    async with AsyncSessionLocal() as db:
+        claim = await db.execute(update(ScreeningTask).where(
+            ScreeningTask.id == task_id, ScreeningTask.status != "running"
+        ).values(status="running"))
+        await db.commit()
+        if not claim.rowcount:
+            return
+        task = await db.get(ScreeningTask, task_id)
+        cfg = (await db.execute(select(LLMConfig).where(
+            LLMConfig.owner_id == task.owner_id, LLMConfig.is_active == True
+        ))).scalar_one_or_none()
+        rows = (await db.scalars(select(ScreeningResult).options(selectinload(ScreeningResult.samples)).where(
+            ScreeningResult.task_id == task_id, ScreeningResult.status.in_(["pending", "error"]),
+            ScreeningResult.decision.is_(None)
+        ))).all()
+        if not cfg or not cfg.api_key:
+            for row in rows:
+                row.status = "error"
+                row.error_msg = "Configure an active model with an API key before screening"
+            task.status = "error"
+            await db.commit()
+            return
+        llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
+                        base_url=cfg.base_url, model=cfg.model, temperature=cfg.temperature)
+        for row in rows:
+            try:
+                description = await _geo_context_for_result(row)
+                result = await llm.screen_dataset(row.dataset_id, row.title or "",
+                                                   description, task.criteria_text)
+                # A manual decision made while the request was running wins.
+                await db.refresh(row)
+                if row.decision is None:
+                    row.decision = result["decision"]
+                    row.confidence = result["confidence"]
+                    row.summary = result["summary"]
+                    row.rule_checks = json.dumps(result["rule_checks"], ensure_ascii=False)
+                row.status, row.error_msg = "done", None
+            except Exception as exc:
+                row.status, row.error_msg = "error", str(exc)
+            await db.flush()
+            await recompute_task_decision_counts(db, task)
+            task.processed = (await db.scalar(select(func.count()).select_from(ScreeningResult).where(
+                ScreeningResult.task_id == task_id, ScreeningResult.status.in_(["done", "error"])
+            )))
+            await db.commit()
+        task.status = "error" if any(row.status == "error" for row in rows) else "done"
+        await db.commit()
+
 
 @celery_app.task(bind=True, name="worker.tasks.run_annotation")
 def run_annotation(self, task_id: int):
@@ -175,11 +232,18 @@ async def _run_annotation_async(task_id: int):
                         db.add(GeoLabel(result_id=sr.id, key=key,
                                         value=str(value) if value is not None else None, source="llm"))
                 # Sync decision from final_conclusion
-                final = extracted.get("final_conclusion")
+                final_label = existing_by_key.get("final_conclusion")
+                final = final_label.value if final_label and final_label.source == "human" else extracted.get("final_conclusion")
                 if final and final in conclusion_to_decision:
                     sr.decision = conclusion_to_decision[final]
                     sr.status = "done"
-                task.processed = (task.processed or 0) + 1
+                await db.flush()
+                task.processed = (await db.scalar(
+                    select(func.count()).select_from(ScreeningResult).where(
+                        ScreeningResult.task_id == task_id,
+                        ScreeningResult.status.in_(["done", "error"]),
+                    )
+                ))
                 task.included_count = (await db.execute(
                     select(func.count()).select_from(ScreeningResult)
                     .where(ScreeningResult.task_id == task_id, ScreeningResult.decision == "include")
@@ -263,10 +327,13 @@ async def _run_single_result_annotation_async(result_id: int):
                 else:
                     db.add(GeoLabel(result_id=sr.id, key=key,
                                     value=str(value) if value is not None else None, source="llm"))
-            final = extracted.get("final_conclusion")
+            final_label = existing_by_key.get("final_conclusion")
+            final = final_label.value if final_label and final_label.source == "human" else extracted.get("final_conclusion")
             if final and final in conclusion_to_decision:
                 sr.decision = conclusion_to_decision[final]
                 sr.status = "done"
+            from backend.decision_sync import recompute_task_decision_counts
+            await recompute_task_decision_counts(db, task)
             await db.commit()
         except Exception as exc:
             await db.rollback()
@@ -294,15 +361,26 @@ async def _run_gsm_annotation_async(result_id: int):
             return
         llm = LLMClient(provider=cfg.provider, api_key=cfg.api_key,
                         base_url=cfg.base_url, model=cfg.model, temperature=0)
+        from backend.label_schema import default_label_schema_json
+        schema = _parse_label_schema(task.label_schema or default_label_schema_json())
+        gsm_labels = schema.get("gsm", [])
+        if not gsm_labels:
+            raise ValueError("Please configure GSM labels before annotation")
+        schema_name = "default"
+        if task.annotation_schema_id:
+            annotation_schema = await db.get(AnnotationSchema, task.annotation_schema_id)
+            if annotation_schema:
+                schema_name = annotation_schema.name
         gse_summary = sr.description or ""
         for sample in sr.samples:
+            gsm_id = sample.gsm_id
             try:
                 # Resume support: skip samples already annotated
                 existing = (await db.execute(
                     select(GsmLabel).where(GsmLabel.sample_id == sample.id)
                 )).scalars().all()
                 existing_by_key = {l.key: l for l in existing}
-                if "gsm_available" in existing_by_key:
+                if "avail" in existing_by_key or "gsm_available" in existing_by_key:
                     continue
                 extracted = await llm.annotate_gsm(
                     gsm_id=sample.gsm_id,
@@ -311,6 +389,8 @@ async def _run_gsm_annotation_async(result_id: int):
                     biosample_id=sample.biosample_id or "",
                     characteristics="",
                     gse_summary=gse_summary,
+                    gsm_labels=gsm_labels,
+                    schema_name=schema_name,
                 )
                 for key, value in extracted.items():
                     ex = existing_by_key.get(key)
@@ -325,7 +405,7 @@ async def _run_gsm_annotation_async(result_id: int):
                 await db.commit()
             except Exception as exc:
                 await db.rollback()
-                logger.warning("GSM annotation error for %s: %s", sample.gsm_id, exc)
+                logger.warning("GSM annotation error for %s: %s", gsm_id, exc)
 
 
 async def _run_gsm_task_async(task_id: int):
@@ -496,52 +576,35 @@ async def _run_gsm_task_async(task_id: int):
             await db.commit()
 
 
-async def _search_pmid_by_title(title: str) -> str | None:
-    """Search PubMed for a PMID by paper title using E-utilities."""
-    import httpx
-    try:
-        async with httpx.AsyncClient(timeout=15) as client:
-            r = await client.get(
-                "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi",
-                params={"db": "pubmed", "term": f"{title}[Title]", "retmax": 1, "retmode": "json"},
-            )
-            r.raise_for_status()
-            ids = r.json().get("esearchresult", {}).get("idlist", [])
-            return ids[0] if ids else None
-    except Exception as e:
-        logger.warning("PubMed title search failed: %s", e)
-        return None
-
-
 async def _fetch_one_paper(result_id: int):
-    """Fetch PDF for a single ScreeningResult in its own DB session."""
+    """Resolve a GEO publication explicitly; leave ambiguous records for upload."""
     async with AsyncSessionLocal() as db:
         sr = await db.get(ScreeningResult, result_id)
         if not sr:
             return
-        if not sr.pmid and sr.title:
-            try:
-                sr.pmid = await _search_pmid_by_title(sr.title)
-                if sr.pmid:
-                    await db.commit()
-            except Exception as e:
-                logger.warning("pmid search failed for %s: %s", sr.dataset_id, e)
-        if not sr.pmid:
-            return
         sr.pdf_status = "fetching"
         await db.commit()
         try:
+            if not sr.pmid:
+                detail = await fetch_gse_detail(sr.dataset_id)
+                pmids = list(dict.fromkeys(detail.get("pmids") or ([detail["pmid"]] if detail.get("pmid") else [])))
+                if len(pmids) != 1:
+                    detail_msg = ", ".join(pmids) if pmids else "none"
+                    raise ValueError("Verify the associated publication and upload the article; PMID: " + detail_msg)
+                sr.pmid = pmids[0]
             pdf_path, doi = await fetch_pdf(sr.pmid, sr.dataset_id)
-            if pdf_path:
-                sr.pdf_path = pdf_path
-                sr.pdf_status = "available"
-            else:
-                sr.pdf_status = "failed"
+            if not pdf_path:
+                raise ValueError("No usable full-text PDF found; upload the article in Protocol materials")
+            sr.pdf_path = pdf_path
+            sr.pdf_status = "available"
             if doi and not sr.doi:
                 sr.doi = doi
-        except Exception as e:
-            logger.error("fetch_pdf error for %s: %s", sr.dataset_id, e)
+            if sr.error_msg and sr.error_msg.startswith("PDF: "):
+                sr.error_msg = None
+        except Exception as exc:
             sr.pdf_status = "failed"
+            if not sr.error_msg or sr.error_msg.startswith("PDF: "):
+                sr.error_msg = "PDF: " + str(exc)
         await db.commit()
 
 
@@ -551,7 +614,7 @@ async def _fetch_papers_async(task_id: int):
             select(ScreeningResult.id).where(
                 ScreeningResult.task_id == task_id,
                 ScreeningResult.decision.in_(["include", "uncertain"]),
-                ScreeningResult.pdf_status == "none",
+                ScreeningResult.pdf_status.in_(["none", "failed"]),
             )
         )
         result_ids = [row[0] for row in res_result.all()]

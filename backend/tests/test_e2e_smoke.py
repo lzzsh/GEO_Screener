@@ -71,7 +71,9 @@ async def test_full_workflow(client):
 
     # 7. Simulate worker running (call internal async function directly)
     mock_resp = _mock_llm_response()
-    with patch("openai.resources.chat.completions.AsyncCompletions.create", new=AsyncMock(return_value=mock_resp)):
+    with patch("openai.resources.chat.completions.AsyncCompletions.create", new=AsyncMock(return_value=mock_resp)), \
+         patch("backend.worker.tasks.fetch_gse_detail", new=AsyncMock(return_value={})), \
+         patch("backend.worker.tasks.fetch_gsm_samples", new=AsyncMock(return_value=[])):
         from backend.worker.tasks import _run_screening_async
         await _run_screening_async(task_id)
 

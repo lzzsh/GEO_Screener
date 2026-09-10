@@ -39,6 +39,7 @@ function protocolDetail(jobId) {
       {title:tr('扰动与剂量'),keys:['Pert_name','Addition_context','Pert_type','dose_value','dose_unit','pubchem_cid','chembl_id']},
       {title:tr('培养与来源'),keys:['Culture_medium','Culture_system','Collection_methods','Reference']}
     ]; },
+    itemPath(id=this.currentId) { return (this.job.extraction_unit === 'gsm' ? '/samples/' : '/items/') + id; },
     fieldLabel(key) { return protocolFieldLabels[key] || key; },
     active() { return this.item && protocolActive(this.item.status); },
     async init() {
@@ -68,7 +69,7 @@ function protocolDetail(jobId) {
     },
     async refreshItem() {
       const id=this.currentId;
-      const value=await (await protocolApi('/items/' + id)).json();
+      const value=await (await protocolApi(this.itemPath(id))).json();
       if (id !== this.currentId || this.dirty) return;
       this.item=value;
       const revision=value.revisions.find(r => r.id === this.revisionId) || value.revisions.find(r=>r.id===value.active_revision_id);
@@ -109,11 +110,11 @@ function protocolDetail(jobId) {
       this.busy=true; this.error=''; this.notice='';
       const form=new FormData(); form.append('file',file); form.append('kind',this.uploadKind); form.append('reference',this.uploadReference);
       try {
-        const response=await (await protocolApi('/items/' + this.currentId + '/documents', {method:'POST',body:form})).json();
+        const response=await (await protocolApi('/items/' + (this.item.source_item_id || this.currentId) + '/documents', {method:'POST',body:form})).json();
         this.notice=response.duplicate ? (tr("材料已存在，已复用。")) : (tr("材料已保存。"));
         this.$refs.material.value=''; this.uploadReference='';
         if (!this.dirty) await this.refreshItem();
-        else { const data=await (await protocolApi('/items/'+this.currentId)).json(); this.item.documents=data.documents; }
+        else { const data=await (await protocolApi(this.itemPath())).json(); this.item.documents=data.documents; }
         await this.showDocument(response.id,1); await this.loadJob();
       } catch(e) { this.error=e.message; } finally { this.busy=false; }
     },
@@ -121,7 +122,7 @@ function protocolDetail(jobId) {
       if (this.dirty) { this.error=(tr("请先保存当前修改再运行")); return; }
       this.busy=true; this.error=''; this.notice='';
       try {
-        await protocolApi('/items/' + this.currentId + '/run?extract=' + extract, {method:'POST'});
+        await protocolApi(this.itemPath() + '/run?extract=' + extract, {method:'POST'});
         this.notice=extract ? (tr("任务已提交。已有人工版本会保留，新提取结果可在版本菜单中查看。")) : (tr("正在获取已有或关联的正文 PDF。"));
         await this.refreshItem(); await this.loadJob();
       } catch(e) { this.error=e.message; } finally { this.busy=false; }
@@ -137,7 +138,7 @@ function protocolDetail(jobId) {
     },
     addRow() {
       if (!this.draft) this.draft={outcome:'extracted',summary:'',events:[],reference_requests:[],warnings:[],blockers:[]};
-      const values=Object.fromEntries(this.job.columns.map(k=>[k,'NA'])); values.GSE_id=this.item.dataset_id;
+      const values=Object.fromEntries(this.job.columns.map(k=>[k,'NA'])); values.GSE_id=this.item.dataset_id; values.GSM_id=this.item.gsm_id || 'NA';
       this.draft.events.push({protocol_name:this.protocolFilter || 'Protocol 1',values,evidence:[]});
       this.draft.outcome='extracted'; this.selectedRow=this.draft.events.length-1; this.dirty=true;
     },
@@ -149,7 +150,7 @@ function protocolDetail(jobId) {
     async save(reviewed=false) {
       this.busy=true; this.error=''; this.notice='';
       try {
-        const result=await (await protocolApi('/items/'+this.currentId+'/revisions',{
+        const result=await (await protocolApi(this.itemPath()+'/revisions',{
           method:'POST',headers:{'Content-Type':'application/json'},
           body:JSON.stringify({payload:this.draft,base_revision_id:this.revisionId,
             expected_active_revision_id:this.item.active_revision_id,reviewed})

@@ -339,6 +339,7 @@
             </td>
             <td class="px-4 py-3 text-xs text-gray-800">
               <p class="line-clamp-2 font-medium text-gray-900" x-text="r.title || (tr(&quot;无标题数据集&quot;))"></p>
+              <p x-show="r.error_msg" class="mt-1 text-xs text-red-600 whitespace-normal" x-text="tr(r.error_msg)"></p>
               <p class="mt-1 text-[11px] text-gray-500" x-text="(r.labels &amp;&amp; r.labels.length) ? ((tr(&quot;已标注&quot;)+&quot; &quot;) + r.labels.length + (&quot; &quot;+tr(&quot;项&quot;))) : (tr(&quot;未生成标注&quot;))"></p>
             </td>
             <td class="px-4 py-3 text-xs text-center" x-text="r.n_samples || '—'"></td>
@@ -353,7 +354,7 @@
               <span x-show="!r.pdf_status || r.pdf_status === 'none'" class="text-gray-300">—</span>
               <span x-show="r.pdf_status === 'fetching'" class="text-blue-400">⟳</span>
               <a x-show="r.pdf_status === 'available'" :href="'/pdfs/' + r.dataset_id + '.pdf'" target="_blank" class="text-blue-600">📄</a>
-              <span x-show="r.pdf_status === 'failed'" class="text-red-400">✗</span>
+              <span x-show="r.pdf_status === 'failed'" class="text-red-400" :title="tr(r.error_msg)">✗</span>
             </td>
             <td class="px-4 py-3 text-xs" @click.stop>
               <template x-if="r.protocol"><a :href="'/protocols/'+r.protocol.job_id" class="text-blue-600 whitespace-nowrap" x-text="protocolStateLabel(r.protocol.status)"></a></template>

@@ -1,6 +1,9 @@
 function tr(source, values = {}) {
   if (source === null || source === undefined) return '';
   const text = String(source);
+  if (text.startsWith('PDF: ')) return 'PDF: ' + tr(text.slice(5));
+  const publicationPrefix = 'Verify the associated publication and upload the article; PMID: ';
+  if (text.startsWith(publicationPrefix)) return (window.uiMessages?.[publicationPrefix] ?? publicationPrefix) + text.slice(publicationPrefix.length);
   if (window.uiLang === 'en' && text.startsWith('无法标记已复核：')) {
     return 'Cannot mark reviewed: ' + text.slice(8).split('；').map(part=>tr(part)).join('; ');
   }

@@ -17,9 +17,9 @@
 <p>{{ t('「用文章重新校准」属于原有筛选流程，会基于文章重新评估筛选结果；它与 Protocol 提取是两个操作。Protocol 提取本身不会修改原任务的筛选判断或标签。') }}</p>
 <a class="ui-button ui-button--quiet" href="/tasks-list">{{ t('查看筛选任务') }} ↗</a></div></section>
 <section class="ui-card guide-section" id="materials"><div class="ui-card-header"><h2><span class="section-number">04</span>{{ t('选择文献并补齐来源材料') }}</h2></div><div class="ui-card-body guide-copy"><p>{{ t('在筛选任务详情的蓝色操作区，使用「提取 Protocol（已选数量）」或「全部已纳入文献」。后一项包含该任务所有纳入记录，不受当前表格分页限制。请先确认选择范围。') }}</p>
-<p>{{ t('进入 Protocol 任务后，左侧是来源文献，中间是材料、提取与复核区，右侧是来源证据。任务保存所选 GSE 和已知 GSM 的快照，便于追溯来源。') }}</p>
-<p>{{ t('先尝试「获取正文 PDF」。系统会复用已有 PDF 或根据明确的 GEO 文章关联获取正文。若关联了多篇文章、下载失败或只得到摘要，请核对 PMID / DOI，并自行上传正确的正文和补充材料。') }}</p>
-<p>{{ t('支持 PDF、UTF-8 TXT 和 MD；每份最多 30 MB、PDF 最多 300 页，每条来源记录最多 20 份材料。扫描 PDF 目前没有自动 OCR，需要先获得可检索文本。Word、Excel 补充材料应先整理为支持的格式，并保留表格对应关系。') }}</p>
+<p>{{ t('新建 Protocol 任务后，左侧按 GSM 样本展开，中间独立提取和复核，右侧查看来源证据。同一文献共享 Methods 与补充材料，每个 GSM 保留自己的条件、采样时间和修订版本。') }}</p>
+<p>{{ t('先尝试「获取 Methods 与补充材料」。系统会复用已有 PDF，并根据明确的文章关联收集 Methods 和可用补充文件。若关联了多篇文章、下载失败或只得到摘要，请核对 PMID / DOI，并上传正确材料。') }}</p>
+<p>{{ t('支持 PDF、UTF-8 TXT / MD / CSV / TSV、DOCX、XLSX 和 ZIP；每份最多 30 MB、PDF 最多 300 页，每条记录最多手动上传 20 份材料。系统自动收集同篇 Methods 与可用补充文件，覆盖清单显示模型输入。扫描件或内嵌图像仍需 OCR 或人工核对。') }}</p>
 <p>{{ t('上传时区分正文、补充材料和引用来源。若目标文章沿用另一篇文章的方法，需要补充被引用的方法，并注明引用或采用关系。当前不会自动追完外部引用链。') }}</p>
 <a class="ui-button ui-button--quiet" href="/protocols">{{ t('查看 Protocol 任务') }} ↗</a></div></section>
 <section class="ui-card guide-section" id="extract"><div class="ui-card-header"><h2><span class="section-number">05</span>{{ t('提取、补充来源与重试') }}</h2></div><div class="ui-card-body guide-copy"><p>{{ t('有可用材料后，对单篇文献开始提取，或批量提取待处理项。模型会读取材料的逐页文本，提出实验组、扰动事件、时间、剂量和对应的原文证据。') }}</p>
@@ -33,7 +33,7 @@
 <p>{{ t('重新提取会增加机器提案，并保留当前人工修订。通过结果版本选择器查看新提案；要采用它，需查看并保存为新的人工修订。两个窗口同时编辑发生冲突时，先记录本地修改，再刷新载入最新版本。') }}</p>
 </div></section>
 <section class="ui-card guide-section" id="rules"><div class="ui-card-header"><h2><span class="section-number">07</span>{{ t('Protocol 填写规则') }}</h2></div><div class="ui-card-body guide-copy"><p>{{ t('一行描述一个实验组 / 样本在一个时间窗口中的一个扰动事件。不同实验组、剂量或时间窗口分别记录；不要把多个方法混成一个配方。') }}</p>
-<p>{{ t('未知或不适用统一填写 NA。只有来源支持样本与条件的对应关系时才填写 GSM；否则保留 NA，作为文献级 Protocol。PubChem / ChEMBL 编号没有来源支持时也保留 NA。') }}</p>
+<p>{{ t('未知数值统一填写 NA。新任务中的 GSM_id 必须对应当前目标样本；映射不明确时保留待补证据，不能标记已复核。每个 GSM 使用一套适用流程，不混合不同处理分支。PubChem / ChEMBL 编号没有来源支持时保留 NA。') }}</p>
 <p>{{ t('使用原文的最终工作浓度，区分母液浓度与工作浓度。长期不变的培养基添加物写入 Culture_medium；纯培养基阶段设置 Addition_context=basal medium，Pert_name 填 NA。') }}</p>
 <p>{{ t('以分化或实验定义的 Day 0 为起点。time_unit 使用 days 或 hours；时间可写 D0 / D3 或 H0 / H24，并与单位一致。持续时间等于结束减开始；结束不能早于开始，也不能超过该样本采样时间。无法确定时使用 NA，不自行补算含糊的端点。') }}</p>
 <p>{{ t('Stage_order 为正整数或 NA；Stage_name 和 Pert_type 必须使用导出规范中的枚举值。界面语言切换不会改写这些数据值。下方示例和字段参考保留原始字段名。') }}</p>

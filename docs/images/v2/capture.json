@@ -1,0 +1,126 @@
+{
+  "captured_on": "2026-09-10",
+  "browser_method": "Playwright headless Chrome, deviceScaleFactor=2 (except user-uploaded original)",
+  "images": [
+    {
+      "file": "guide-en.png",
+      "width": 2880,
+      "height": 2000,
+      "format": "PNG",
+      "bytes": 384592,
+      "sha256": "d633e081f4084f1ae821a7abfe189e1fecefec543225d562c74605980ee4664f",
+      "source": "isolated demo browser",
+      "upscaled": false
+    },
+    {
+      "file": "guide-zh.png",
+      "width": 2880,
+      "height": 2000,
+      "format": "PNG",
+      "bytes": 475664,
+      "sha256": "81b365c73778bf1f7148118fa5f9ceecacf987056120db3f8c4681ab4140ad92",
+      "source": "isolated demo browser",
+      "upscaled": false
+    },
+    {
+      "file": "models.png",
+      "width": 2880,
+      "height": 2000,
+      "format": "PNG",
+      "bytes": 331651,
+      "sha256": "18ecf1f542a38c4c865de6e98946556d03ad395c9e91d00e906cc3daf3a1812f",
+      "source": "isolated demo browser",
+      "upscaled": false
+    },
+    {
+      "file": "protocol-exports.png",
+      "width": 2880,
+      "height": 2000,
+      "format": "PNG",
+      "bytes": 485648,
+      "sha256": "2aaaec30a51d9b645885e4873f5702228deedfaf4a2817b728a1d090710e66b1",
+      "source": "isolated demo browser",
+      "upscaled": false
+    },
+    {
+      "file": "protocol-review.png",
+      "width": 2880,
+      "height": 2000,
+      "format": "PNG",
+      "bytes": 459410,
+      "sha256": "07ad8224cbd0c99e82905393ef69acacb4686ab3eed3a81e33e66fc6d73f296e",
+      "source": "isolated demo browser",
+      "upscaled": false
+    },
+    {
+      "file": "rules.png",
+      "width": 2880,
+      "height": 2000,
+      "format": "PNG",
+      "bytes": 223955,
+      "sha256": "653612f8abd3aaa0f5fa0715fd03a97e4bc97c6555f3bb24c8d3b6f2f10d05e3",
+      "source": "isolated demo browser",
+      "upscaled": false
+    },
+    {
+      "file": "screening-exclude.png",
+      "width": 4480,
+      "height": 2370,
+      "format": "PNG",
+      "bytes": 498754,
+      "sha256": "befe7970320fedd6ed674f09d8b71d68338ef5069dfaa31391b5054006fbad29",
+      "source": "real saved screening record",
+      "upscaled": false
+    },
+    {
+      "file": "screening-include.png",
+      "width": 4480,
+      "height": 2370,
+      "format": "PNG",
+      "bytes": 505734,
+      "sha256": "470b4a428a18d48a0374f74f11013a9df54dffaaa9d10165ecbe22049e55ec73",
+      "source": "real saved screening record",
+      "upscaled": false
+    },
+    {
+      "file": "screening.png",
+      "width": 4480,
+      "height": 2370,
+      "format": "PNG",
+      "bytes": 1229179,
+      "sha256": "4b65aa329d37e9400e02a9cc52d538191c4aed5e915ae413da34bb378de34f9e",
+      "source": "user-uploaded original",
+      "upscaled": false
+    },
+    {
+      "file": "search.png",
+      "width": 2880,
+      "height": 2000,
+      "format": "PNG",
+      "bytes": 157829,
+      "sha256": "65150f96b039d08b007e0a1a917a502fc3159694b975b14724f5868882e6d526",
+      "source": "isolated demo browser",
+      "upscaled": false
+    },
+    {
+      "file": "gsm-protocol.png",
+      "width": 3840,
+      "height": 2400,
+      "format": "PNG",
+      "bytes": 915191,
+      "sha256": "0a1e68125e2f7456c029c53df65160a3465635d666191163cec1763b3c10216e",
+      "source": "real GSM8502816, independent reviewed revision; isolated validation service",
+      "upscaled": false
+    },
+    {
+      "file": "methods-supplements.png",
+      "width": 3840,
+      "height": 2400,
+      "format": "PNG",
+      "bytes": 853472,
+      "sha256": "84121d7add43d24f7229ac6131ae10f9c8c0f361da1ce1b9dc103323abe28b9f",
+      "source": "real GSE239550 Methods and DOCX supplement; legacy article-level draft",
+      "upscaled": false
+    }
+  ]
+}

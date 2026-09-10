@@ -2,18 +2,18 @@ import os
 from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
-from fastapi import Cookie, Depends, FastAPI, Request
+from fastapi import Cookie, Depends, FastAPI, Request, HTTPException
 from fastapi.security import OAuth2PasswordBearer
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, FileResponse
 from backend.database import init_db
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
-from backend.auth import resolve_current_user
+from backend.auth import resolve_current_user, get_current_user
 from backend.database import get_db
-from backend.models import Library, ScreeningTask, ScreeningResult, GeoSample, GsmLabel
+from backend.models import Library, ScreeningTask, ScreeningResult, GeoSample, GsmLabel, User
 from backend.routers import auth as auth_router
 from backend.routers import criteria as criteria_router
 from backend.routers import llm as llm_router
@@ -41,14 +41,26 @@ async def lifespan(app: FastAPI):
     await init_db()
     yield
 
-app = FastAPI(title="GEO Search & Screening", lifespan=lifespan)
+app = FastAPI(title="GEO Search & Screening", version="2.0.0", lifespan=lifespan)
 
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
 
 import os as _os
 PDF_DIR = _os.getenv("PDF_DIR", "pdfs")
 _os.makedirs(PDF_DIR, exist_ok=True)
-app.mount("/pdfs", StaticFiles(directory=PDF_DIR), name="pdfs")
+@app.get("/pdfs/{filename}")
+async def article_pdf(filename: str, db: AsyncSession = Depends(get_db), user: User = Depends(get_current_user)):
+    rows = (await db.scalars(select(ScreeningResult).join(ScreeningTask).where(
+        ScreeningTask.owner_id == user.id, ScreeningResult.dataset_id == Path(filename).stem,
+        ScreeningResult.pdf_status == "available"
+    ))).all()
+    root = Path(PDF_DIR).resolve()
+    for row in rows:
+        if row.pdf_path:
+            path = Path(row.pdf_path).resolve()
+            if path.is_relative_to(root) and path.name == filename and path.is_file():
+                return FileResponse(path, media_type="application/pdf")
+    raise HTTPException(404, "PDF not found")
 
 @app.get("/")
 async def root():

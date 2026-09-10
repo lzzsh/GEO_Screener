@@ -2650,5 +2650,153 @@
   "默认「导出已复核 TSV」只汇总各来源当前已复核的版本，保留固定 24 列顺序。「更多导出」提供草稿 TSV、证据 JSON 和待确认项 JSON；草稿文件应继续按未复核资料管理。": {
     "zh": "默认「导出已复核 TSV」只汇总各来源当前已复核的版本，保留固定 24 列顺序。「更多导出」提供草稿 TSV、证据 JSON 和待确认项 JSON；草稿文件应继续按未复核资料管理。",
     "en": "Export reviewed TSV includes only the current reviewed revisions and preserves the fixed 24-column order. More exports offers draft TSV, evidence JSON and issues JSON. Treat draft files as unreviewed material."
+  },
+  "Configure an active model with an API key before screening": {
+    "zh": "请先配置并启用带有 API Key 的模型，再运行筛选",
+    "en": "Configure an active model with an API key before screening"
+  },
+  "No usable full-text PDF found; upload the article in Protocol materials": {
+    "zh": "未取得可用正文 PDF，请在 Protocol 材料区上传文章",
+    "en": "No usable full-text PDF found; upload the article in Protocol materials"
+  },
+  "Verify the associated publication and upload the article; PMID: ": {
+    "zh": "请核对文章关联并上传正确正文；PMID：",
+    "en": "Verify the associated publication and upload the article; PMID: "
+  },
+  "Dataset source must be csv or geo": {
+    "zh": "数据来源必须为 CSV 或 GEO",
+    "en": "Dataset source must be csv or geo"
+  },
+  "Please upload a CSV file": {
+    "zh": "请上传 CSV 文件",
+    "en": "Please upload a CSV file"
+  },
+  "Invalid screening decision": {
+    "zh": "模型返回了无效的筛选判断",
+    "en": "Invalid screening decision"
+  },
+  "Invalid screening confidence": {
+    "zh": "模型返回了无效的置信度",
+    "en": "Invalid screening confidence"
+  },
+  "Invalid screening explanation": {
+    "zh": "模型返回的筛选理由格式不正确",
+    "en": "Invalid screening explanation"
+  },
+  "Screening response was truncated": {
+    "zh": "模型筛选响应被截断，请重试",
+    "en": "Screening response was truncated"
+  },
+  "推荐配置": {
+    "zh": "推荐配置",
+    "en": "Recommended"
+  },
+  "获取 Methods 与补充材料": {
+    "zh": "获取 Methods 与补充材料",
+    "en": "Fetch Methods & supplements"
+  },
+  "支持 PDF、TXT、MD、DOCX、XLSX、CSV、TSV、ZIP，每份最多 30 MB。扫描件请先 OCR。引用来源请注明采用关系。": {
+    "zh": "支持 PDF、TXT、MD、DOCX、XLSX、CSV、TSV、ZIP，每份最多 30 MB。扫描件请先 OCR。引用来源请注明采用关系。",
+    "en": "PDF, TXT, MD, DOCX, XLSX, CSV, TSV and ZIP; up to 30 MB per file. OCR scanned documents first. Identify how cited protocols were adopted."
+  },
+  "页 / 节": {
+    "zh": "页 / 节",
+    "en": "Page / section"
+  },
+  "模型输入覆盖清单": {
+    "zh": "模型输入覆盖清单",
+    "en": "Model input coverage"
+  },
+  "PDF 使用页码；Word、Excel 和 Methods 文本使用节或工作表编号。原始文件保留供核对。": {
+    "zh": "PDF 使用页码；Word、Excel 和 Methods 文本使用节或工作表编号。原始文件保留供核对。",
+    "en": "PDF evidence uses page numbers; Word, Excel and Methods text use sections or worksheets. Original files remain available for verification."
+  },
+  "原始全文保留供核对；同篇 Methods 已单独纳入": {
+    "zh": "原始全文保留供核对；同篇 Methods 已单独纳入",
+    "en": "Original article retained for verification; its Methods are provided separately."
+  },
+  "纳入 Methods / 补充材料": {
+    "zh": "纳入 Methods / 补充材料",
+    "en": "Included in Methods / supplementary input"
+  },
+  "已扫描：基因或统计结果表，未发现方法或配方字段": {
+    "zh": "已扫描：基因或统计结果表，未发现方法或配方字段",
+    "en": "Scanned gene/statistical results table; no Methods or recipe fields identified."
+  },
+  "非可搜索文本附件，需人工检查原文件": {
+    "zh": "非可搜索文本附件，需人工检查原文件",
+    "en": "Attachment has no searchable text; inspect the original file."
+  },
+  "正在获取 Methods 与补充材料": {
+    "zh": "正在获取 Methods 与补充材料",
+    "en": "Fetching Methods and supplementary materials"
+  },
+  "支持 PDF、UTF-8 TXT / MD / CSV / TSV、DOCX、XLSX 和 ZIP；每份最多 30 MB、PDF 最多 300 页，每条记录最多手动上传 20 份材料。系统自动收集同篇 Methods 与可用补充文件，覆盖清单显示模型输入。扫描件或内嵌图像仍需 OCR 或人工核对。": {
+    "zh": "支持 PDF、UTF-8 TXT / MD / CSV / TSV、DOCX、XLSX 和 ZIP；每份最多 30 MB、PDF 最多 300 页，每条记录最多手动上传 20 份材料。系统自动收集同篇 Methods 与可用补充文件，覆盖清单显示模型输入。扫描件或内嵌图像仍需 OCR 或人工核对。",
+    "en": "Upload PDF, UTF-8 TXT / MD / CSV / TSV, DOCX, XLSX or ZIP: up to 30 MB per file, 300 PDF pages and 20 manual uploads per record. The system collects the same article’s Methods and available supplements; check the model input coverage list. Scans and embedded images still require OCR or manual review."
+  },
+  "模型服务截断了 protocol 输出，请将材料进一步拆分后重试": {
+    "zh": "模型服务截断了 protocol 输出，请将材料进一步拆分后重试",
+    "en": "The model service truncated the protocol output. Split the source material further and retry."
+  },
+  "先尝试「获取 Methods 与补充材料」。系统会复用已有 PDF，并根据明确的文章关联收集 Methods 和可用补充文件。若关联了多篇文章、下载失败或只得到摘要，请核对 PMID / DOI，并上传正确材料。": {
+    "zh": "先尝试「获取 Methods 与补充材料」。系统会复用已有 PDF，并根据明确的文章关联收集 Methods 和可用补充文件。若关联了多篇文章、下载失败或只得到摘要，请核对 PMID / DOI，并上传正确材料。",
+    "en": "Start with Fetch Methods & supplements. The system reuses existing PDFs and collects Methods and available supplements through explicit publication links. If multiple papers are linked, downloads fail or only abstracts are available, verify PMID / DOI and upload the correct sources."
+  },
+  "Word 含内嵌图像；其中的方法或配方需人工检查或 OCR": {
+    "zh": "Word 含内嵌图像；其中的方法或配方需人工检查或 OCR",
+    "en": "Word contains embedded images; inspect or OCR any methods or recipes shown in images."
+  },
+  "Strict OOXML 表格按兼容命名空间读取，原始文件保持不变": {
+    "zh": "Strict OOXML 表格按兼容命名空间读取，原始文件保持不变",
+    "en": "Strict OOXML is read with compatible namespaces; the original file is preserved."
+  },
+  "未定位到独立 Methods 章节，将检查原始全文": {
+    "zh": "未定位到独立 Methods 章节，将检查原始全文",
+    "en": "No standalone Methods section identified; the original article will be checked."
+  },
+  "正文声明了补充文件，但公开数据中没有对应附件": {
+    "zh": "正文声明了补充文件，但公开数据中没有对应附件",
+    "en": "The article declares a supplement that is absent from the public dataset."
+  },
+  "期刊审稿或报告清单，已登记来源": {
+    "zh": "期刊审稿或报告清单，已登记来源",
+    "en": "Journal peer review or reporting checklist; source indexed."
+  },
+  "当前支持 PDF、TXT、MD、DOCX、XLSX、CSV、TSV 和 ZIP 补充材料": {
+    "zh": "当前支持 PDF、TXT、MD、DOCX、XLSX、CSV、TSV 和 ZIP 补充材料",
+    "en": "Supported supplementary formats: PDF, TXT, MD, DOCX, XLSX, CSV, TSV and ZIP."
+  },
+  "材料损坏、加密或无法解析，请检查原文件": {
+    "zh": "材料损坏、加密或无法解析，请检查原文件",
+    "en": "The material is damaged, encrypted or unreadable. Check the original file."
+  },
+  "GSM 样本 ·": {
+    "zh": "GSM 样本 ·",
+    "en": "GSM samples ·"
+  },
+  "文献级旧版本 ·": {
+    "zh": "文献级旧版本 ·",
+    "en": "Legacy article results ·"
+  },
+  "个 GSM 样本": {
+    "zh": "个 GSM 样本",
+    "en": "GSM samples"
+  },
+  "每个 GSM 独立提取和复核；同一文献共享 Methods 与补充材料。": {
+    "zh": "每个 GSM 独立提取和复核；同一文献共享 Methods 与补充材料。",
+    "en": "Each GSM is extracted and reviewed independently; Methods and supplements are shared within an article."
+  },
+  "这是文献级旧版本；请从筛选任务新建 GSM 提取任务。": {
+    "zh": "这是文献级旧版本；请从筛选任务新建 GSM 提取任务。",
+    "en": "This is a legacy article-level job. Create a new GSM extraction job from the screening task."
+  },
+  "新建 Protocol 任务后，左侧按 GSM 样本展开，中间独立提取和复核，右侧查看来源证据。同一文献共享 Methods 与补充材料，每个 GSM 保留自己的条件、采样时间和修订版本。": {
+    "zh": "新建 Protocol 任务后，左侧按 GSM 样本展开，中间独立提取和复核，右侧查看来源证据。同一文献共享 Methods 与补充材料，每个 GSM 保留自己的条件、采样时间和修订版本。",
+    "en": "New Protocol jobs list individual GSM samples on the left, with independent extraction and review in the centre and source evidence on the right. Methods and supplements are shared within an article; each GSM retains its own conditions, collection time and revisions."
+  },
+  "未知数值统一填写 NA。新任务中的 GSM_id 必须对应当前目标样本；映射不明确时保留待补证据，不能标记已复核。每个 GSM 使用一套适用流程，不混合不同处理分支。PubChem / ChEMBL 编号没有来源支持时保留 NA。": {
+    "zh": "未知数值统一填写 NA。新任务中的 GSM_id 必须对应当前目标样本；映射不明确时保留待补证据，不能标记已复核。每个 GSM 使用一套适用流程，不混合不同处理分支。PubChem / ChEMBL 编号没有来源支持时保留 NA。",
+    "en": "Use NA for unknown values. In new jobs, GSM_id must match the target sample; unresolved mappings must remain pending and cannot be marked reviewed. Each GSM has one applicable protocol, without mixing treatment branches. Keep unsupported PubChem / ChEMBL identifiers as NA."
   }
 }

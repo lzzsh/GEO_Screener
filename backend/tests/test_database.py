@@ -68,12 +68,12 @@ async def test_init_db_enables_wal_mode_for_file_backed_sqlite(tmp_path, monkeyp
     db_path = tmp_path / "wal.db"
     monkeypatch.setenv("DATABASE_URL", f"sqlite+aiosqlite:///{db_path}")
 
-    import importlib
-    import backend.database as database
-
-    database = importlib.reload(database)
-    await database.init_db()
-    await database.engine.dispose()
+    # Import the startup module in a fresh process: reloading it here replaces
+    # Base and the engine underneath every subsequent router/model test.
+    import subprocess
+    import sys
+    subprocess.run([sys.executable, "-c", "import asyncio; from backend.database import init_db, engine; "
+                    "asyncio.run(init_db()); asyncio.run(engine.dispose())"], check=True)
 
     conn = sqlite3.connect(db_path)
     journal_mode = conn.execute("PRAGMA journal_mode").fetchone()[0]

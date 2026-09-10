@@ -203,7 +203,7 @@ async def test_run_annotation_async_persists_labels_and_keeps_human_edits(auth_c
         db.add(sr)
         await db.flush()
         db.add(GeoSample(result_id=sr.id, gsm_id="GSMOLD", title="stored sample", organism="Homo sapiens"))
-        db.add(LLMConfig(owner_id=auth_client._ann_user_id, provider="deepseek", api_key="sk-test", model="deepseek-chat"))
+        db.add(LLMConfig(owner_id=auth_client._ann_user_id, provider="deepseek", api_key="sk-test", model="deepseek-chat", is_active=True))
         db.add(GeoLabel(result_id=sr.id, key="起始细胞类型", value="human curated", source="human"))
         await db.commit()
         task_id = task.id
@@ -301,7 +301,7 @@ async def test_run_gsm_annotation_async_persists_labels(auth_client):
             __import__("sqlalchemy").select(LLMConfig).where(LLMConfig.owner_id == auth_client._ann_user_id)
         )).scalar_one_or_none()
         if not existing_cfg:
-            db.add(LLMConfig(owner_id=auth_client._ann_user_id, provider="deepseek", api_key="sk-test2", model="deepseek-chat"))
+            db.add(LLMConfig(owner_id=auth_client._ann_user_id, provider="deepseek", api_key="sk-test2", model="deepseek-chat", is_active=True))
         await db.commit()
         result_id = sr.id
         sample_id = sample.id

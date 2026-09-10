@@ -53,3 +53,13 @@ def test_known_type_spacing_and_missing_value_variants_are_normalized():
     assert result['events'][0]['values']['Pert_type'] == 'small_molecule'
     assert result['events'][0]['values']['Collection_methods'] == 'NA'
     assert not result['blockers']
+
+
+def test_missing_time_unit_can_be_resolved_from_explicit_day_prefix_only():
+    row=event();row['values'].update(time_pert_start='D35',time_pert_end='NA',duration_pert='NA',time_unit='NA',time_collection='NA')
+    result=validate_extraction({'outcome':'extracted','events':[row]},source(),'GSE1',['GSM1'])
+    assert result['events'][0]['values']['time_unit']=='days'
+    assert not any('time_pert_start' in x for x in result['blockers'])
+    row['values']['time_unit']='hours'
+    result=validate_extraction({'outcome':'extracted','events':[row]},source(),'GSE1',['GSM1'])
+    assert any('time_pert_start' in x for x in result['blockers'])

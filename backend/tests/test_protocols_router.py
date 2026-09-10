@@ -49,7 +49,7 @@ async def protocol_env(tmp_path, monkeypatch):
 
 
 async def create_item(client, task):
-    response = await client.post('/api/protocols/jobs', json={'task_id': task.id})
+    response = await client.post('/api/protocols/jobs', json={'task_id': task.id, 'extraction_unit': 'article'})
     assert response.status_code == 201, response.text
     job_id = response.json()['id']
     job = (await client.get(f'/api/protocols/jobs/{job_id}')).json()
@@ -195,3 +195,77 @@ async def test_screening_results_link_to_latest_owned_protocol_job(protocol_env)
     excluded = next(row for row in response.json()['items'] if row['dataset_id'] == 'GSE2')
     assert included['protocol'] == {'job_id': job_id, 'status': 'waiting_material'}
     assert excluded['protocol'] is None
+
+
+@pytest.mark.asyncio
+async def test_automatic_methods_and_supplement_reach_model_with_coverage(protocol_env, monkeypatch):
+    from backend.worker import protocol_tasks as worker
+    client, task, included, excluded, other, sessions, queue = protocol_env
+    _, item_id = await create_item(client, task)
+    await upload(client, item_id)
+    async with sessions() as db:
+        item=await db.get(ProtocolItem,item_id)
+        snapshot=json.loads(item.snapshot_json);snapshot['pmid']='123456'
+        item.snapshot_json=json.dumps(snapshot);await db.commit()
+    collection=AsyncMock(return_value={'pmid':'123456','pmcid':'PMC123', 'references':[],
+        'inventory':[{'name':'Methods.md','status':'downloaded'},{'name':'supplement.txt','status':'downloaded'}],
+        'documents':[
+            {'name':'Methods.md','kind':'methods','reference':'same article','content':b'Cell differentiation Methods refer to the supplementary recipe supplied with this article.'},
+            {'name':'supplement.txt','kind':'supplement','reference':'supplement 1','content':b'Supplementary recipe: Cells received CHIR99021 at 3 uM from day 0 to day 3. These cells were collected at day 3.'}]})
+    monkeypatch.setattr(worker,'collect_article_sources',collection)
+    monkeypatch.setattr(worker,'fetch_gsm_samples',AsyncMock(return_value=[{'gsm_id':'GSM1','growth_protocol':'Differentiation started at day zero.'}]))
+    chunks=[]
+    async def extract(llm,snapshot,chunk):
+        chunks.extend(chunk)
+        assert snapshot['materials_manifest']['collection_status']=='collected'
+        assert snapshot['samples'][0]['growth_protocol'].startswith('Differentiation')
+        return {'outcome':'no_protocol','events':[]}
+    monkeypatch.setattr(worker,'extract_chunk',extract)
+    await client.post(f'/api/protocols/items/{item_id}/run')
+    await worker.process_protocol_item(*queue.await_args.args)
+    item=(await client.get(f'/api/protocols/items/{item_id}')).json()
+    assert item['status']=='no_protocol',item.get('error')
+    assert {s['kind'] for s in chunks}=={'methods','supplement','metadata'}
+    assert any(not c['included'] for c in item['material_coverage'])
+    await client.post(f'/api/protocols/items/{item_id}/run?extract=false')
+    await worker.process_protocol_item(*queue.await_args.args)
+    assert collection.await_count==1
+
+
+@pytest.mark.asyncio
+async def test_methods_remain_usable_when_pdf_endpoint_fails(protocol_env, monkeypatch):
+    from backend.worker import protocol_tasks as worker
+    client, task, included, excluded, other, sessions, queue = protocol_env
+    _, item_id = await create_item(client,task)
+    async with sessions() as db:
+        item=await db.get(ProtocolItem,item_id);snapshot=json.loads(item.snapshot_json)
+        snapshot['pmid']='123456';item.snapshot_json=json.dumps(snapshot);await db.commit()
+    monkeypatch.setattr(worker,'acquire_material',AsyncMock(side_effect=worker.NeedMaterials('PDF unavailable')))
+    monkeypatch.setattr(worker,'fetch_gsm_samples',AsyncMock(return_value=[]))
+    monkeypatch.setattr(worker,'collect_article_sources',AsyncMock(return_value={
+        'inventory':[{'name':'Methods.md','status':'downloaded'}], 'references':[],
+        'documents':[{'name':'Methods.md','kind':'methods','reference':'same article XML',
+        'content':b'Same article Methods: Cells received CHIR99021 at 3 uM from day zero to day three.'}]}))
+    await client.post(f'/api/protocols/items/{item_id}/run?extract=false')
+    await worker.process_protocol_item(*queue.await_args.args)
+    item=(await client.get(f'/api/protocols/items/{item_id}')).json()
+    assert item['status']=='ready',item['error']
+    assert item['documents'][0]['kind']=='methods'
+    assert item['materials_manifest']['pdf_warning']=='PDF unavailable'
+
+
+@pytest.mark.asyncio
+async def test_review_provenance_tracks_newly_added_reference_material(protocol_env):
+    client, task, included, excluded, other, sessions, queue = protocol_env
+    _,item_id=await create_item(client,task);doc_id=await upload(client,item_id)
+    first=await client.post(f'/api/protocols/items/{item_id}/revisions',json={'payload':payload(doc_id)})
+    assert first.status_code==201
+    ref=await client.post(f'/api/protocols/items/{item_id}/documents',files={'file':('reference.txt',b'Previously described differentiation method with CHIR99021 at 3 uM from day 0 to day 3.','text/plain')},data={'kind':'reference','reference':'Target article reference 7; adopted differentiation method.'})
+    assert ref.status_code==201
+    revision_id=first.json()['id']
+    saved=await client.post(f'/api/protocols/items/{item_id}/revisions',json={'payload':payload(ref.json()['id']),'base_revision_id':revision_id,'expected_active_revision_id':revision_id})
+    assert saved.status_code==201
+    item=(await client.get(f'/api/protocols/items/{item_id}')).json()
+    sources=item['revisions'][0]['provenance']['review_documents']
+    assert {d['id'] for d in sources}=={doc_id,ref.json()['id']}
+    assert all(len(d['sha256'])==64 for d in sources)

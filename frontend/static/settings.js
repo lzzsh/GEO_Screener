@@ -13,12 +13,12 @@
     custom: ''
   };
   const ALL_PROVIDERS = [
+    {value: 'orcarouter', label: 'OrcaRouter', recommended: true},
     {value: 'deepseek', label: 'DeepSeek'},
     {value: 'glm', label: 'GLM (Zhipu)'},
     {value: 'minimax', label: 'MiniMax'},
     {value: 'campus-minimax', label: (tr("校内 MiniMax"))},
     {value: 'campus-glm', label: (tr("校内 GLM"))},
-    {value: 'orcarouter', label: 'OrcaRouter'},
     {value: 'custom', label: (tr("Custom"))},
   ];
 

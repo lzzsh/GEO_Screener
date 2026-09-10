@@ -194,6 +194,7 @@ class ProtocolJob(Base):
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
     source_task_id: Mapped[int] = mapped_column(Integer)
+    extraction_unit: Mapped[str] = mapped_column(String(16), default='article', server_default='article')
     name: Mapped[str] = mapped_column(String(256))
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
@@ -210,6 +211,20 @@ class ProtocolItem(Base):
     active_revision_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     __table_args__ = (UniqueConstraint("job_id", "source_result_id"),)
+
+
+class ProtocolSample(Base):
+    __tablename__ = "protocol_samples"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("protocol_items.id"), index=True)
+    gsm_id: Mapped[str] = mapped_column(String(64))
+    snapshot_json: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(32), default="waiting_material")
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    run_token: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    active_revision_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("item_id", "gsm_id"),)
 
 
 class ProtocolDocument(Base):
@@ -231,6 +246,7 @@ class ProtocolRevision(Base):
     __tablename__ = "protocol_revisions"
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     item_id: Mapped[int] = mapped_column(ForeignKey("protocol_items.id"), index=True)
+    sample_id: Mapped[int | None] = mapped_column(ForeignKey("protocol_samples.id"), nullable=True, index=True)
     parent_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
     source: Mapped[str] = mapped_column(String(16))  # machine | human
     reviewed: Mapped[bool] = mapped_column(Boolean, default=False)

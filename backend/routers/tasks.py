@@ -3,7 +3,7 @@ import csv
 import io
 from typing import Optional
 import httpx
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Query, Request
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import delete, select, func, update
@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.decision_sync import recompute_task_decision_counts, sync_final_conclusion_label
 from backend.label_schema import default_label_schema_json
-from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry, AnnotationSchema, ProtocolItem, ProtocolJob
+from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry, AnnotationSchema, ProtocolItem, ProtocolJob, ProtocolSample
 from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
@@ -32,8 +32,9 @@ class TaskUpdate(BaseModel):
 
 @router.post("", status_code=201)
 async def create_task(
-    name: str,
-    source: str,
+    request: Request,
+    name: Optional[str] = Query(default=None),
+    source: Optional[str] = Query(default=None),
     criteria_text: str = "",
     file: Optional[UploadFile] = File(default=None),
     search_query: Optional[str] = Query(default=None),
@@ -44,6 +45,17 @@ async def create_task(
     db: AsyncSession = Depends(get_db),
     user: User = Depends(get_current_user),
 ):
+    if "multipart/form-data" in request.headers.get("content-type", ""):
+        form = await request.form()
+        name = name or form.get("name")
+        source = source or form.get("source")
+        criteria_text = criteria_text or form.get("criteria_text", "")
+    if not isinstance(name, str) or not name.strip():
+        raise HTTPException(400, "Task name is required.")
+    if source not in {"csv", "geo"}:
+        raise HTTPException(400, "Dataset source must be csv or geo")
+    if source == "csv" and not file:
+        raise HTTPException(400, "Please upload a CSV file")
     if source == "geo" and not search_query and not geo_ids:
         raise HTTPException(status_code=400, detail="search_query is required for GEO tasks")
 
@@ -58,6 +70,8 @@ async def create_task(
             )
         )
         schema = schema_result.scalar_one_or_none()
+        if not schema:
+            raise HTTPException(404, "Schema not found")
         if schema:
             import json
             label_schema = json.dumps({
@@ -83,7 +97,10 @@ async def create_task(
         datasets: list[dict] = []
         if source == "csv" and file:
             content = await file.read()
-            datasets = parse_csv(content)
+            try:
+                datasets = parse_csv(content)
+            except (ValueError, UnicodeError) as exc:
+                raise HTTPException(400, str(exc)) from exc
         elif source == "geo" and search_query:
             datasets = await search_geo(search_query, retmax=retmax)
         elif source == "geo" and geo_ids:
@@ -112,7 +129,7 @@ async def create_task(
             db.add(sr)
             await db.flush()
 
-        if source == "geo" and not criteria_text.strip():
+        if not criteria_text.strip() or not datasets:
             task.status = "done"
 
         await db.commit()
@@ -122,6 +139,13 @@ async def create_task(
         if "database is locked" in str(exc).lower():
             raise HTTPException(status_code=503, detail="Database is busy. Please retry in a moment.")
         raise
+
+    if task.total and task.criteria_text.strip():
+        from backend.worker.tasks import run_screening, _run_screening_async
+        dispatch_or_run_inline(
+            delay_call=lambda: run_screening.delay(task.id),
+            inline_coro_factory=lambda: _run_screening_async(task.id),
+        )
 
     return {
         "id": task.id,
@@ -200,9 +224,12 @@ async def delete_task(task_id: int, db: AsyncSession = Depends(get_db), user: Us
     try:
         if result_ids:
             await db.execute(delete(GeoLabel).where(GeoLabel.result_id.in_(result_ids)))
+            sample_ids = select(GeoSample.id).where(GeoSample.result_id.in_(result_ids))
+            await db.execute(delete(GsmLabel).where(GsmLabel.sample_id.in_(sample_ids)))
             await db.execute(delete(GeoSample).where(GeoSample.result_id.in_(result_ids)))
             await db.execute(delete(ScreeningResult).where(ScreeningResult.id.in_(result_ids)))
         await db.execute(update(LibraryEntry).where(LibraryEntry.task_id == task_id).values(task_id=None))
+        await db.execute(update(ScreeningTask).where(ScreeningTask.parent_task_id == task_id).values(parent_task_id=None))
         await db.delete(task)
         await db.commit()
     except OperationalError as exc:
@@ -269,14 +296,21 @@ async def get_results(
     protocol_links = {}
     if rows:
         links = (await db.execute(
-            select(ProtocolItem.source_result_id, ProtocolItem.job_id, ProtocolItem.status)
+            select(ProtocolItem.source_result_id, ProtocolItem.job_id, ProtocolItem.status, ProtocolItem.id, ProtocolJob.extraction_unit)
             .join(ProtocolJob).where(
                 ProtocolJob.owner_id == user.id, ProtocolJob.source_task_id == task_id,
                 ProtocolItem.source_result_id.in_([row.id for row in rows]),
             ).order_by(ProtocolItem.id.desc())
         )).all()
+        sample_states = (await db.execute(select(ProtocolSample.item_id, ProtocolSample.status)
+            .where(ProtocolSample.item_id.in_([link.id for link in links if link.extraction_unit == 'gsm'])))).all()
         for link in links:
-            protocol_links.setdefault(link.source_result_id, {"job_id": link.job_id, "status": link.status})
+            status = link.status
+            if link.extraction_unit == 'gsm' and status not in {'queued', 'fetching', 'extracting'}:
+                states = {row.status for row in sample_states if row.item_id == link.id}
+                status = next((state for state in ('extracting', 'queued', 'failed', 'waiting_material',
+                    'needs_sources', 'needs_review', 'ready', 'no_protocol', 'reviewed') if state in states), status)
+            protocol_links.setdefault(link.source_result_id, {"job_id": link.job_id, "status": status})
     return {
         "total": total, "page": page, "page_size": page_size,
         "items": [{"id": r.id, "dataset_id": r.dataset_id, "title": r.title,

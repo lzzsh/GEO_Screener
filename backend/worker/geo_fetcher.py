@@ -58,10 +58,10 @@ async def search_geo_page(query: str, retmax: int = 10000, page: int = 1, page_s
     }
 
 
-async def fetch_gsm_samples(gse_accession: str, retmax: int = 1000) -> list[dict]:
+async def fetch_gsm_samples(gse_accession: str, retmax: int = 1000, full: bool = False) -> list[dict]:
     """Fetch all GSM samples for a given GSE accession via MINiML XML."""
     url = "https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi"
-    params = {"acc": gse_accession, "targ": "gsm", "form": "xml", "view": "quick"}
+    params = {"acc": gse_accession, "targ": "gsm", "form": "xml", "view": "full" if full else "quick"}
     NS = "http://www.ncbi.nlm.nih.gov/geo/info/MINiML"
 
     async with httpx.AsyncClient(timeout=30) as client:
@@ -85,8 +85,8 @@ async def fetch_gsm_samples(gse_accession: str, retmax: int = 1000) -> list[dict
                     library_strategy = _find_text(sample, NS, "Library-Strategy")
                     library_source = _find_text(sample, NS, "Library-Source")
                     data_processing = _find_text(sample, NS, "Data-Processing")
-                    growth_protocol = _find_text(sample, NS, "Growth-Protocol")
-                    treatment_protocol = _find_text(sample, NS, "Treatment-Protocol")
+                    growth_protocol = "\n".join(e.text or "" for e in sample.findall(f".//{{{NS}}}Growth-Protocol"))
+                    treatment_protocol = "\n".join(e.text or "" for e in sample.findall(f".//{{{NS}}}Treatment-Protocol"))
                     suppl_files = []
                     for sd in sample.findall(f"{{{NS}}}Supplementary-Data"):
                         url_text = sd.text.strip() if sd.text else ""

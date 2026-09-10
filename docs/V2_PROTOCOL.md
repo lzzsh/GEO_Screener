@@ -39,9 +39,9 @@ Rollback: stop the separate v2 service and return to the original deployment/dat
 
 1. Open an existing screening task. Select records across pages, or use “全部 Included 提取” for all included results, regardless of the displayed page.
 2. A protocol job stores snapshots of the selected GSE records and known GSM identifiers. These snapshots remain available if the original screening task is deleted.
-3. Upload main papers, supplements or referenced methods. PDF, UTF-8 TXT and MD are supported (30 MB per file, 300 PDF pages, 20 materials per item). Reference material must name the target paper's citation or adoption relationship.
-4. Alternatively select “获取正文 PDF” to reuse an existing PDF or resolve the explicit GEO publication. Ambiguous multiple PMID associations require the user to provide the correct article. Automatic acquisition does not search dataset titles and accept an unverified first hit.
-5. Select “开始提取”, or queue pending records from the job toolbar. The active owner-specific LLM configuration in Settings is used. Every document page is processed in bounded chunks; nothing is silently truncated to the first 8,000 characters. Responses are streamed, with an 8,192-token output limit and a 300-second deadline per chunk. Token-limit truncation is reported as a failure, never as a successful partial extraction.
+3. Upload main papers, supplements or referenced methods. PDF, UTF-8 TXT/MD/CSV/TSV, DOCX, XLSX and ZIP supplements are supported (30 MB per file, 300 PDF pages, 20 manually uploaded materials per item). Word paragraphs/tables/notes, Excel worksheets (including Strict OOXML) and searchable ZIP members retain their source identity. Reference material must name the target paper's citation or adoption relationship.
+4. Alternatively select “获取 Methods 与补充材料” to reuse an existing PDF or resolve the explicit GEO publication and collect its official PMC Methods and declared supplements. Ambiguous multiple PMID associations require the user to provide the correct article. Automatic acquisition does not search dataset titles and accept an unverified first hit.
+5. Select “开始提取”, or queue pending records from the job toolbar. The active owner-specific LLM configuration in Settings is used. Methods from the same article XML preserve reading order; the original PDF remains available. All included supplementary sections are processed in overlapping chunks. The coverage manifest records every section and explicitly identifies gene/statistical result tables excluded after scanning for recipe clues. Responses are streamed without an application `max_tokens` or `max_completion_tokens` ceiling or a fixed whole-call deadline. Service-side truncation triggers bounded splitting of only the affected block; an unresolved truncation is a failure, never a successful partial result. Network stall timeouts remain in place.
 6. Inspect the proposed events, protocol groups, missing fields and verbatim page evidence. Edit any field, add/remove an event, or add the specific supporting quote. Save creates a new immutable human revision. “保存并标记已复核” additionally requires all blocking validation errors to be resolved.
 7. Export the current reviewed revisions as TSV. Draft export is separate and named as draft. Evidence JSON contains row numbers, protocol names, source page identifiers and provenance; issues JSON includes missing values, unresolved references and blockers.
 
@@ -49,7 +49,7 @@ A repeat extraction creates a new machine proposal and retains the active human 
 
 ## Skill contract
 
-Rules are adapted from `perturbation-extractor` and `protocol-chain-annotator`. Source skills remain unchanged. The server uses `backend/prompts/protocol/extract_v1.txt` and `backend/protocol_schema.py`, with a prompt hash, model, schema version and document hashes recorded in each machine revision.
+The actual `perturbation-extractor` and `protocol-chain-annotator` skill snapshots are bundled in `backend/prompts/protocol/skills/` and included in every extraction system prompt. Source skill files remain unchanged. The server combines these with `backend/prompts/protocol/extract_v1.txt` and `backend/protocol_schema.py`, with the combined prompt hash, individual skill hashes, model, schema version, document hashes and material coverage recorded in each machine revision. The application JSON contract resolves conflicting TSV-only examples from the skills.
 
 The original skill defines **24 columns** (the earlier planning messages incorrectly said 25). The TSV preserves their exact order:
 
@@ -71,9 +71,9 @@ Resolved skill inconsistencies:
 
 ## Scope and limitations
 
-Implemented: selection and batch jobs, private source upload/viewing, PDF/text parsing, evidence-grounded extraction, explicit missing-source state, multi-protocol groups, known-GSM validation, human revisions, reviewed/draft exports, owner isolation, failed/stale-run retries and additive PDF-column migrations.
+Implemented: selection and batch jobs, private source upload/viewing, PDF/text parsing, evidence-grounded extraction, explicit missing-source state, independent GSM trajectories, strict target-GSM validation, human revisions, reviewed/draft exports, owner isolation, failed/stale-run retries and additive PDF-column migrations.
 
-Not yet automated: OCR, spreadsheet/Word supplements, external citation-chain retrieval, chemical identifier lookup, semantic verification of every dose against its quote, and biological accuracy benchmarking. A quote being found on a page verifies provenance, not the scientific correctness of every extracted field. Supplementary tables should be checked against the original PDF. A paper with no usable searchable text cannot be processed until OCR/text is supplied.
+Not yet automated: OCR, external citation-chain retrieval, chemical identifier lookup, semantic verification of every dose against its quote, and biological accuracy benchmarking. A quote being found on a page verifies provenance, not the scientific correctness of every extracted field. Supplementary tables should be checked against the original PDF. A paper with no usable searchable text cannot be processed until OCR/text is supplied.
 
 The old screening/PDF calibration implementation is retained; the new workflow does not apply its “paper overrides GEO” rule or overwrite screening decisions.
 
@@ -91,6 +91,24 @@ python -m pytest -c backend/pytest.ini \
 
 Coverage includes selecting included records, duplicate materials, invalid PDFs, ownership checks, evidence and time checks, reviewed export, editing conflicts, protecting human revisions, repeated broker deliveries and stale-run recovery.
 
-The repository's pre-existing full suite is not green: a baseline run at ccc34f6 gave 43 passed, 5 failed and 21 setup errors, including removed screening APIs and database-fixture isolation. The final v2 comparison had the same failures/errors and 64 passed. The targeted suite above passed all 38 tests. These historical test issues were not silently rewritten to claim a clean regression suite.
+At the initial v2 validation, the repository's pre-existing full suite was not green: a baseline run at ccc34f6 gave 43 passed, 5 failed and 21 setup errors, including removed screening APIs and database-fixture isolation. The final v2 comparison had the same failures/errors and 64 passed. The targeted suite above passed all 38 tests. These historical test issues were not silently rewritten to claim a clean regression suite.
 
 Detailed local validation and the real DeepSeek smoke result: [V2_VALIDATION.md](V2_VALIDATION.md).
+
+Subsequent legacy workflow repairs brought the full backend suite to **107 passed**. See [legacy debugging results and remaining limits](LEGACY_DEBUGGING.md).
+
+
+## GSM 作为提取与复核单位
+
+新任务默认 `extraction_unit=gsm`：所选 GSE 展开为各个 GSM，每个样本独立生成一套适用 protocol。`ProtocolItem` 保存共享文献材料，`ProtocolSample` 保存目标样本快照、状态和当前修订，`ProtocolRevision.sample_id` 绑定独立版本。迁移只新增表/字段；旧任务保留 `article`，旧人工版本不改动。
+
+输入包括目标 GSM 的完整 GEO Characteristics、Growth-Protocol、Treatment-Protocol，以及共用 Methods、补充材料和明确采用的引用来源。模型必须区分起始对照、不同剂量、分支和采样时间；不能将论文所有配方复制给每个样本。新任务中 GSM_id=NA、其他 GSM 或多个备选 protocol 名称会阻止标记已复核。
+
+工作台按 GSM 展示、单独重跑和复核；共享材料在任一关联样本提取期间禁止上传。批量提取保留已有结果，重新提取保留人工版本。已复核导出只选择各 GSM 当前已复核版本，TSV 仍为 24 列，证据和问题 JSON 另含 sample_id / gsm_id。
+
+一个 GSM 没有可用分化流程或映射不明确时，保留 `no_protocol` / `needs_sources`，不为凑齐一套配方而填入猜测。原始细胞、对照样本也可能没有 Day 0 以后的分化事件。
+
+
+## Default prompt deployment
+
+A fresh or empty PROMPT_DIR falls back to the versioned `backend/prompts/default` files for annotation, and to the bundled Protocol contract for extraction. Both skill documents are bundled. The immutable `protocol/gsm_contract.txt` is always appended, so private prompts from older releases cannot silently remove the target-sample contract. Docker v2 keeps private overrides at `/data/prompts` and does not bind over the bundled prompt directory. Custom non-empty prompts retain priority; no API credentials are shipped.

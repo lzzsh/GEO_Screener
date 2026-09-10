@@ -9,13 +9,13 @@ services:
       - "127.0.0.1:8002:8000"
     volumes:
       - ../data/v2:/data
-      - ../data/v2/prompts:/app/backend/prompts
     env_file:
       - .env
     environment:
       DATABASE_URL: sqlite+aiosqlite:////data/geo_search.db
       PDF_DIR: /data/pdfs
       PROTOCOL_DIR: /data/protocols
+      PROMPT_DIR: /data/prompts
       REDIS_URL: redis://redis:6379/0
       PROTOCOL_EXECUTION: celery
     depends_on:
@@ -28,13 +28,13 @@ services:
     command: celery -A backend.worker.celery_app worker --loglevel=info --concurrency=2
     volumes:
       - ../data/v2:/data
-      - ../data/v2/prompts:/app/backend/prompts
     env_file:
       - .env
     environment:
       DATABASE_URL: sqlite+aiosqlite:////data/geo_search.db
       PDF_DIR: /data/pdfs
       PROTOCOL_DIR: /data/protocols
+      PROMPT_DIR: /data/prompts
       REDIS_URL: redis://redis:6379/0
     depends_on:
       - redis

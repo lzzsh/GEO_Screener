@@ -47,7 +47,7 @@ def _time(value, unit):
     return _number(value)
 
 
-def validate_extraction(payload, documents, gse_id, gsm_ids):
+def validate_extraction(payload, documents, gse_id, gsm_ids, required_gsm_id=None):
     if not isinstance(payload, dict) or payload.get('outcome') not in {'extracted', 'no_protocol', 'needs_sources'}:
         raise ValueError('模型必须返回 outcome: extracted/no_protocol/needs_sources')
     rows = payload.get('events')
@@ -63,11 +63,19 @@ def validate_extraction(payload, documents, gse_id, gsm_ids):
     events, blockers, warnings = [], [], []
     if payload['outcome'] == 'needs_sources' or requests:
         blockers.append('引用配方或补充材料尚未补齐，请添加来源后重新提取')
+    if required_gsm_id and len({r.get("protocol_name") for r in rows if isinstance(r, dict)}) > 1:
+        blockers.append("同一 GSM 必须对应一套连续 protocol，不能混合多个备选配方")
     seen = set()
     for index, row in enumerate(rows, 1):
         if not isinstance(row, dict) or not isinstance(row.get('values'), dict):
             raise ValueError(f'第 {index} 行缺少 values 对象')
         values = {key: _text(row['values'].get(key)) for key in COLUMNS}
+        if values['time_unit'] == 'NA':
+            times = [values[key] for key in ('time_pert_start', 'time_pert_end', 'time_collection') if values[key] != 'NA']
+            if times and all(re.fullmatch(r'D\s*\d+(?:\.\d+)?', value, re.I) for value in times):
+                values['time_unit'] = 'days'
+            elif times and all(re.fullmatch(r'H\s*\d+(?:\.\d+)?', value, re.I) for value in times):
+                values['time_unit'] = 'hours'
         type_alias = values['Pert_type'].replace(' ', '_')
         if type_alias in TYPES:
             values['Pert_type'] = type_alias
@@ -77,7 +85,9 @@ def validate_extraction(payload, documents, gse_id, gsm_ids):
         values['GSE_id'] = gse_id
         if values['GSM_id'] != 'NA' and values['GSM_id'] not in gsm_ids:
             blockers.append(prefix + f"GSM {values['GSM_id']} 不属于所选来源")
-        if values['GSM_id'] == 'NA':
+        if required_gsm_id and values['GSM_id'] != required_gsm_id:
+            blockers.append(prefix + f'必须明确对应目标样本 {required_gsm_id}，不能使用 NA 或其他 GSM')
+        if values['GSM_id'] == 'NA' and not required_gsm_id:
             warnings.append(prefix + '尚未映射到 GSM；保留为文献级 protocol')
         for key, allowed in [('Stage_name', STAGES), ('Pert_type', TYPES),
                              ('Addition_context', {'perturbation', 'basal medium', 'NA'}),

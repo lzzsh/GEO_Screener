@@ -92,6 +92,11 @@ async def save_entries(library_id: int, body: EntriesSave,
     existing = set((await db.execute(
         select(LibraryEntry.gse_id).where(LibraryEntry.library_id == library_id)
     )).scalars().all())
+    if body.task_id is not None:
+        from backend.models import ScreeningTask
+        task = await db.get(ScreeningTask, body.task_id)
+        if not task or task.owner_id != user.id:
+            raise HTTPException(404, "Task not found")
     added = 0
     for e in body.entries:
         if e.gse_id in existing:
@@ -103,6 +108,7 @@ async def save_entries(library_id: int, body: EntriesSave,
             pubdate=e.pubdate, update_date=e.update_date,
             source=body.source, task_id=body.task_id, status="new",
         ))
+        existing.add(e.gse_id)
         added += 1
     await db.commit()
     return {"added": added, "skipped": len(body.entries) - added}
@@ -165,9 +171,19 @@ async def update_entry(library_id: int, entry_id: int, body: EntryUpdate,
     return {"id": entry.id, "gse_id": entry.gse_id, "status": entry.status}
 
 
+async def _owned_entry(db, entry_id, user):
+    entry = (await db.execute(select(LibraryEntry).join(Library).where(
+        LibraryEntry.id == entry_id, Library.owner_id == user.id
+    ))).scalar_one_or_none()
+    if not entry:
+        raise HTTPException(404, "Not found")
+    return entry
+
+
 @router.get("/entries/{entry_id}/labels")
 async def get_entry_labels(entry_id: int, db: AsyncSession = Depends(get_db),
                             user: User = Depends(get_current_user)):
+    await _owned_entry(db, entry_id, user)
     rows = (await db.execute(
         select(LibraryEntryLabel).where(LibraryEntryLabel.entry_id == entry_id)
     )).scalars().all()
@@ -178,6 +194,7 @@ async def get_entry_labels(entry_id: int, db: AsyncSession = Depends(get_db),
 async def upsert_label(entry_id: int, body: LabelUpsert,
                         db: AsyncSession = Depends(get_db),
                         user: User = Depends(get_current_user)):
+    await _owned_entry(db, entry_id, user)
     existing = (await db.execute(
         select(LibraryEntryLabel).where(
             LibraryEntryLabel.entry_id == entry_id,

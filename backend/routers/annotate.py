@@ -17,9 +17,26 @@ class LabelUpsert(BaseModel):
     value: str | None = None
 
 
+async def _owned_result(db, result_id, user):
+    result = (await db.execute(select(ScreeningResult).join(ScreeningTask)
+        .where(ScreeningResult.id == result_id, ScreeningTask.owner_id == user.id))).scalar_one_or_none()
+    if not result:
+        raise HTTPException(status_code=404, detail="Not found")
+    return result
+
+
+async def _owned_sample(db, sample_id, user):
+    sample = (await db.execute(select(GeoSample).join(ScreeningResult).join(ScreeningTask)
+        .where(GeoSample.id == sample_id, ScreeningTask.owner_id == user.id))).scalar_one_or_none()
+    if not sample:
+        raise HTTPException(status_code=404, detail="Not found")
+    return sample
+
+
 @router.get("/results/{result_id}/labels")
 async def get_labels(result_id: int, db: AsyncSession = Depends(get_db),
                      user: User = Depends(get_current_user)):
+    await _owned_result(db, result_id, user)
     rows = (await db.execute(
         select(GeoLabel).where(GeoLabel.result_id == result_id)
     )).scalars().all()
@@ -30,6 +47,7 @@ async def get_labels(result_id: int, db: AsyncSession = Depends(get_db),
 async def upsert_label(result_id: int, body: LabelUpsert,
                        db: AsyncSession = Depends(get_db),
                        user: User = Depends(get_current_user)):
+    await _owned_result(db, result_id, user)
     existing = (await db.execute(
         select(GeoLabel).where(GeoLabel.result_id == result_id, GeoLabel.key == body.key)
     )).scalar_one_or_none()
@@ -82,11 +100,7 @@ async def trigger_annotation(task_id: int, db: AsyncSession = Depends(get_db),
 @router.post("/results/{result_id}/run")
 async def trigger_single_result_annotation(result_id: int, db: AsyncSession = Depends(get_db),
                                             user: User = Depends(get_current_user)):
-    sr = (await db.execute(
-        select(ScreeningResult).where(ScreeningResult.id == result_id)
-    )).scalar_one_or_none()
-    if not sr:
-        raise HTTPException(status_code=404, detail="Not found")
+    sr = await _owned_result(db, result_id, user)
     from backend.worker.tasks import _run_single_result_annotation_async
     status = dispatch_or_run_inline(
         delay_call=None,
@@ -98,6 +112,7 @@ async def trigger_single_result_annotation(result_id: int, db: AsyncSession = De
 @router.get("/samples/{sample_id}/labels")
 async def get_gsm_labels(sample_id: int, db: AsyncSession = Depends(get_db),
                           user: User = Depends(get_current_user)):
+    await _owned_sample(db, sample_id, user)
     rows = (await db.execute(
         select(GsmLabel).where(GsmLabel.sample_id == sample_id)
     )).scalars().all()
@@ -108,6 +123,7 @@ async def get_gsm_labels(sample_id: int, db: AsyncSession = Depends(get_db),
 async def upsert_gsm_label(sample_id: int, body: LabelUpsert,
                             db: AsyncSession = Depends(get_db),
                             user: User = Depends(get_current_user)):
+    await _owned_sample(db, sample_id, user)
     existing = (await db.execute(
         select(GsmLabel).where(GsmLabel.sample_id == sample_id, GsmLabel.key == body.key)
     )).scalar_one_or_none()
@@ -127,11 +143,7 @@ async def upsert_gsm_label(sample_id: int, body: LabelUpsert,
 @router.post("/results/{result_id}/gsm-labels/run")
 async def trigger_gsm_annotation(result_id: int, db: AsyncSession = Depends(get_db),
                                    user: User = Depends(get_current_user)):
-    sr = (await db.execute(
-        select(ScreeningResult).where(ScreeningResult.id == result_id)
-    )).scalar_one_or_none()
-    if not sr:
-        raise HTTPException(status_code=404, detail="Not found")
+    sr = await _owned_result(db, result_id, user)
     from backend.worker.tasks import _run_gsm_annotation_async
     status = dispatch_or_run_inline(
         delay_call=None,
