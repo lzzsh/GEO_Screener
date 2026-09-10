@@ -6,6 +6,7 @@ from typing import Optional
 from openai import APIStatusError, AsyncOpenAI
 
 PROVIDER_DEFAULTS: dict[str, dict] = {
+    "orcarouter":      {"base_url": "https://api.orcarouter.ai/v1", "model": "orcarouter/auto"},
     "deepseek":        {"base_url": "https://api.deepseek.com/v1", "model": "deepseek-chat"},
     "glm":             {"base_url": "https://open.bigmodel.cn/api/paas/v4", "model": "glm-4"},
     "minimax":         {"base_url": "https://api.minimax.chat/v1", "model": "abab6.5s-chat"},

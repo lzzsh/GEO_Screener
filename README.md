@@ -107,6 +107,20 @@ LLM credentials (provider, API key, model, base URL) are configured through the 
 
 ---
 
+## OrcaRouter (optional provider)
+
+In **Settings → Provider Credentials → OrcaRouter → Edit**, enter your API Key,
+Base URL and Model ID. The defaults are `https://api.orcarouter.ai/v1` and
+`orcarouter/auto`, as shown in the [official documentation](https://docs.orcarouter.ai/introduction).
+You can override them with the dedicated endpoint and model supplied for your account.
+Saving credentials keeps the current provider active; select OrcaRouter under
+**Active Model**, save, then use **Test Connection** to switch and verify it.
+Screening and v2 Protocol extraction both use the existing OpenAI-compatible client;
+no additional SDK is required.
+
+[Sign up for OrcaRouter — project referral link](https://www.orcarouter.ai/ref/ref_3c070f5c24f3119666e7).
+The project maintainer may receive a commission through this link. OrcaRouter is optional.
+
 ## 📐 Annotation Schemas
 
 A schema defines what fields the LLM extracts from each GSE dataset and each GSM sample. You can maintain multiple schemas for different research questions and switch between them at any time.
