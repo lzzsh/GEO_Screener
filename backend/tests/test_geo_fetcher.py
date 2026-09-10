@@ -265,3 +265,11 @@ async def test_fetch_gse_detail_calls_efetch():
 
     assert result["gse_id"] == "GSE123"
     assert "contact" in result
+
+
+def test_miniml_parses_publication_ids_and_preserves_multiple_articles():
+    from backend.worker.geo_fetcher import _parse_miniml
+    xml = '<MINiML xmlns="http://www.ncbi.nlm.nih.gov/geo/info/MINiML"><Series iid="GSE205224"><Pubmed-ID>42151415</Pubmed-ID><Pubmed-ID>12345678</Pubmed-ID></Series></MINiML>'
+    result = _parse_miniml(xml, 'GSE205224')
+    assert result['pmid'] == '42151415'
+    assert result['pmids'] == ['42151415', '12345678']

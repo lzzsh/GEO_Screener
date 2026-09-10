@@ -223,15 +223,16 @@ class LLMClient:
     def _load_prompt(self, schema_name: str, prompt_type: str) -> str:
         """Load prompt from file, with fallback to defaults and constants."""
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        prompts_dir = os.getenv('PROMPT_DIR', os.path.join(base_dir, 'prompts'))
 
         # Try schema-specific prompt
-        schema_prompt_path = os.path.join(base_dir, "prompts", schema_name, f"{prompt_type}.txt")
+        schema_prompt_path = os.path.join(prompts_dir, schema_name, f"{prompt_type}.txt")
         if os.path.exists(schema_prompt_path):
             with open(schema_prompt_path, 'r', encoding='utf-8') as f:
                 return f.read()
 
         # Try default prompt
-        default_prompt_path = os.path.join(base_dir, "prompts", "default", f"{prompt_type}.txt")
+        default_prompt_path = os.path.join(prompts_dir, "default", f"{prompt_type}.txt")
         if os.path.exists(default_prompt_path):
             with open(default_prompt_path, 'r', encoding='utf-8') as f:
                 return f.read()

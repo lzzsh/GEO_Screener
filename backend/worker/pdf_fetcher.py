@@ -1,15 +1,19 @@
 import logging
 import os
+import re
 import httpx
 
 logger = logging.getLogger(__name__)
-PDF_DIR = "pdfs"
+PDF_DIR = os.getenv("PDF_DIR", "pdfs")
 
 
-async def fetch_pdf(pmid: str, gse_id: str) -> tuple[str | None, str | None]:
+async def fetch_pdf(pmid: str, gse_id: str, output_dir: str | None = None) -> tuple[str | None, str | None]:
     """Returns (pdf_path, doi) or (None, None) on failure."""
-    os.makedirs(PDF_DIR, exist_ok=True)
-    out_path = os.path.join(PDF_DIR, f"{gse_id}.pdf")
+    if not re.fullmatch(r"GSE\d+", gse_id) or not str(pmid).isdigit():
+        return None, None
+    directory = output_dir or PDF_DIR
+    os.makedirs(directory, exist_ok=True)
+    out_path = os.path.join(directory, f"{gse_id}.pdf")
 
     doi = None
     pmcid = None

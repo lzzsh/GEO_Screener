@@ -47,6 +47,8 @@ async def _run_sqlite_migrations(conn):
             "active_annotation_schema_id": "INTEGER REFERENCES annotation_schemas(id)",
         },
         "screening_tasks": {
+            "task_type": "VARCHAR(32) DEFAULT 'screening'",
+            "parent_task_id": "INTEGER REFERENCES screening_tasks(id)",
             "search_query": "TEXT",
             "candidate_count": "INTEGER DEFAULT 0",
             "included_count": "INTEGER DEFAULT 0",
@@ -56,6 +58,12 @@ async def _run_sqlite_migrations(conn):
             "annotation_schema_id": "INTEGER REFERENCES annotation_schemas(id)",
         },
         "screening_results": {
+            "pmid": "VARCHAR(32)",
+            "doi": "VARCHAR(256)",
+            "pdf_path": "VARCHAR(512)",
+            "pdf_status": "VARCHAR(16) DEFAULT 'none'",
+            "original_decision": "VARCHAR(16)",
+            "original_summary": "TEXT",
             "description": "TEXT",
             "keyword_matched": "BOOLEAN DEFAULT 1",
             "gse_type": "VARCHAR(256)",

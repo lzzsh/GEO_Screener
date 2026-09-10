@@ -17,7 +17,7 @@ def _get_prompts_dir() -> Path:
     """Get the prompts directory path."""
     # Get the backend directory
     backend_dir = Path(__file__).parent.parent
-    return backend_dir / "prompts"
+    return Path(os.getenv('PROMPT_DIR', backend_dir / 'prompts'))
 
 def _get_prompt_path(schema_name: str, prompt_type: str) -> Path:
     """Get the full path to a prompt file."""

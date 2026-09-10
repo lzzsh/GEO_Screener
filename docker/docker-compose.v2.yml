@@ -1,0 +1,49 @@
+# Run alongside v1: docker compose -p geo-v2 -f docker/docker-compose.v2.yml up -d --build
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: uvicorn backend.main:app --host 0.0.0.0 --port 8000
+    ports:
+      - "127.0.0.1:8002:8000"
+    volumes:
+      - ../data/v2:/data
+      - ../data/v2/prompts:/app/backend/prompts
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/geo_search.db
+      PDF_DIR: /data/pdfs
+      PROTOCOL_DIR: /data/protocols
+      REDIS_URL: redis://redis:6379/0
+      PROTOCOL_EXECUTION: celery
+    depends_on:
+      - redis
+    restart: unless-stopped
+  worker:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    command: celery -A backend.worker.celery_app worker --loglevel=info --concurrency=2
+    volumes:
+      - ../data/v2:/data
+      - ../data/v2/prompts:/app/backend/prompts
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: sqlite+aiosqlite:////data/geo_search.db
+      PDF_DIR: /data/pdfs
+      PROTOCOL_DIR: /data/protocols
+      REDIS_URL: redis://redis:6379/0
+    depends_on:
+      - redis
+    restart: unless-stopped
+  redis:
+    image: redis:7-alpine
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-v2:/data
+    restart: unless-stopped
+volumes:
+  redis-v2:

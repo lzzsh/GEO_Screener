@@ -16,6 +16,10 @@
 
 GEO Screener turns the tedious process of systematic GEO dataset curation into a structured, LLM-assisted workflow. Define your inclusion criteria once, run batch screening across hundreds of datasets, drill into sample-level annotation, and export clean results — all from a web UI.
 
+## v2 Protocol extraction
+
+The `codex/v2-protocol` branch adds evidence-backed protocol extraction from selected screening results. See [v2 setup, workflow and limitations](docs/V2_PROTOCOL.md). The v1 baseline is preserved as `v1-baseline-20260910`; v2 can run with an isolated data copy on port 8002.
+
 ## ✨ Features
 
 | | |

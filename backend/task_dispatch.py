@@ -1,4 +1,5 @@
 import asyncio
+import os
 from collections.abc import Awaitable, Callable
 from typing import Optional
 
@@ -9,7 +10,7 @@ def dispatch_or_run_inline(
     delay_call: Optional[Callable[[], object]],
     inline_coro_factory: Callable[[], Awaitable[object]],
 ) -> str:
-    if delay_call is None:
+    if delay_call is None or os.getenv('TASK_EXECUTION') == 'inline':
         asyncio.create_task(inline_coro_factory())
         return "running_inline"
     try:

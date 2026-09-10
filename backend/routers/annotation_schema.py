@@ -45,7 +45,7 @@ def _serialize(schema: AnnotationSchema, active_id: int | None = None) -> dict:
 
 def _get_prompts_dir() -> str:
     """Get the prompts directory path."""
-    return os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts")
+    return os.getenv('PROMPT_DIR', os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "prompts"))
 
 def _create_schema_prompt_files(schema_name: str):
     """Create prompt directory for a new schema (without copying defaults)."""

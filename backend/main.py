@@ -23,6 +23,7 @@ from backend.routers import annotate as annotate_router
 from backend.routers import library as library_router
 from backend.routers import annotation_schema as annotation_schema_router
 from backend.routers import prompts as prompts_router
+from backend.routers import protocols as protocols_router
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 frontend_dir_value = os.getenv("FRONTEND_DIR", "frontend")
@@ -43,8 +44,9 @@ app = FastAPI(title="GEO Search & Screening", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory=str(FRONTEND_DIR / "static")), name="static")
 
 import os as _os
-_os.makedirs("pdfs", exist_ok=True)
-app.mount("/pdfs", StaticFiles(directory="pdfs"), name="pdfs")
+PDF_DIR = _os.getenv("PDF_DIR", "pdfs")
+_os.makedirs(PDF_DIR, exist_ok=True)
+app.mount("/pdfs", StaticFiles(directory=PDF_DIR), name="pdfs")
 
 @app.get("/")
 async def root():
@@ -195,7 +197,18 @@ app.include_router(annotate_router.router)
 app.include_router(library_router.router)
 app.include_router(annotation_schema_router.router)
 app.include_router(prompts_router.router)
+app.include_router(protocols_router.router)
 
 @app.get("/library/{library_id}")
 async def library_detail_page(request: Request, library_id: int):
     return templates.TemplateResponse(request, "library_detail.html", {"library_id": library_id})
+
+
+@app.get("/protocols")
+async def protocols_page(request: Request):
+    return templates.TemplateResponse(request, "protocols.html")
+
+
+@app.get("/protocols/{job_id}")
+async def protocol_detail_page(request: Request, job_id: int):
+    return templates.TemplateResponse(request, "protocol_detail.html", {"job_id": job_id})

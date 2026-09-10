@@ -185,3 +185,55 @@ class GsmLabel(Base):
     value: Mapped[str | None] = mapped_column(Text, nullable=True)
     source: Mapped[str] = mapped_column(String(16), default="llm")
     sample: Mapped["GeoSample"] = relationship(back_populates="labels")
+
+
+# v2: source IDs are snapshots, not foreign keys, so deleting a screening task
+# does not delete or prevent access to an independently reviewed protocol.
+class ProtocolJob(Base):
+    __tablename__ = "protocol_jobs"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    owner_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    source_task_id: Mapped[int] = mapped_column(Integer)
+    name: Mapped[str] = mapped_column(String(256))
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+
+class ProtocolItem(Base):
+    __tablename__ = "protocol_items"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    job_id: Mapped[int] = mapped_column(ForeignKey("protocol_jobs.id"), index=True)
+    source_result_id: Mapped[int] = mapped_column(Integer)
+    snapshot_json: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(32), default="waiting_material")
+    error: Mapped[str | None] = mapped_column(Text, nullable=True)
+    run_token: Mapped[str | None] = mapped_column(String(36), nullable=True)
+    active_revision_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("job_id", "source_result_id"),)
+
+
+class ProtocolDocument(Base):
+    __tablename__ = "protocol_documents"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("protocol_items.id"), index=True)
+    name: Mapped[str] = mapped_column(String(256))
+    kind: Mapped[str] = mapped_column(String(32), default="main")
+    reference: Mapped[str] = mapped_column(Text, default="")
+    path: Mapped[str] = mapped_column(Text)
+    sha256: Mapped[str] = mapped_column(String(64))
+    pages_json: Mapped[str] = mapped_column(Text)
+    warnings_json: Mapped[str] = mapped_column(Text, default="[]")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+    __table_args__ = (UniqueConstraint("item_id", "sha256"),)
+
+
+class ProtocolRevision(Base):
+    __tablename__ = "protocol_revisions"
+    id: Mapped[int] = mapped_column(Integer, primary_key=True)
+    item_id: Mapped[int] = mapped_column(ForeignKey("protocol_items.id"), index=True)
+    parent_id: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    source: Mapped[str] = mapped_column(String(16))  # machine | human
+    reviewed: Mapped[bool] = mapped_column(Boolean, default=False)
+    payload_json: Mapped[str] = mapped_column(Text)
+    provenance_json: Mapped[str] = mapped_column(Text, default="{}")
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)

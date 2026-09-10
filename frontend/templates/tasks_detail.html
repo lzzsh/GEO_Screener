@@ -262,7 +262,8 @@
     </div>
   </div>
 
-  <div class="flex justify-between items-center mb-4 gap-3">
+  <p x-show="protocolError" x-text="protocolError" class="mb-3 text-sm text-red-600"></p>
+  <div class="flex justify-between items-center mb-4 gap-3 flex-wrap">
     <div class="flex items-center gap-3">
       <div class="flex items-center gap-2">
         <label class="text-sm text-gray-500">筛选</label>
@@ -280,6 +281,8 @@
              class="border rounded-lg px-3 py-2 text-sm bg-white w-36 focus:outline-none focus:ring-2 focus:ring-blue-300" />
     </div>
     <div class="flex items-center gap-2">
+      <button @click="createProtocol(false)" :disabled="protocolCreating || !protocolSelection.length" class="text-sm border rounded-lg px-3 py-2 disabled:opacity-40" x-text="'提取 Protocol（'+protocolSelection.length+'）'"></button>
+      <button @click="createProtocol(true)" :disabled="protocolCreating" class="text-sm border rounded-lg px-3 py-2 text-blue-600 disabled:opacity-40">全部 Included 提取</button>
       <a :href="'/tasks/' + taskId + '/export'"
          class="text-sm bg-gray-100 hover:bg-gray-200 px-4 py-2 rounded-lg font-medium">导出 CSV</a>
       <button @click="fetchPapers()" :disabled="fetchingPdfs"
@@ -313,6 +316,7 @@
     <table class="w-full text-sm">
       <thead class="bg-gray-50 border-b">
         <tr>
+          <th class="px-3 py-3"><input type="checkbox" aria-label="选择当前页" @change="toggleProtocolPage($event.target.checked)" :checked="results.length>0 && results.every(r=>protocolSelection.includes(r.id))" /></th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-36">Accession</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600">标题</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-20">Samples</th>
@@ -321,6 +325,7 @@
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-28">最后更新</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">原始数据</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">PDF</th>
+          <th class="text-left px-4 py-3 font-medium text-gray-600">Protocol</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">原始决策</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-24">决策</th>
           <th class="text-left px-4 py-3 font-medium text-gray-600 w-16">操作</th>
@@ -329,6 +334,7 @@
       <template x-for="r in results" :key="r.id">
         <tbody class="divide-y" id="results-tbody">
           <tr @click="toggleExpand(r.id)" class="cursor-pointer hover:bg-gray-50">
+            <td class="px-3" @click.stop><input type="checkbox" :aria-label="'选择 '+r.dataset_id" :checked="protocolSelection.includes(r.id)" @change="toggleProtocolSelection(r.id,$event.target.checked)" /></td>
             <td class="px-4 py-3">
               <p class="font-mono text-xs font-semibold text-blue-700" x-text="r.dataset_id"></p>
             </td>
@@ -349,6 +355,10 @@
               <span x-show="r.pdf_status === 'fetching'" class="text-blue-400">⟳</span>
               <a x-show="r.pdf_status === 'available'" :href="'/pdfs/' + r.dataset_id + '.pdf'" target="_blank" class="text-blue-600">📄</a>
               <span x-show="r.pdf_status === 'failed'" class="text-red-400">✗</span>
+            </td>
+            <td class="px-4 py-3 text-xs" @click.stop>
+              <template x-if="r.protocol"><a :href="'/protocols/'+r.protocol.job_id" class="text-blue-600 whitespace-nowrap" x-text="protocolStateLabel(r.protocol.status)"></a></template>
+              <span x-show="!r.protocol" class="text-gray-300">—</span>
             </td>
             <td class="px-4 py-3">
               <span x-show="r.original_decision"
@@ -374,7 +384,7 @@
             <td class="px-4 py-3 text-xs text-blue-600" x-text="expanded.has(r.id) ? '收起' : '展开'"></td>
           </tr>
           <tr x-show="expanded.has(r.id)" class="bg-slate-50">
-            <td colspan="11" class="px-4 py-4">
+            <td colspan="13" class="px-4 py-4">
               <div class="mb-4" x-data="labelEditor(r)">
                 <div class="flex items-center justify-between mb-2">
                   <p class="text-xs font-semibold text-gray-500">标注</p>
@@ -496,6 +506,21 @@
       page: 1, pageSize: 20, total: 0, jumpPageInput: 1, expanded: new Set(),
       decisionFilter: '', accessionSearch: '', annotating: false, annotationError: '', gsmAnnotating: false, gsmAnnotationError: '',
       fetchingPdfs: false, calibrating: false,
+      protocolSelection: [], protocolCreating: false, protocolError: '',
+      protocolStateLabel(status) { return ({waiting_material:'待补材料',ready:'材料就绪',queued:'排队中',fetching:'获取材料',extracting:'提取中',needs_review:'待复核',needs_sources:'待补引用',no_protocol:'未找到',reviewed:'已复核',failed:'失败'})[status] || status; },
+      toggleProtocolSelection(id, checked) {
+        this.protocolSelection = checked ? [...new Set([...this.protocolSelection,id])] : this.protocolSelection.filter(v=>v!==id);
+      },
+      toggleProtocolPage(checked) { this.results.forEach(r=>this.toggleProtocolSelection(r.id,checked)); },
+      async createProtocol(allIncluded) {
+        this.protocolCreating=true; this.protocolError='';
+        try {
+          const r=await fetch('/api/protocols/jobs',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({task_id:this.taskId,result_ids:allIncluded?null:this.protocolSelection})});
+          const data=await r.json();
+          if(!r.ok) throw new Error(typeof data.detail==='string'?data.detail:'无法创建提取任务');
+          window.location.href='/protocols/'+data.id;
+        } catch(e) { this.protocolError=e.message; } finally { this.protocolCreating=false; }
+      },
       pollTimer: null, libs: [],
       expandedGsm: new Set(),
       gsmModal: {open: false, id: '', loading: false, data: null},

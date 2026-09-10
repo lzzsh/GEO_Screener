@@ -31,3 +31,7 @@ docs/superpowers/
 # Custom prompt schemas (local only)
 backend/prompts/cancer/
 backend/prompts/xlz_test/
+
+# Local v2 browser verification artifacts
+.playwright-cli/
+output/playwright/

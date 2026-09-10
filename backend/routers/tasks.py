@@ -12,7 +12,7 @@ from sqlalchemy.orm import selectinload
 from backend.database import get_db
 from backend.decision_sync import recompute_task_decision_counts, sync_final_conclusion_label
 from backend.label_schema import default_label_schema_json
-from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry, AnnotationSchema
+from backend.models import ScreeningTask, ScreeningResult, User, GeoSample, GeoLabel, GsmLabel, LibraryEntry, AnnotationSchema, ProtocolItem, ProtocolJob
 from backend.task_dispatch import dispatch_or_run_inline
 from backend.auth import get_current_user
 from backend.worker.csv_parser import parse_csv
@@ -266,6 +266,17 @@ async def get_results(
         ).offset(offset).limit(page_size)
     )
     rows = rows_result.scalars().all()
+    protocol_links = {}
+    if rows:
+        links = (await db.execute(
+            select(ProtocolItem.source_result_id, ProtocolItem.job_id, ProtocolItem.status)
+            .join(ProtocolJob).where(
+                ProtocolJob.owner_id == user.id, ProtocolJob.source_task_id == task_id,
+                ProtocolItem.source_result_id.in_([row.id for row in rows]),
+            ).order_by(ProtocolItem.id.desc())
+        )).all()
+        for link in links:
+            protocol_links.setdefault(link.source_result_id, {"job_id": link.job_id, "status": link.status})
     return {
         "total": total, "page": page, "page_size": page_size,
         "items": [{"id": r.id, "dataset_id": r.dataset_id, "title": r.title,
@@ -277,6 +288,7 @@ async def get_results(
                    "update_date": r.update_date, "has_raw_data": r.has_raw_data,
                    "n_samples": r.n_samples,
                    "pmid": r.pmid, "pdf_status": r.pdf_status, "original_decision": r.original_decision,
+                   "protocol": protocol_links.get(r.id),
                    "labels": [{"key": label.key, "value": label.value, "source": label.source} for label in r.labels],
                    "samples": [{"id": s.id, "gsm_id": s.gsm_id, "title": s.title,
                                 "organism": s.organism, "biosample_id": s.biosample_id,

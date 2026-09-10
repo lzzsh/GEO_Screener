@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}Protocol 提取 — GEO Screener v2{% endblock %}
+{% block content %}
+<script src="/static/protocols.js"></script>
+<div x-data="protocolList()" class="max-w-6xl mx-auto">
+  <div class="flex items-end justify-between mb-8">
+    <div><p class="text-xs font-semibold text-blue-600 mb-2">GEO SCREENER · V2</p><h1 class="text-2xl font-semibold">Protocol 提取</h1><p class="text-sm text-gray-500 mt-2">从筛选文献整理实验配方，逐条核对来源与时间窗口。</p></div>
+    <a href="/tasks-list" class="px-4 py-2 rounded-lg bg-blue-600 text-white text-sm">从筛选任务创建 →</a>
+  </div>
+  <p x-show="error" x-text="error" class="p-4 bg-red-50 text-red-700 rounded-lg mb-4"></p>
+  <p x-show="loading" class="text-sm text-gray-500">正在加载任务…</p>
+  <div x-show="!loading && !jobs.length" class="bg-white border rounded-xl p-12 text-center"><h2 class="font-medium text-lg">开始提取第一篇 Protocol</h2><p class="text-gray-500 text-sm mt-3">打开筛选任务，勾选文献或选择全部 Included，再点击“提取 Protocol”。</p></div>
+  <div class="grid gap-4">
+    <template x-for="job in jobs" :key="job.id">
+      <a :href="'/protocols/'+job.id" class="block bg-white border border-gray-200 rounded-xl p-6 hover:border-blue-400 transition">
+        <div class="flex justify-between gap-4"><div><h2 class="font-semibold" x-text="job.name"></h2><p class="text-xs text-gray-500 mt-2" x-text="'来源筛选任务 #'+job.source_task_id+' · '+job.total+' 条文献记录'"></p></div><div class="text-right"><p class="text-lg text-blue-700 font-semibold" x-text="reviewed(job)+' / '+job.total"></p><p class="text-xs text-gray-500">已复核</p></div></div>
+        <div class="mt-4 flex gap-2 flex-wrap"><template x-for="[status,count] in Object.entries(job.counts)" :key="status"><span class="text-xs rounded-full bg-gray-100 px-3 py-1" x-text="label(status)+' '+count"></span></template></div>
+      </a>
+    </template>
+  </div>
+</div>
+{% endblock %}

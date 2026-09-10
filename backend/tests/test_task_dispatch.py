@@ -5,6 +5,19 @@ from kombu.exceptions import OperationalError
 from backend.task_dispatch import dispatch_or_run_inline
 
 
+def test_explicit_inline_mode_never_dispatches_to_existing_worker(monkeypatch):
+    created = []
+    def capture(coro):
+        created.append(coro)
+        coro.close()
+    monkeypatch.setenv('TASK_EXECUTION', 'inline')
+    monkeypatch.setattr('backend.task_dispatch.asyncio.create_task', capture)
+    def forbidden_dispatch():
+        raise AssertionError('v2 must not dispatch to a v1 worker')
+    assert dispatch_or_run_inline(forbidden_dispatch, lambda: asyncio.sleep(0)) == 'running_inline'
+    assert len(created) == 1
+
+
 def test_dispatch_or_run_inline_returns_queued_when_delay_succeeds():
     calls = []
 
