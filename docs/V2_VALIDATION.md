@@ -2,7 +2,7 @@
 
 ## 交付版本与运行方式
 
-开发分支为 `codex/v2-protocol`。原版 `main` 保留在 `ccc34f6`，并有标签 `v1-baseline-20260910`。本地 v2 通过 `python scripts/run_v2.py` 启动，入口为 http://127.0.0.1:8002/protocols，使用原有账号登录。
+开发分支为 `codex/v2-protocol`。开始开发时的原版快照 `ccc34f6` 保留为标签 `v1-baseline-20260910`。最终检查发现 `main` 在开发期间另有一次 fast-forward pull，现为 `dfd24ae`；未重置它，v2 仍基于开始时的快照。本地 v2 通过 `python scripts/run_v2.py` 启动，入口为 http://127.0.0.1:8002/protocols，使用原有账号登录。
 
 v2 的数据库、PDF、上传材料、提示词和会话签名密钥位于被 Git 忽略的 `data/v2/`。本地旧筛选任务和 Protocol 任务均在 v2 进程内执行，避免误投递到 v1 的 Celery worker。Docker 配置使用独立 Redis 和数据卷；本次验证了 Compose 配置解析，未进行容器构建或部署验证。
 

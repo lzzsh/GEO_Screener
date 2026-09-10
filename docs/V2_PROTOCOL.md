@@ -4,7 +4,7 @@ This release adds protocol extraction after the existing screening workflow. Scr
 
 ## Preserved version and isolated data
 
-- v1 baseline: `main` at `ccc34f6`, tag `v1-baseline-20260910`.
+- Preserved starting v1 snapshot: `ccc34f6`, tag `v1-baseline-20260910`. The current `main` ref independently advanced to `dfd24ae` during development; v2 remains based on the preserved starting snapshot.
 - v2 development branch: `codex/v2-protocol`.
 - Existing `geo_search.db`, `data/geo_search.db` and `pdfs/` remain unchanged.
 - The prepared v2 copy is `data/v2/geo_search.db`; PDFs, new documents and prompt copies are under `data/v2/`.
