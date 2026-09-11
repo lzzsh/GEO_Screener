@@ -2,7 +2,7 @@
 
 # GEO Screener v2
 
-<img src="docs/images/logo.png" alt="GEO Screener" width="600"/>
+<img src="docs/images/geo-screener-logo-v2.png" alt="GEO Screener" width="600"/>
 
 **从 GEO 数据集筛选，到有原文证据的实验 Protocol 提取**
 

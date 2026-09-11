@@ -2,7 +2,7 @@
 
 # GEO Screener v2
 
-<img src="docs/images/logo.png" alt="GEO Screener" width="600"/>
+<img src="docs/images/geo-screener-logo-v2.png" alt="GEO Screener" width="600"/>
 
 **From GEO dataset screening to evidence-backed protocol extraction**
 
