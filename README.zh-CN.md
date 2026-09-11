@@ -31,10 +31,6 @@ GEO Screener 是一个可自行部署的科研工作台，用于检索 GEO 数�
 
 ## 网页功能截图
 
-以下为实际运行的 v2 网页截图。筛选主图使用用户提供的 **4480 × 2370 原始 PNG**；其他图片由无头 Chrome 以 **2 倍像素密度**直接截图（演示页为 2880 × 2000，真实 GSM 工作台为 3840 × 2400，展开的筛选例子为 4480 × 2370），未放大旧图。点击图片可查看原图。
-
-筛选部分展示真实保存的记录；GSM 工作台展示真实样本的独立复核结果；导出菜单图中的 `GSE1`、`GSM1` 为演示数据。截图不能替代对实验适用性和缺失条件的核对。截图不包含登录凭证或 API Key。切换界面语言会保留研究内容的原始语言。[截图来源与尺寸](docs/images/v2/README.md)。 [十篇真实文献流程验证](docs/V2_LIVE_VALIDATION.md)单独记录实际结果及尚存限制。
-
 ### 1. 检索 GEO 候选
 
 输入关键词或编号，设置返回数量。截图展示提交前的查询输入，未将虚构演示记录冒充实时检索结果。
@@ -173,6 +169,10 @@ docker compose -p geo-v2 -f docker/docker-compose.v2.yml up -d --build
 不要让本地启动器和 Docker 同时占用 8002 端口。Docker 启动网页、Celery worker 和 Redis，网站仅绑定本机地址，Redis 卷与 v1 分开。新用户仍按上面的接口注册。已记录的本地回归测试不包含容器构建和部署验证。
 
 ## 配置模型
+
+[![获取 OrcaRouter API Key](docs/images/orcarouter-api-key.svg)](https://www.orcarouter.ai/ref/ref_3c070f5c24f3119666e7)
+
+点击按钮，通过项目推广链接访问 OrcaRouter。登录或注册后，在 OrcaRouter 账号中创建 API Key，再按下面的步骤配置 GEO Screener。README 中的按钮用于打开网站，自动授权和自动填写配置需另行在应用中接入。
 
 1. 进入「模型与连接」，选择首位推荐的 OrcaRouter，或其他支持的服务商。
 2. 填写服务商提供的 **Base URL、API Key 和 Model ID**，保存连接。

@@ -31,10 +31,6 @@ GEO Screener is a self-hosted research workspace for finding GEO datasets, scree
 
 ## Interface tour
 
-These are screenshots of the running v2 interface. The main screening image is the user's original **4480 × 2370 PNG**; the other images were captured directly in headless Chrome at **2× pixel density** (2880 × 2000 for demo pages, 3840 × 2400 for the real protocol workspace, or 4480 × 2370 for the expanded screening examples). No images were upscaled. Click an image to inspect the original.
-
-Screening views show real saved records. The GSM workspace shows a real, independently reviewed sample from the ten-publication validation cohort. The export-menu image uses synthetic `GSE1`/`GSM1` demo fixtures. Neither screenshot is a substitute for checking applicability and missing experimental details. No login credentials or API keys are shown. Interface switching preserves the original language of research content. [Capture details](docs/images/v2/README.md). [Ten-publication live validation](docs/V2_LIVE_VALIDATION.md) records actual results and remaining limitations.
-
 ### 1. Search GEO candidates
 
 Enter keywords or accession identifiers and set a result limit. This screenshot shows a prepared query before submission; it does not imply that a live search returned the demo study.
@@ -173,6 +169,10 @@ docker compose -p geo-v2 -f docker/docker-compose.v2.yml up -d --build
 Do not run the local launcher and Docker on port 8002 simultaneously. Docker starts web, Celery worker and Redis services, binds the website to localhost, and keeps its Redis volume separate from v1. Register a fresh account as above if needed. Container build/deployment was not part of the recorded local regression run.
 
 ## Model configuration
+
+[![Get OrcaRouter API Key](docs/images/orcarouter-api-key.svg)](https://www.orcarouter.ai/ref/ref_3c070f5c24f3119666e7)
+
+Click the button to visit OrcaRouter through the project's referral link. Sign in or register, create an API key in your OrcaRouter account, then configure GEO Screener below. This README button opens the website; it does not authorize or configure GEO Screener automatically.
 
 1. Open **Models & connections**. OrcaRouter is the first, recommended provider; choose it or another supported connection.
 2. Configure the provider's **Base URL**, **API Key** and **Model ID**, then save the connection.

@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="280" height="44" viewBox="0 0 280 44" role="img" aria-labelledby="title">
+  <title id="title">Get OrcaRouter API Key</title>
+  <rect width="280" height="44" rx="8" fill="#1f6ae0"/>
+  <g fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <circle cx="23" cy="20" r="5"/>
+    <path d="m27 24 7 7m-3-3 3-3"/>
+  </g>
+  <text x="48" y="27" fill="#fff" font-family="Arial, Helvetica, sans-serif" font-size="16" font-weight="600">Get OrcaRouter API Key</text>
+</svg>
